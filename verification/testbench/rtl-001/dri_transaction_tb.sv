@@ -1,0 +1,136 @@
+// dri_transaction_tb.sv -- end-to-end DRI protocol test for dfc_rtl001.
+// Drives real DRI transactions (not internal peeks) and checks the
+// externally-observable protocol/response contract.
+
+`timescale 1ns/1ps
+
+module dri_transaction_tb;
+
+  import dfc_constants_pkg::*;
+  import dfc_registers_pkg::*;
+
+  logic core_clk_i = 0;
+  logic core_rst_n_i;
+  logic dri_req_valid_i, dri_req_ready_o, dri_req_write_i;
+  logic [31:0] dri_req_addr_i, dri_req_wdata_i;
+  logic [3:0]  dri_req_wstrb_i;
+  logic dri_rsp_valid_o, dri_rsp_ready_i;
+  logic [31:0] dri_rsp_rdata_o;
+  logic [2:0]  dri_rsp_code_o;
+
+  always #10 core_clk_i = ~core_clk_i;
+
+  dfc_rtl001 dut (.*);
+
+  int errors = 0, checks = 0;
+  task automatic check(string what, logic [31:0] got, logic [31:0] expected);
+    checks++;
+    if (got !== expected) begin
+      errors++;
+      $display("FAIL: %s -- got 0x%08h, expected 0x%08h", what, got, expected);
+    end else $display("PASS: %s -- 0x%08h", what, got);
+  endtask
+  task automatic check3(string what, logic [2:0] got, logic [2:0] expected);
+    checks++;
+    if (got !== expected) begin
+      errors++;
+      $display("FAIL: %s -- got %03b, expected %03b", what, got, expected);
+    end else $display("PASS: %s -- %03b", what, got);
+  endtask
+
+  // One full DRI read or write transaction, waiting properly for both
+  // request acceptance and response acceptance -- no clocking races.
+  task automatic dri_txn(input logic write, input logic [31:0] addr,
+                         input logic [31:0] wdata, input logic [3:0] wstrb,
+                         output logic [31:0] rdata, output logic [2:0] code);
+    dri_req_valid_i = 1'b1;
+    dri_req_write_i = write;
+    dri_req_addr_i  = addr;
+    dri_req_wdata_i = wdata;
+    dri_req_wstrb_i = wstrb;
+    // wait for acceptance (valid && ready) at a clock edge
+    do @(posedge core_clk_i); while (!dri_req_ready_o);
+    #1;  // settle past the edge before dropping valid -- avoid the same
+         // clocking race documented in regbank_smoke_tb.sv
+    dri_req_valid_i = 1'b0;
+    dri_rsp_ready_i = 1'b1;
+    // wait for response valid
+    do @(posedge core_clk_i); while (!dri_rsp_valid_o);
+    #1;
+    rdata = dri_rsp_rdata_o;
+    code  = dri_rsp_code_o;
+    dri_rsp_ready_i = 1'b0;
+  endtask
+
+  logic [31:0] rdata;
+  logic [2:0] code;
+
+  initial begin
+    dri_req_valid_i = 0; dri_req_write_i = 0; dri_req_addr_i = 0;
+    dri_req_wdata_i = 0; dri_req_wstrb_i = 4'b1111; dri_rsp_ready_i = 0;
+
+    core_rst_n_i = 0;
+    repeat (4) @(posedge core_clk_i);
+    core_rst_n_i = 1;
+    @(posedge core_clk_i);
+
+    // ---- Read a CONST register ----
+    dri_txn(0, DFC_ADDR_DFC_DEVICE_ID, '0, 4'b1111, rdata, code);
+    check("read DFC_DEVICE_ID", rdata, 32'h4446_4331);
+    check3("read DFC_DEVICE_ID code OK", code, 3'b000);
+
+    // ---- Write+readback an unprotected internal_reg register ----
+    // SYS_CONTROL is deliberately NOT used here: REG-002 lists it as
+    // "Yes for bits 0-3" (qualified protection), and reggen.py v2
+    // conservatively flags any qualified protection as fully protected
+    // (see reggen.py's file header) -- so SYS_CONTROL correctly returns
+    // PROTECTED_ERROR without auth. CONDITION_MASK_SELECT has no
+    // protection requirement at all and exercises the same write path.
+    dri_txn(1, DFC_ADDR_CONDITION_MASK_SELECT, 32'hCAFE_0001, 4'b1111, rdata, code);
+    check3("write CONDITION_MASK_SELECT code OK", code, 3'b000);
+    dri_txn(0, DFC_ADDR_CONDITION_MASK_SELECT, '0, 4'b1111, rdata, code);
+    check("readback CONDITION_MASK_SELECT", rdata, 32'hCAFE_0001);
+
+    // ---- Decode error on an unmapped, but aligned, address ----
+    // (0x9999 is misaligned and would trip the alignment check first,
+    // which is a different -- also real -- code path; 0x9998 is aligned
+    // and genuinely unmapped.)
+    dri_txn(0, 32'h0000_9998, '0, 4'b1111, rdata, code);
+    check3("unmapped aligned address -> DECODE_ERROR", code, 3'b001);
+
+    // ---- Access error: write to a CONST register ----
+    dri_txn(1, DFC_ADDR_DFC_DEVICE_ID, 32'hDEAD_0000, 4'b1111, rdata, code);
+    check3("write to CONST -> ACCESS_ERROR", code, 3'b010);
+
+    // ---- Access error: partial write strobe ----
+    dri_txn(1, DFC_ADDR_SYS_CONTROL, 32'h0000_0001, 4'b0011, rdata, code);
+    check3("partial wstrb -> ACCESS_ERROR", code, 3'b010);
+
+    // ---- Protection: write to a protected register without auth ----
+    dri_txn(1, DFC_ADDR_RESET_CONTROL, 32'h0000_0001, 4'b1111, rdata, code);
+    check3("protected write w/o auth -> PROTECTED_ERROR", code, 3'b011);
+
+    // ---- Protection: correct key sequence then protected write succeeds ----
+    dri_txn(1, DFC_ADDR_PROTECT_KEY, DFC_PROTECT_KEY1, 4'b1111, rdata, code);
+    check3("PROTECT_KEY key1 write OK", code, 3'b000);
+    dri_txn(1, DFC_ADDR_PROTECT_KEY, DFC_PROTECT_KEY2, 4'b1111, rdata, code);
+    check3("PROTECT_KEY key2 write OK", code, 3'b000);
+    dri_txn(1, DFC_ADDR_RESET_CONTROL, 32'h0000_0001, 4'b1111, rdata, code);
+    check3("protected write with valid auth -> OK", code, 3'b000);
+
+    // ---- Authorization consumed: a second protected write fails ----
+    dri_txn(1, DFC_ADDR_RESET_CONTROL, 32'h0000_0002, 4'b1111, rdata, code);
+    check3("second protected write, auth consumed -> PROTECTED_ERROR", code, 3'b011);
+
+    $display("");
+    $display("dri_transaction_tb: %0d checks, %0d failures", checks, errors);
+    if (errors != 0) begin
+      $display("TEST FAILED");
+      $finish(1);
+    end else begin
+      $display("TEST PASSED");
+      $finish(0);
+    end
+  end
+
+endmodule : dri_transaction_tb

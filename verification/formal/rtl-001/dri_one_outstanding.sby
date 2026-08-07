@@ -1,0 +1,35 @@
+[tasks]
+bmc
+prove
+
+[options]
+bmc: mode bmc
+bmc: depth 40
+prove: mode prove
+prove: depth 40
+
+[engines]
+smtbmc boolector
+
+[script]
+read -formal dri_one_outstanding_formal.sv
+prep -top formal_top
+
+[files]
+dri_one_outstanding_formal.sv
+
+# --- NOT YET RUN IN THIS REPOSITORY -----------------------------------
+# No formal toolchain (yosys/sby) was available in the sandbox this file
+# was authored in, so this task has NOT been executed and its properties
+# are NOT yet formally confirmed. Every other generated/authored artifact
+# this session was verified with a real tool (Icarus Verilog for the .sv
+# packages/testbench, grep-based citation resolution for the docs); this
+# is the one exception. Run both tasks before trusting this harness:
+#
+#   sby -f dri_one_outstanding.sby bmc
+#   sby -f dri_one_outstanding.sby prove
+#
+# `formal_top` is a signal-only stub (see dri_one_outstanding_formal.sv's
+# header) -- it is not RTL-001's actual DRI endpoint, which does not exist
+# yet in this repository. Once RTL-001's DRI endpoint RTL is written, bind
+# these same properties against it directly rather than against the stub.

@@ -1,0 +1,3146 @@
+{
+  "module": "RTL-001",
+  "_source": "RTL-001's register bank must physically decode/store the FULL REG-002 address space; this slice is all 314 registers, each carrying readback classification and protection status for reggen.py v2's address-decode and access-class/protection output generation.",
+  "registers": [
+    {
+      "name": "DFC_DEVICE_ID",
+      "addr": 0,
+      "reset": "0x44464331",
+      "access_summary": "CONST",
+      "owner": "RTL-001",
+      "readback": "const",
+      "contract_id": "REG-0000",
+      "protection": "No"
+    },
+    {
+      "name": "DFC_PRODUCT_REV",
+      "addr": 4,
+      "reset": "0x00010000",
+      "access_summary": "CONST",
+      "owner": "RTL-001",
+      "readback": "const",
+      "contract_id": "REG-0004",
+      "protection": "No"
+    },
+    {
+      "name": "DFC_REGMAP_REV",
+      "addr": 8,
+      "reset": "0x00030001",
+      "access_summary": "CONST",
+      "owner": "RTL-001",
+      "readback": "const",
+      "contract_id": "REG-0008",
+      "protection": "No"
+    },
+    {
+      "name": "DFC_BUILD_ID",
+      "addr": 12,
+      "reset": "BUILD_ID parameter (default 0x00000000)",
+      "access_summary": "CONST",
+      "owner": "RTL-001",
+      "readback": "const",
+      "contract_id": "REG-000C",
+      "protection": "No"
+    },
+    {
+      "name": "DFC_CAPABILITY0",
+      "addr": 16,
+      "reset": "0x00FFFFFF",
+      "access_summary": "Mixed: CONST, RSV0",
+      "owner": "RTL-001",
+      "readback": "const",
+      "contract_id": "REG-0010",
+      "protection": "No"
+    },
+    {
+      "name": "SYS_CONTROL",
+      "addr": 20,
+      "reset": "0x0000000A",
+      "access_summary": "Mixed: RW, WO-CMD, RSV0",
+      "owner": "RTL-001 / RTL-002",
+      "readback": "internal_reg",
+      "contract_id": "REG-0014",
+      "protection": "Yes for bits 0-3"
+    },
+    {
+      "name": "SYS_STATUS",
+      "addr": 24,
+      "reset": "0x00000041",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-002",
+      "readback": "external",
+      "contract_id": "REG-0018",
+      "protection": "No"
+    },
+    {
+      "name": "SUBSYS_ENABLE",
+      "addr": 28,
+      "reset": "0x0080F81F",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-002",
+      "readback": "internal_reg",
+      "contract_id": "REG-001C",
+      "protection": "Yes for configurable bits"
+    },
+    {
+      "name": "SUBSYS_READY",
+      "addr": 32,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-002",
+      "readback": "external",
+      "contract_id": "REG-0020",
+      "protection": "No"
+    },
+    {
+      "name": "SUBSYS_FAULT",
+      "addr": 36,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-002",
+      "readback": "external",
+      "contract_id": "REG-0024",
+      "protection": "No"
+    },
+    {
+      "name": "RESET_CONTROL",
+      "addr": 40,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-001 / RTL-002",
+      "readback": "zero",
+      "contract_id": "REG-0028",
+      "protection": "Yes"
+    },
+    {
+      "name": "RESET_STATUS",
+      "addr": 44,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C",
+      "owner": "RTL-002",
+      "readback": "external",
+      "contract_id": "REG-002C",
+      "protection": "No"
+    },
+    {
+      "name": "PROTECT_KEY",
+      "addr": 48,
+      "reset": "0x00000000",
+      "access_summary": "WO-CMD",
+      "owner": "RTL-001",
+      "readback": "zero",
+      "contract_id": "REG-0030",
+      "protection": "No"
+    },
+    {
+      "name": "PROTECT_STATUS",
+      "addr": 52,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RO, RSV0",
+      "owner": "RTL-001",
+      "readback": "external",
+      "contract_id": "REG-0034",
+      "protection": "No"
+    },
+    {
+      "name": "CONFIG_ERROR_STATUS",
+      "addr": 56,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RO",
+      "owner": "RTL-001",
+      "readback": "internal_w1c",
+      "contract_id": "REG-0038",
+      "protection": "No"
+    },
+    {
+      "name": "CONFIG_ERROR_ADDR",
+      "addr": 60,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-001",
+      "readback": "internal_capture",
+      "contract_id": "REG-003C",
+      "protection": "No"
+    },
+    {
+      "name": "CONFIG_ERROR_DATA",
+      "addr": 64,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-001",
+      "readback": "internal_capture",
+      "contract_id": "REG-0040",
+      "protection": "No"
+    },
+    {
+      "name": "RTL002_EVT_OVERFLOW_STATUS",
+      "addr": 68,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-002",
+      "readback": "external",
+      "contract_id": "REG-0044",
+      "protection": "No"
+    },
+    {
+      "name": "RTL001_EVT_OVERFLOW_STATUS",
+      "addr": 72,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-001",
+      "readback": "internal_w1c",
+      "contract_id": "REG-0048",
+      "protection": "No"
+    },
+    {
+      "name": "CONDITION_MASK_SELECT",
+      "addr": 76,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001",
+      "readback": "internal_reg",
+      "contract_id": "REG-004C",
+      "protection": "No"
+    },
+    {
+      "name": "EVENT_CONDITION_MASK_LO",
+      "addr": 80,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001",
+      "readback": "internal_reg",
+      "contract_id": "REG-0050",
+      "protection": "No"
+    },
+    {
+      "name": "EVENT_CONDITION_MASK_HI",
+      "addr": 84,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001",
+      "readback": "internal_reg",
+      "contract_id": "REG-0054",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_CONDITION_MASK_LO",
+      "addr": 88,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001",
+      "readback": "internal_reg",
+      "contract_id": "REG-0058",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_CONDITION_MASK_HI",
+      "addr": 92,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001",
+      "readback": "internal_reg",
+      "contract_id": "REG-005C",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_ENABLE",
+      "addr": 256,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-003",
+      "readback": "internal_reg",
+      "contract_id": "REG-0100",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_RAW_STATUS",
+      "addr": 260,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-003",
+      "readback": "external",
+      "contract_id": "REG-0104",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_PENDING",
+      "addr": 264,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-003",
+      "readback": "external",
+      "contract_id": "REG-0108",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_ACK",
+      "addr": 268,
+      "reset": "0x00000000",
+      "access_summary": "WO-CMD",
+      "owner": "RTL-003",
+      "readback": "zero",
+      "contract_id": "REG-010C",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_ACKED",
+      "addr": 272,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-003",
+      "readback": "external",
+      "contract_id": "REG-0110",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_CLEAR",
+      "addr": 276,
+      "reset": "0x00000000",
+      "access_summary": "W1C",
+      "owner": "RTL-003",
+      "readback": "external",
+      "contract_id": "REG-0114",
+      "protection": "No"
+    },
+    {
+      "name": "IRQ_VECTOR",
+      "addr": 280,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-003",
+      "readback": "external",
+      "contract_id": "REG-0118",
+      "protection": "No"
+    },
+    {
+      "name": "RTL003_EVT_OVERFLOW_STATUS",
+      "addr": 284,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-003",
+      "readback": "external",
+      "contract_id": "REG-011C",
+      "protection": "No"
+    },
+    {
+      "name": "TIME_CONTROL",
+      "addr": 512,
+      "reset": "0x00000001",
+      "access_summary": "Mixed: CONST1, RW, RSV0",
+      "owner": "RTL-004",
+      "readback": "internal_reg",
+      "contract_id": "REG-0200",
+      "protection": "Yes for CORRELATION_ENABLE; ENABLE is constant one"
+    },
+    {
+      "name": "TIME_STATUS",
+      "addr": 516,
+      "reset": "0x00000001",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-004",
+      "readback": "external",
+      "contract_id": "REG-0204",
+      "protection": "No"
+    },
+    {
+      "name": "TIME_SNAPSHOT",
+      "addr": 520,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-004",
+      "readback": "zero",
+      "contract_id": "REG-0208",
+      "protection": "No"
+    },
+    {
+      "name": "TIME_RAW_LO",
+      "addr": 524,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-004",
+      "readback": "external",
+      "contract_id": "REG-020C",
+      "protection": "No"
+    },
+    {
+      "name": "TIME_RAW_HI",
+      "addr": 528,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-004",
+      "readback": "external",
+      "contract_id": "REG-0210",
+      "protection": "No"
+    },
+    {
+      "name": "TIME_SYNC_OFFSET_LO",
+      "addr": 532,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-004",
+      "readback": "internal_reg",
+      "contract_id": "REG-0214",
+      "protection": "Yes"
+    },
+    {
+      "name": "TIME_SYNC_OFFSET_HI",
+      "addr": 536,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-004",
+      "readback": "internal_reg",
+      "contract_id": "REG-0218",
+      "protection": "Yes"
+    },
+    {
+      "name": "TIME_SYNC_COMMIT",
+      "addr": 540,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-001 / RTL-004",
+      "readback": "zero",
+      "contract_id": "REG-021C",
+      "protection": "Yes"
+    },
+    {
+      "name": "TIME_SYNC_STATUS",
+      "addr": 544,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-004",
+      "readback": "external",
+      "contract_id": "REG-0220",
+      "protection": "No"
+    },
+    {
+      "name": "RTL004_EVT_OVERFLOW_STATUS",
+      "addr": 548,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-004",
+      "readback": "external",
+      "contract_id": "REG-0224",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_CONTROL",
+      "addr": 768,
+      "reset": "0x00000003",
+      "access_summary": "Mixed: RW, CONST1, RSV0",
+      "owner": "RTL-005",
+      "readback": "internal_reg",
+      "contract_id": "REG-0300",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_STATUS",
+      "addr": 772,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-0304",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_COUNT",
+      "addr": 776,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-0308",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_OVERFLOW_COUNT",
+      "addr": 780,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-030C",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_SOURCE_ENABLE",
+      "addr": 784,
+      "reset": "0x00FFFFFF",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-005",
+      "readback": "internal_reg",
+      "contract_id": "REG-0310",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_SNAPSHOT",
+      "addr": 788,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-005",
+      "readback": "zero",
+      "contract_id": "REG-0314",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_DATA0",
+      "addr": 792,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-0318",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_DATA1",
+      "addr": 796,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-031C",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_DATA2",
+      "addr": 800,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-0320",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_DATA3",
+      "addr": 804,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-0324",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_POP",
+      "addr": 808,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-005",
+      "readback": "zero",
+      "contract_id": "REG-0328",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_CLEAR",
+      "addr": 812,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-005",
+      "readback": "zero",
+      "contract_id": "REG-032C",
+      "protection": "Yes"
+    },
+    {
+      "name": "EVT_DROP_SOURCE",
+      "addr": 816,
+      "reset": "0x00000000",
+      "access_summary": "W1C",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-0330",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_ARB_STATUS",
+      "addr": 820,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-0334",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_CONTROL",
+      "addr": 1024,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-006",
+      "readback": "internal_reg",
+      "contract_id": "REG-0400",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_DIR",
+      "addr": 1028,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-006 / RTL-024",
+      "readback": "internal_reg",
+      "contract_id": "REG-0404",
+      "protection": "Yes"
+    },
+    {
+      "name": "GPIO_OUT",
+      "addr": 1032,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-006",
+      "readback": "internal_reg",
+      "contract_id": "REG-0408",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_RAW_IN",
+      "addr": 1036,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-006",
+      "readback": "external",
+      "contract_id": "REG-040C",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_SYNC_IN",
+      "addr": 1040,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-006",
+      "readback": "external",
+      "contract_id": "REG-0410",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_QUAL_IN",
+      "addr": 1044,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-006",
+      "readback": "external",
+      "contract_id": "REG-0414",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_RISE_ENABLE",
+      "addr": 1048,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-006",
+      "readback": "internal_reg",
+      "contract_id": "REG-0418",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_FALL_ENABLE",
+      "addr": 1052,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-006",
+      "readback": "internal_reg",
+      "contract_id": "REG-041C",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_EVENT_ENABLE",
+      "addr": 1056,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-006",
+      "readback": "internal_reg",
+      "contract_id": "REG-0420",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_IRQ_ENABLE",
+      "addr": 1060,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-006",
+      "readback": "internal_reg",
+      "contract_id": "REG-0424",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_EVENT_STATUS",
+      "addr": 1064,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0",
+      "owner": "RTL-006",
+      "readback": "external",
+      "contract_id": "REG-0428",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_QUAL_0_3",
+      "addr": 1068,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-006",
+      "readback": "internal_reg",
+      "contract_id": "REG-042C",
+      "protection": "No"
+    },
+    {
+      "name": "GPIO_QUAL_4_7",
+      "addr": 1072,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-006",
+      "readback": "internal_reg",
+      "contract_id": "REG-0430",
+      "protection": "No"
+    },
+    {
+      "name": "RTL006_EVT_OVERFLOW_STATUS",
+      "addr": 1076,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-006",
+      "readback": "external",
+      "contract_id": "REG-0434",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_CONTROL",
+      "addr": 1280,
+      "reset": "0x00000001",
+      "access_summary": "Mixed: CONST1, RW, RSV0",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "internal_reg",
+      "contract_id": "REG-0500",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_STATUS",
+      "addr": 1284,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0504",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_LAST_RESULT",
+      "addr": 1288,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0508",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_LAST_ADDRESS",
+      "addr": 1292,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "external",
+      "contract_id": "REG-050C",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_COMPLETED_COUNT",
+      "addr": 1296,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0510",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_CRC_ERROR_COUNT",
+      "addr": 1300,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0514",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_ABORT_COUNT",
+      "addr": 1304,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0518",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_TIMEOUT_COUNT",
+      "addr": 1308,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "external",
+      "contract_id": "REG-051C",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_ACCESS_ERROR_COUNT",
+      "addr": 1312,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-001 / RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0520",
+      "protection": "No"
+    },
+    {
+      "name": "RTL024_EVT_OVERFLOW_STATUS",
+      "addr": 1316,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0524",
+      "protection": "No"
+    },
+    {
+      "name": "BUFFER_STATUS",
+      "addr": 1320,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0528",
+      "protection": "No"
+    },
+    {
+      "name": "HOST_LAST_SEQUENCE",
+      "addr": 1324,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-024 / RTL-001",
+      "readback": "external",
+      "contract_id": "REG-052C",
+      "protection": "No"
+    },
+    {
+      "name": "TEST_CONTROL",
+      "addr": 1536,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-024 / ASIC wrapper",
+      "readback": "internal_reg",
+      "contract_id": "REG-0600",
+      "protection": "Yes"
+    },
+    {
+      "name": "TEST_STATUS",
+      "addr": 1540,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-024 / ASIC wrapper",
+      "readback": "external",
+      "contract_id": "REG-0604",
+      "protection": "No"
+    },
+    {
+      "name": "TEST_COMMAND",
+      "addr": 1544,
+      "reset": "0x00000000",
+      "access_summary": "WO-CMD",
+      "owner": "RTL-024 / ASIC wrapper",
+      "readback": "zero",
+      "contract_id": "REG-0608",
+      "protection": "Yes"
+    },
+    {
+      "name": "TEST_LOOPBACK",
+      "addr": 1548,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-024",
+      "readback": "internal_reg",
+      "contract_id": "REG-060C",
+      "protection": "Yes"
+    },
+    {
+      "name": "TEST_IRQ_INJECT",
+      "addr": 1552,
+      "reset": "0x00000000",
+      "access_summary": "WO-CMD",
+      "owner": "RTL-024 / RTL-003",
+      "readback": "zero",
+      "contract_id": "REG-0610",
+      "protection": "Yes"
+    },
+    {
+      "name": "TEST_FAULT_INJECT",
+      "addr": 1556,
+      "reset": "0x00000000",
+      "access_summary": "WO-CMD",
+      "owner": "RTL-024 / RTL-013",
+      "readback": "zero",
+      "contract_id": "REG-0614",
+      "protection": "Yes"
+    },
+    {
+      "name": "ARX_CONTROL",
+      "addr": 4096,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-017 / RTL-024",
+      "readback": "internal_reg",
+      "contract_id": "REG-1000",
+      "protection": "Yes for speed while enabled"
+    },
+    {
+      "name": "ARX_STATUS",
+      "addr": 4100,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-1004",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_QUEUE_LEVEL",
+      "addr": 4104,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-1008",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_SNAPSHOT",
+      "addr": 4108,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-017",
+      "readback": "zero",
+      "contract_id": "REG-100C",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_DATA",
+      "addr": 4112,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-1010",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_META",
+      "addr": 4116,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-1014",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_TIME_LO",
+      "addr": 4120,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-1018",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_TIME_HI",
+      "addr": 4124,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-101C",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_POP",
+      "addr": 4128,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-017",
+      "readback": "zero",
+      "contract_id": "REG-1020",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_ERROR_COUNT",
+      "addr": 4132,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-1024",
+      "protection": "No"
+    },
+    {
+      "name": "ARX_OVERFLOW_COUNT",
+      "addr": 4136,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-1028",
+      "protection": "No"
+    },
+    {
+      "name": "RTL017_EVT_OVERFLOW_STATUS",
+      "addr": 4140,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-102C",
+      "protection": "No"
+    },
+    {
+      "name": "ATX_CONTROL",
+      "addr": 4352,
+      "reset": "0x00000010",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-018",
+      "readback": "internal_reg",
+      "contract_id": "REG-1100",
+      "protection": "Yes for speed while enabled"
+    },
+    {
+      "name": "ATX_STATUS",
+      "addr": 4356,
+      "reset": "0x00000004",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-018",
+      "readback": "external",
+      "contract_id": "REG-1104",
+      "protection": "No"
+    },
+    {
+      "name": "ATX_QUEUE_LEVEL",
+      "addr": 4360,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-018",
+      "readback": "external",
+      "contract_id": "REG-1108",
+      "protection": "No"
+    },
+    {
+      "name": "ATX_DATA_STAGE",
+      "addr": 4364,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-018",
+      "readback": "internal_reg",
+      "contract_id": "REG-110C",
+      "protection": "No"
+    },
+    {
+      "name": "ATX_META_STAGE",
+      "addr": 4368,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-018",
+      "readback": "internal_reg",
+      "contract_id": "REG-1110",
+      "protection": "No"
+    },
+    {
+      "name": "ATX_PUSH",
+      "addr": 4372,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-018",
+      "readback": "zero",
+      "contract_id": "REG-1114",
+      "protection": "No"
+    },
+    {
+      "name": "ATX_ERROR_COUNT",
+      "addr": 4376,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-018",
+      "readback": "external",
+      "contract_id": "REG-1118",
+      "protection": "No"
+    },
+    {
+      "name": "ATX_UNDERRUN_COUNT",
+      "addr": 4380,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-018",
+      "readback": "external",
+      "contract_id": "REG-111C",
+      "protection": "No"
+    },
+    {
+      "name": "RTL018_EVT_OVERFLOW_STATUS",
+      "addr": 4384,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-018",
+      "readback": "external",
+      "contract_id": "REG-1120",
+      "protection": "No"
+    },
+    {
+      "name": "ATX_INTERWORD_GAP_BITS",
+      "addr": 4388,
+      "reset": "0x00000004",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-018",
+      "readback": "internal_reg",
+      "contract_id": "REG-1124",
+      "protection": "Yes while enabled"
+    },
+    {
+      "name": "CAN_CONTROL",
+      "addr": 4608,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-019",
+      "readback": "internal_reg",
+      "contract_id": "REG-1200",
+      "protection": "Yes for mode changes"
+    },
+    {
+      "name": "CAN_STATUS",
+      "addr": 4612,
+      "reset": "0x00000004",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1204",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_BIT_TIMING",
+      "addr": 4616,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-019",
+      "readback": "internal_reg",
+      "contract_id": "REG-1208",
+      "protection": "Yes"
+    },
+    {
+      "name": "CAN_ERROR_COUNT",
+      "addr": 4620,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-120C",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_LEVEL",
+      "addr": 4624,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1210",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_SNAPSHOT",
+      "addr": 4628,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-019",
+      "readback": "zero",
+      "contract_id": "REG-1214",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_ID",
+      "addr": 4632,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1218",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_META",
+      "addr": 4636,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-121C",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_DATA_LO",
+      "addr": 4640,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1220",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_DATA_HI",
+      "addr": 4644,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1224",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_TIME_LO",
+      "addr": 4648,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1228",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_TIME_HI",
+      "addr": 4652,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-122C",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RX_POP",
+      "addr": 4656,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-019",
+      "readback": "zero",
+      "contract_id": "REG-1230",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_TX_LEVEL",
+      "addr": 4660,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1234",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_TX_ID_STAGE",
+      "addr": 4664,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-019",
+      "readback": "internal_reg",
+      "contract_id": "REG-1238",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_TX_META_STAGE",
+      "addr": 4668,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-019",
+      "readback": "internal_reg",
+      "contract_id": "REG-123C",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_TX_DATA_LO_STAGE",
+      "addr": 4672,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-019",
+      "readback": "internal_reg",
+      "contract_id": "REG-1240",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_TX_DATA_HI_STAGE",
+      "addr": 4676,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-019",
+      "readback": "internal_reg",
+      "contract_id": "REG-1244",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_TX_PUSH",
+      "addr": 4680,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-019",
+      "readback": "zero",
+      "contract_id": "REG-1248",
+      "protection": "No"
+    },
+    {
+      "name": "RTL019_EVT_OVERFLOW_STATUS",
+      "addr": 4684,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-124C",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_RECOVERY",
+      "addr": 4688,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-019",
+      "readback": "zero",
+      "contract_id": "REG-1250",
+      "protection": "Yes"
+    },
+    {
+      "name": "UART_CONTROL",
+      "addr": 4864,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-020",
+      "readback": "internal_reg",
+      "contract_id": "REG-1300",
+      "protection": "Yes for format while enabled"
+    },
+    {
+      "name": "UART_STATUS",
+      "addr": 4868,
+      "reset": "0x00000004",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-1304",
+      "protection": "No"
+    },
+    {
+      "name": "UART_BAUD_DIV",
+      "addr": 4872,
+      "reset": "0x000001B2",
+      "access_summary": "RW",
+      "owner": "RTL-020",
+      "readback": "internal_reg",
+      "contract_id": "REG-1308",
+      "protection": "Yes"
+    },
+    {
+      "name": "UART_RX_LEVEL",
+      "addr": 4876,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-130C",
+      "protection": "No"
+    },
+    {
+      "name": "UART_RX_DATA",
+      "addr": 4880,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-1310",
+      "protection": "No"
+    },
+    {
+      "name": "UART_RX_POP",
+      "addr": 4884,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-020",
+      "readback": "zero",
+      "contract_id": "REG-1314",
+      "protection": "No"
+    },
+    {
+      "name": "UART_TX_LEVEL",
+      "addr": 4888,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-1318",
+      "protection": "No"
+    },
+    {
+      "name": "UART_TX_DATA",
+      "addr": 4892,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-020",
+      "readback": "internal_reg",
+      "contract_id": "REG-131C",
+      "protection": "No"
+    },
+    {
+      "name": "UART_TX_PUSH",
+      "addr": 4896,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-020",
+      "readback": "zero",
+      "contract_id": "REG-1320",
+      "protection": "No"
+    },
+    {
+      "name": "UART_ERROR_COUNT",
+      "addr": 4900,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-1324",
+      "protection": "No"
+    },
+    {
+      "name": "RTL020_EVT_OVERFLOW_STATUS",
+      "addr": 4904,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-1328",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_CONTROL",
+      "addr": 5120,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-021",
+      "readback": "internal_reg",
+      "contract_id": "REG-1400",
+      "protection": "Yes"
+    },
+    {
+      "name": "ROUTE_STATUS",
+      "addr": 5124,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1404",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_ENTRY_SELECT",
+      "addr": 5128,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "internal_reg",
+      "contract_id": "REG-1408",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_STAGE_SOURCE",
+      "addr": 5132,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "internal_reg",
+      "contract_id": "REG-140C",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_STAGE_DEST",
+      "addr": 5136,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "internal_reg",
+      "contract_id": "REG-1410",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_STAGE_TYPE_MASK",
+      "addr": 5140,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "internal_reg",
+      "contract_id": "REG-1414",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_STAGE_FILTER_VALUE",
+      "addr": 5144,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "internal_reg",
+      "contract_id": "REG-1418",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_STAGE_FILTER_MASK",
+      "addr": 5148,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "internal_reg",
+      "contract_id": "REG-141C",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_STAGE_CONTROL",
+      "addr": 5152,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "internal_reg",
+      "contract_id": "REG-1420",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_VALIDATE_COMMIT",
+      "addr": 5156,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "zero",
+      "contract_id": "REG-1424",
+      "protection": "Yes"
+    },
+    {
+      "name": "ROUTE_ACTIVE_SOURCE",
+      "addr": 5160,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1428",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_ACTIVE_DEST",
+      "addr": 5164,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-142C",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_ACTIVE_TYPE_MASK",
+      "addr": 5168,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1430",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_ACTIVE_FILTER_VALUE",
+      "addr": 5172,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1434",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_ACTIVE_FILTER_MASK",
+      "addr": 5176,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1438",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_ENTRY_STATUS",
+      "addr": 5180,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-143C",
+      "protection": "No"
+    },
+    {
+      "name": "RTL021_EVT_OVERFLOW_STATUS",
+      "addr": 5184,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1440",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_CONTROL",
+      "addr": 8192,
+      "reset": "0x00000002",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-007",
+      "readback": "internal_reg",
+      "contract_id": "REG-2000",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_STATUS",
+      "addr": 8196,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-007",
+      "readback": "external",
+      "contract_id": "REG-2004",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_RPM",
+      "addr": 8200,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-007",
+      "readback": "external",
+      "contract_id": "REG-2008",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_PERIOD_TICKS",
+      "addr": 8204,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-007",
+      "readback": "external",
+      "contract_id": "REG-200C",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_THRESH_LOW",
+      "addr": 8208,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-007",
+      "readback": "internal_reg",
+      "contract_id": "REG-2010",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_THRESH_HIGH",
+      "addr": 8212,
+      "reset": "0x000003E8",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-007",
+      "readback": "internal_reg",
+      "contract_id": "REG-2014",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_PULSES_PER_REV",
+      "addr": 8216,
+      "reset": "0x00000001",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-007",
+      "readback": "internal_reg",
+      "contract_id": "REG-2018",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_TIMEOUT_US",
+      "addr": 8220,
+      "reset": "0x000186A0",
+      "access_summary": "RW",
+      "owner": "RTL-007",
+      "readback": "internal_reg",
+      "contract_id": "REG-201C",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_EDGE_FILTER",
+      "addr": 8224,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-007",
+      "readback": "internal_reg",
+      "contract_id": "REG-2020",
+      "protection": "No"
+    },
+    {
+      "name": "RTL007_EVT_OVERFLOW_STATUS",
+      "addr": 8228,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-007",
+      "readback": "external",
+      "contract_id": "REG-2024",
+      "protection": "No"
+    },
+    {
+      "name": "ROTOR_HYSTERESIS",
+      "addr": 8232,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-007",
+      "readback": "internal_reg",
+      "contract_id": "REG-2028",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_CONTROL",
+      "addr": 8448,
+      "reset": "0x00000002",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-008",
+      "readback": "internal_reg",
+      "contract_id": "REG-2100",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_STATUS",
+      "addr": 8452,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-008",
+      "readback": "external",
+      "contract_id": "REG-2104",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_RPM",
+      "addr": 8456,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-008",
+      "readback": "external",
+      "contract_id": "REG-2108",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_PERIOD_TICKS",
+      "addr": 8460,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-008",
+      "readback": "external",
+      "contract_id": "REG-210C",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_THRESH_LOW",
+      "addr": 8464,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-008",
+      "readback": "internal_reg",
+      "contract_id": "REG-2110",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_THRESH_HIGH",
+      "addr": 8468,
+      "reset": "0x00004E20",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-008",
+      "readback": "internal_reg",
+      "contract_id": "REG-2114",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_PULSES_PER_REV",
+      "addr": 8472,
+      "reset": "0x00000001",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-008",
+      "readback": "internal_reg",
+      "contract_id": "REG-2118",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_TIMEOUT_US",
+      "addr": 8476,
+      "reset": "0x000186A0",
+      "access_summary": "RW",
+      "owner": "RTL-008",
+      "readback": "internal_reg",
+      "contract_id": "REG-211C",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_EDGE_FILTER",
+      "addr": 8480,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-008",
+      "readback": "internal_reg",
+      "contract_id": "REG-2120",
+      "protection": "No"
+    },
+    {
+      "name": "RTL008_EVT_OVERFLOW_STATUS",
+      "addr": 8484,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-008",
+      "readback": "external",
+      "contract_id": "REG-2124",
+      "protection": "No"
+    },
+    {
+      "name": "ENGINE_HYSTERESIS",
+      "addr": 8488,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-008",
+      "readback": "internal_reg",
+      "contract_id": "REG-2128",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_CONTROL",
+      "addr": 8704,
+      "reset": "0x00000002",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2200",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_STATUS",
+      "addr": 8708,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-009",
+      "readback": "external",
+      "contract_id": "REG-2204",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_FREQ_Q17_15",
+      "addr": 8712,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-009",
+      "readback": "external",
+      "contract_id": "REG-2208",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_PERIOD_TICKS",
+      "addr": 8716,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-009",
+      "readback": "external",
+      "contract_id": "REG-220C",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_THRESH_LOW_Q17_15",
+      "addr": 8720,
+      "reset": "0x00004000",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2210",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_THRESH_HIGH_Q17_15",
+      "addr": 8724,
+      "reset": "0xC3500000",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2214",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_TIMEOUT_US",
+      "addr": 8728,
+      "reset": "0x002625A0",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2218",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_EDGE_FILTER",
+      "addr": 8732,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-221C",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE0_HYSTERESIS_Q17_15",
+      "addr": 8736,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2220",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_CONTROL",
+      "addr": 8752,
+      "reset": "0x00000002",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2230",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_STATUS",
+      "addr": 8756,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-009",
+      "readback": "external",
+      "contract_id": "REG-2234",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_FREQ_Q17_15",
+      "addr": 8760,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-009",
+      "readback": "external",
+      "contract_id": "REG-2238",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_PERIOD_TICKS",
+      "addr": 8764,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-009",
+      "readback": "external",
+      "contract_id": "REG-223C",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_THRESH_LOW_Q17_15",
+      "addr": 8768,
+      "reset": "0x00004000",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2240",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_THRESH_HIGH_Q17_15",
+      "addr": 8772,
+      "reset": "0xC3500000",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2244",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_TIMEOUT_US",
+      "addr": 8776,
+      "reset": "0x002625A0",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2248",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_EDGE_FILTER",
+      "addr": 8780,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-224C",
+      "protection": "No"
+    },
+    {
+      "name": "RTL009_EVT_OVERFLOW_STATUS",
+      "addr": 8784,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-009",
+      "readback": "external",
+      "contract_id": "REG-2250",
+      "protection": "No"
+    },
+    {
+      "name": "PULSE1_HYSTERESIS_Q17_15",
+      "addr": 8788,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-009",
+      "readback": "internal_reg",
+      "contract_id": "REG-2254",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR_CONTROL",
+      "addr": 8960,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2300",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR_STATUS",
+      "addr": 8964,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-2304",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR_UPDATE_SELECT",
+      "addr": 8968,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2308",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR_UPDATE_VALUE",
+      "addr": 8972,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-230C",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR_UPDATE_META",
+      "addr": 8976,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2310",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR_UPDATE_COMMIT",
+      "addr": 8980,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-001 / RTL-010",
+      "readback": "zero",
+      "contract_id": "REG-2314",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_VALUE",
+      "addr": 8992,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-2320",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_STATUS",
+      "addr": 8996,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-2324",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_MAX_AGE_MS",
+      "addr": 9000,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2328",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_CURRENT_AGE_MS",
+      "addr": 9004,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-232C",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_THRESH_LOW",
+      "addr": 9008,
+      "reset": "0x80000000",
+      "access_summary": "RW",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2330",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_THRESH_HIGH",
+      "addr": 9012,
+      "reset": "0x7FFFFFFF",
+      "access_summary": "RW",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2334",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_EVENT_IRQ_CFG",
+      "addr": 9016,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2338",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_VALUE",
+      "addr": 9024,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-2340",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_STATUS",
+      "addr": 9028,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-2344",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_MAX_AGE_MS",
+      "addr": 9032,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2348",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_CURRENT_AGE_MS",
+      "addr": 9036,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-234C",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_THRESH_LOW",
+      "addr": 9040,
+      "reset": "0x80000000",
+      "access_summary": "RW",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2350",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_THRESH_HIGH",
+      "addr": 9044,
+      "reset": "0x7FFFFFFF",
+      "access_summary": "RW",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2354",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_EVENT_IRQ_CFG",
+      "addr": 9048,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2358",
+      "protection": "No"
+    },
+    {
+      "name": "RTL010_EVT_OVERFLOW_STATUS",
+      "addr": 9052,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-235C",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_HYSTERESIS",
+      "addr": 9056,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2360",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR0_META",
+      "addr": 9060,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-2364",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_HYSTERESIS",
+      "addr": 9064,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-010",
+      "readback": "internal_reg",
+      "contract_id": "REG-2368",
+      "protection": "No"
+    },
+    {
+      "name": "SENSOR1_META",
+      "addr": 9068,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-010",
+      "readback": "external",
+      "contract_id": "REG-236C",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_CONTROL",
+      "addr": 9216,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-011",
+      "readback": "internal_reg",
+      "contract_id": "REG-2400",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_RAW_IN",
+      "addr": 9220,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-011",
+      "readback": "external",
+      "contract_id": "REG-2404",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_SYNC_IN",
+      "addr": 9224,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-011",
+      "readback": "external",
+      "contract_id": "REG-2408",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_QUAL_IN",
+      "addr": 9228,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-011",
+      "readback": "external",
+      "contract_id": "REG-240C",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_ACTIVE",
+      "addr": 9232,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-011",
+      "readback": "external",
+      "contract_id": "REG-2410",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_STICKY",
+      "addr": 9236,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0",
+      "owner": "RTL-011",
+      "readback": "external",
+      "contract_id": "REG-2414",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_POLARITY",
+      "addr": 9240,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-011",
+      "readback": "internal_reg",
+      "contract_id": "REG-2418",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_FAULT_ENABLE",
+      "addr": 9244,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-011",
+      "readback": "internal_reg",
+      "contract_id": "REG-241C",
+      "protection": "Yes"
+    },
+    {
+      "name": "HEALTH_EVENT_ENABLE",
+      "addr": 9248,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-011",
+      "readback": "internal_reg",
+      "contract_id": "REG-2420",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_IRQ_ENABLE",
+      "addr": 9252,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-011",
+      "readback": "internal_reg",
+      "contract_id": "REG-2424",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_QUAL_0_3",
+      "addr": 9256,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-011",
+      "readback": "internal_reg",
+      "contract_id": "REG-2428",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_QUAL_4_7",
+      "addr": 9260,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-011",
+      "readback": "internal_reg",
+      "contract_id": "REG-242C",
+      "protection": "No"
+    },
+    {
+      "name": "RTL011_EVT_OVERFLOW_STATUS",
+      "addr": 9264,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-011",
+      "readback": "external",
+      "contract_id": "REG-2430",
+      "protection": "No"
+    },
+    {
+      "name": "WDOG_CONTROL",
+      "addr": 12288,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-012",
+      "readback": "internal_reg",
+      "contract_id": "REG-3000",
+      "protection": "Yes"
+    },
+    {
+      "name": "WDOG_WINDOW_OPEN_US",
+      "addr": 12292,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-012",
+      "readback": "internal_reg",
+      "contract_id": "REG-3004",
+      "protection": "No"
+    },
+    {
+      "name": "WDOG_TIMEOUT_US",
+      "addr": 12296,
+      "reset": "0x000F4240",
+      "access_summary": "RW",
+      "owner": "RTL-012",
+      "readback": "internal_reg",
+      "contract_id": "REG-3008",
+      "protection": "No"
+    },
+    {
+      "name": "WDOG_SERVICE",
+      "addr": 12300,
+      "reset": "0x00000000",
+      "access_summary": "WO-CMD",
+      "owner": "RTL-012",
+      "readback": "zero",
+      "contract_id": "REG-300C",
+      "protection": "No"
+    },
+    {
+      "name": "WDOG_STATUS",
+      "addr": 12304,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-012",
+      "readback": "external",
+      "contract_id": "REG-3010",
+      "protection": "No"
+    },
+    {
+      "name": "WDOG_ELAPSED_US",
+      "addr": 12308,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-012",
+      "readback": "external",
+      "contract_id": "REG-3014",
+      "protection": "No"
+    },
+    {
+      "name": "WDOG_RECOVERY",
+      "addr": 12312,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-012",
+      "readback": "zero",
+      "contract_id": "REG-3018",
+      "protection": "Yes"
+    },
+    {
+      "name": "RTL012_EVT_OVERFLOW_STATUS",
+      "addr": 12316,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-012",
+      "readback": "external",
+      "contract_id": "REG-301C",
+      "protection": "No"
+    },
+    {
+      "name": "FAULT_CONTROL",
+      "addr": 12544,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, WO-CMD, RSV0",
+      "owner": "RTL-013",
+      "readback": "internal_reg",
+      "contract_id": "REG-3100",
+      "protection": "Yes"
+    },
+    {
+      "name": "FAULT_STATUS",
+      "addr": 12548,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RO, RSV0",
+      "owner": "RTL-013",
+      "readback": "external",
+      "contract_id": "REG-3104",
+      "protection": "No"
+    },
+    {
+      "name": "FAULT_CLASS",
+      "addr": 12552,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-013",
+      "readback": "external",
+      "contract_id": "REG-3108",
+      "protection": "No"
+    },
+    {
+      "name": "FAULT_RESPONSE",
+      "addr": 12556,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-013",
+      "readback": "internal_reg",
+      "contract_id": "REG-310C",
+      "protection": "Yes"
+    },
+    {
+      "name": "DEGRADED_STATUS",
+      "addr": 12560,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-013",
+      "readback": "external",
+      "contract_id": "REG-3110",
+      "protection": "No"
+    },
+    {
+      "name": "FAULT_ACTIVE_SOURCE",
+      "addr": 12564,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-013",
+      "readback": "external",
+      "contract_id": "REG-3114",
+      "protection": "No"
+    },
+    {
+      "name": "FAULT_LATCHED_SOURCE",
+      "addr": 12568,
+      "reset": "0x00000000",
+      "access_summary": "W1C",
+      "owner": "RTL-013",
+      "readback": "external",
+      "contract_id": "REG-3118",
+      "protection": "No"
+    },
+    {
+      "name": "FAULT_RECOVERABLE_MASK",
+      "addr": 12572,
+      "reset": "0x00017FEF",
+      "access_summary": "CONST",
+      "owner": "RTL-013",
+      "readback": "const",
+      "contract_id": "REG-311C",
+      "protection": "No"
+    },
+    {
+      "name": "RTL013_EVT_OVERFLOW_STATUS",
+      "addr": 12576,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-013",
+      "readback": "external",
+      "contract_id": "REG-3120",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_CONTROL",
+      "addr": 12800,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-014",
+      "readback": "internal_reg",
+      "contract_id": "REG-3200",
+      "protection": "Yes"
+    },
+    {
+      "name": "ILOCK_STATUS",
+      "addr": 12804,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-014",
+      "readback": "external",
+      "contract_id": "REG-3204",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_ENTRY_SELECT",
+      "addr": 12808,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "internal_reg",
+      "contract_id": "REG-3208",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_STAGE_TERMS",
+      "addr": 12812,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "internal_reg",
+      "contract_id": "REG-320C",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_STAGE_LOGIC",
+      "addr": 12816,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "internal_reg",
+      "contract_id": "REG-3210",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_STAGE_GUARD",
+      "addr": 12820,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "internal_reg",
+      "contract_id": "REG-3214",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_STAGE_ENABLE",
+      "addr": 12824,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "internal_reg",
+      "contract_id": "REG-3218",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_VALIDATE_COMMIT",
+      "addr": 12828,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "zero",
+      "contract_id": "REG-321C",
+      "protection": "Yes"
+    },
+    {
+      "name": "ILOCK_ACTIVE_RESULT",
+      "addr": 12832,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-014",
+      "readback": "external",
+      "contract_id": "REG-3220",
+      "protection": "No"
+    },
+    {
+      "name": "RTL014_EVT_OVERFLOW_STATUS",
+      "addr": 12836,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-014",
+      "readback": "external",
+      "contract_id": "REG-3224",
+      "protection": "No"
+    },
+    {
+      "name": "LLINK_CONTROL",
+      "addr": 13056,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-015",
+      "readback": "internal_reg",
+      "contract_id": "REG-3300",
+      "protection": "Yes"
+    },
+    {
+      "name": "LLINK_STATUS",
+      "addr": 13060,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-015",
+      "readback": "external",
+      "contract_id": "REG-3304",
+      "protection": "No"
+    },
+    {
+      "name": "LLINK_MONITOR_SELECT",
+      "addr": 13064,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-015",
+      "readback": "internal_reg",
+      "contract_id": "REG-3308",
+      "protection": "No"
+    },
+    {
+      "name": "LLINK_MONITOR_CONTROL",
+      "addr": 13068,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-015",
+      "readback": "internal_reg",
+      "contract_id": "REG-330C",
+      "protection": "Yes"
+    },
+    {
+      "name": "LLINK_QUALIFY_US",
+      "addr": 13072,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-015",
+      "readback": "internal_reg",
+      "contract_id": "REG-3310",
+      "protection": "No"
+    },
+    {
+      "name": "LLINK_TIMEOUT_US",
+      "addr": 13076,
+      "reset": "0x000F4240",
+      "access_summary": "RW",
+      "owner": "RTL-015",
+      "readback": "internal_reg",
+      "contract_id": "REG-3314",
+      "protection": "No"
+    },
+    {
+      "name": "LLINK_RECOVERY_US",
+      "addr": 13080,
+      "reset": "0x000186A0",
+      "access_summary": "RW",
+      "owner": "RTL-015",
+      "readback": "internal_reg",
+      "contract_id": "REG-3318",
+      "protection": "No"
+    },
+    {
+      "name": "LLINK_ELAPSED_US",
+      "addr": 13084,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-015",
+      "readback": "external",
+      "contract_id": "REG-331C",
+      "protection": "No"
+    },
+    {
+      "name": "LLINK_ACTIVITY_INJECT",
+      "addr": 13088,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-015",
+      "readback": "zero",
+      "contract_id": "REG-3320",
+      "protection": "No"
+    },
+    {
+      "name": "RTL015_EVT_OVERFLOW_STATUS",
+      "addr": 13092,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-015",
+      "readback": "external",
+      "contract_id": "REG-3324",
+      "protection": "No"
+    },
+    {
+      "name": "SAFETY_CONTROL",
+      "addr": 13312,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-016",
+      "readback": "internal_reg",
+      "contract_id": "REG-3400",
+      "protection": "Yes"
+    },
+    {
+      "name": "SAFETY_STATUS",
+      "addr": 13316,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-016",
+      "readback": "external",
+      "contract_id": "REG-3404",
+      "protection": "No"
+    },
+    {
+      "name": "SAFETY_CHANNEL_SELECT",
+      "addr": 13320,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-016",
+      "readback": "internal_reg",
+      "contract_id": "REG-3408",
+      "protection": "No"
+    },
+    {
+      "name": "SAFETY_CHANNEL_CONTROL",
+      "addr": 13324,
+      "reset": "0x00000002",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-016",
+      "readback": "internal_reg",
+      "contract_id": "REG-340C",
+      "protection": "Yes"
+    },
+    {
+      "name": "SAFETY_RESPONSE_MASK",
+      "addr": 13328,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-016",
+      "readback": "internal_reg",
+      "contract_id": "REG-3410",
+      "protection": "Yes"
+    },
+    {
+      "name": "SAFETY_INTERLOCK_MASK",
+      "addr": 13332,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-016",
+      "readback": "internal_reg",
+      "contract_id": "REG-3414",
+      "protection": "Yes"
+    },
+    {
+      "name": "SAFETY_CHANNEL_STATUS",
+      "addr": 13336,
+      "reset": "0x000000CC",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-016",
+      "readback": "external",
+      "contract_id": "REG-3418",
+      "protection": "No"
+    },
+    {
+      "name": "RTL016_EVT_OVERFLOW_STATUS",
+      "addr": 13340,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-016",
+      "readback": "external",
+      "contract_id": "REG-341C",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_CONTROL",
+      "addr": 16384,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, WO-CMD, RSV0",
+      "owner": "RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-4000",
+      "protection": "Yes"
+    },
+    {
+      "name": "ULI_STATUS",
+      "addr": 16388,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-4004",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_PARAM0",
+      "addr": 16392,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-4008",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_PARAM1",
+      "addr": 16396,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-400C",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_PARAM2",
+      "addr": 16400,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-4010",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_PARAM3",
+      "addr": 16404,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-4014",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_PARAM4",
+      "addr": 16408,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-4018",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_PARAM5",
+      "addr": 16412,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-401C",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_PARAM6",
+      "addr": 16416,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-4020",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_PARAM7",
+      "addr": 16420,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-4024",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_IN_LEVEL",
+      "addr": 16424,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-4028",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_IN_DATA",
+      "addr": 16428,
+      "reset": "0x00000000",
+      "access_summary": "RW",
+      "owner": "RTL-001 / RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-402C",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_IN_PUSH",
+      "addr": 16432,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-022",
+      "readback": "zero",
+      "contract_id": "REG-4030",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_OUT_LEVEL",
+      "addr": 16436,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-4034",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_OUT_DATA",
+      "addr": 16440,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-4038",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_OUT_POP",
+      "addr": 16444,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-022",
+      "readback": "zero",
+      "contract_id": "REG-403C",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_IO_DIRECTION",
+      "addr": 16448,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: CONST, RSV0",
+      "owner": "RTL-022 / RTL-024",
+      "readback": "const",
+      "contract_id": "REG-4040",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_IO_INPUT",
+      "addr": 16452,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-4044",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_IO_OUTPUT",
+      "addr": 16456,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-022",
+      "readback": "internal_reg",
+      "contract_id": "REG-4048",
+      "protection": "No"
+    },
+    {
+      "name": "RTL022_EVT_OVERFLOW_STATUS",
+      "addr": 16460,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-404C",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_CONTROL",
+      "addr": 16640,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-023",
+      "readback": "internal_reg",
+      "contract_id": "REG-4100",
+      "protection": "Yes"
+    },
+    {
+      "name": "UROUTE_STATUS",
+      "addr": 16644,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-023",
+      "readback": "external",
+      "contract_id": "REG-4104",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_ENTRY_SELECT",
+      "addr": 16648,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-023",
+      "readback": "internal_reg",
+      "contract_id": "REG-4108",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_STAGE_SOURCE",
+      "addr": 16652,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-023",
+      "readback": "internal_reg",
+      "contract_id": "REG-410C",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_STAGE_DEST",
+      "addr": 16656,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-023",
+      "readback": "internal_reg",
+      "contract_id": "REG-4110",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_STAGE_CONTROL",
+      "addr": 16660,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-023",
+      "readback": "internal_reg",
+      "contract_id": "REG-4114",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_VALIDATE_COMMIT",
+      "addr": 16664,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: WO-CMD, RSV0",
+      "owner": "RTL-001 / RTL-023",
+      "readback": "zero",
+      "contract_id": "REG-4118",
+      "protection": "Yes"
+    },
+    {
+      "name": "UROUTE_ACTIVE_SOURCE",
+      "addr": 16668,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-023",
+      "readback": "external",
+      "contract_id": "REG-411C",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_ACTIVE_DEST",
+      "addr": 16672,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-023",
+      "readback": "external",
+      "contract_id": "REG-4120",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_ENTRY_STATUS",
+      "addr": 16676,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-023",
+      "readback": "external",
+      "contract_id": "REG-4124",
+      "protection": "No"
+    },
+    {
+      "name": "RTL023_EVT_OVERFLOW_STATUS",
+      "addr": 16680,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0, RO",
+      "owner": "RTL-023",
+      "readback": "external",
+      "contract_id": "REG-4128",
+      "protection": "No"
+    }
+  ]
+}

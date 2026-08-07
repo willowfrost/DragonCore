@@ -1,0 +1,619 @@
+{
+  "package": "dfc_interrupt_pkg",
+  "_source": "ASSEMBLED from dfc_irqfault.json's irq_sources (ARCH-002 C.4) and fault_sources (ARCH-002 C.6), both mechanically extracted and verified by extract_irqfault.py. Resolves the project's previously-flagged partially-confirmed fault-source matrix -- all 17 assigned + 15 reserved fault bits are now sourced directly from C.6, not partial retrieval.",
+  "imports": [
+    "dfc_constants_pkg"
+  ],
+  "irq_sources": [
+    {
+      "bit": 0,
+      "source": "System Control",
+      "producer": "RTL-002",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 1,
+      "source": "Event Logger",
+      "producer": "RTL-005",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 2,
+      "source": "GPIO",
+      "producer": "RTL-006",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 3,
+      "source": "ARINC RX",
+      "producer": "RTL-017",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 4,
+      "source": "ARINC TX",
+      "producer": "RTL-018",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 5,
+      "source": "CAN",
+      "producer": "RTL-019",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 6,
+      "source": "UART",
+      "producer": "RTL-020",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 7,
+      "source": "Databus Routing",
+      "producer": "RTL-021",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 8,
+      "source": "Rotor RPM",
+      "producer": "RTL-007",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 9,
+      "source": "Engine RPM",
+      "producer": "RTL-008",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 10,
+      "source": "Pulse/Frequency",
+      "producer": "RTL-009",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 11,
+      "source": "Sensor Monitor",
+      "producer": "RTL-010",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 12,
+      "source": "System Health",
+      "producer": "RTL-011",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 13,
+      "source": "Watchdog",
+      "producer": "RTL-012",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 14,
+      "source": "Fault Manager",
+      "producer": "RTL-013",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 15,
+      "source": "Interlock",
+      "producer": "RTL-014",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 16,
+      "source": "Lost Link",
+      "producer": "RTL-015",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 17,
+      "source": "Safety Output",
+      "producer": "RTL-016",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 18,
+      "source": "Mask-Defined User Logic",
+      "producer": "RTL-022",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 19,
+      "source": "User Routing",
+      "producer": "RTL-023",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 20,
+      "source": "Host Interface",
+      "producer": "RTL-024",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 21,
+      "source": "Configuration Error",
+      "producer": "RTL-001",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 22,
+      "source": "Clock/Reset Integration",
+      "producer": "RTL-024",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 23,
+      "source": "Production Test",
+      "producer": "RTL-024",
+      "port": "irq_req_o",
+      "semantics": "qualified source level or sticky evidence; active condition may reassert after clear",
+      "clear": "W1C after acknowledgement; new assertion dominates",
+      "reserved": false
+    },
+    {
+      "bit": 24,
+      "source": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "semantics": "reserved inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 25,
+      "source": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "semantics": "reserved inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 26,
+      "source": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "semantics": "reserved inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 27,
+      "source": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "semantics": "reserved inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 28,
+      "source": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "semantics": "reserved inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 29,
+      "source": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "semantics": "reserved inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 30,
+      "source": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "semantics": "reserved inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 31,
+      "source": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "semantics": "reserved inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    }
+  ],
+  "fault_sources": [
+    {
+      "bit": 0,
+      "fault": "Watchdog timeout",
+      "producer": "RTL-012",
+      "port": "fault_req_o",
+      "fault_class": "0x04",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 1,
+      "fault": "Interlock violation",
+      "producer": "RTL-014",
+      "port": "fault_req_o",
+      "fault_class": "0x04",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 2,
+      "fault": "Lost-link condition",
+      "producer": "RTL-015",
+      "port": "fault_req_o",
+      "fault_class": "0x03",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 3,
+      "fault": "Safety-output configuration error",
+      "producer": "RTL-016",
+      "port": "fault_req_o",
+      "fault_class": "0x04",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 4,
+      "fault": "System-health aggregate fault",
+      "producer": "RTL-011",
+      "port": "fault_req_o",
+      "fault_class": "0x06",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=false",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 5,
+      "fault": "Event logger overflow",
+      "producer": "RTL-005",
+      "port": "fault_req_o",
+      "fault_class": "0x05",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 6,
+      "fault": "Rotor RPM abnormal/error",
+      "producer": "RTL-007",
+      "port": "fault_req_o",
+      "fault_class": "0x02",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 7,
+      "fault": "Engine RPM abnormal/error",
+      "producer": "RTL-008",
+      "port": "fault_req_o",
+      "fault_class": "0x02",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 8,
+      "fault": "Pulse/frequency abnormal/error",
+      "producer": "RTL-009",
+      "port": "fault_req_o",
+      "fault_class": "0x02",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 9,
+      "fault": "Sensor abnormal/configuration error",
+      "producer": "RTL-010",
+      "port": "fault_req_o",
+      "fault_class": "0x02",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 10,
+      "fault": "ARINC RX error",
+      "producer": "RTL-017",
+      "port": "fault_req_o",
+      "fault_class": "0x03",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 11,
+      "fault": "ARINC TX error",
+      "producer": "RTL-018",
+      "port": "fault_req_o",
+      "fault_class": "0x03",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 12,
+      "fault": "CAN error or bus-off",
+      "producer": "RTL-019",
+      "port": "fault_req_o",
+      "fault_class": "0x03",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 13,
+      "fault": "UART error",
+      "producer": "RTL-020",
+      "port": "fault_req_o",
+      "fault_class": "0x03",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 14,
+      "fault": "Databus routing error",
+      "producer": "RTL-021",
+      "port": "fault_req_o",
+      "fault_class": "0x03",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 15,
+      "fault": "Mask-defined user-logic error",
+      "producer": "RTL-022",
+      "port": "fault_req_o",
+      "fault_class": "0x7F",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=false",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 16,
+      "fault": "User-routing error",
+      "producer": "RTL-023",
+      "port": "fault_req_o",
+      "fault_class": "0x03",
+      "behavior": "active condition plus RTL-013 sticky evidence; recoverable=true",
+      "clear": "eligible host clear; active source remains or relatches; new detection dominates",
+      "reserved": false
+    },
+    {
+      "bit": 17,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 18,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 19,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 20,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 21,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 22,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 23,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 24,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 25,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 26,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 27,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 28,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 29,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 30,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    },
+    {
+      "bit": 31,
+      "fault": "Reserved",
+      "producer": "Tied inactive",
+      "port": "constant_zero",
+      "fault_class": "0x00",
+      "behavior": "inactive",
+      "clear": "writes of one rejected",
+      "reserved": true
+    }
+  ]
+}

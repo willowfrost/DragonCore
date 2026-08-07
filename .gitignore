@@ -1,0 +1,99 @@
+# =============================================================================
+# Dragon Core / DragonFlight .gitignore
+# Everything here is a regenerable BUILD ARTIFACT, not a source-of-truth file.
+# Rule of thumb: if scripts/gate.sh (or Yosys/sby/iverilog directly) produces
+# it fresh on every run, it's ignored. Docs, specs, packages, generated RTL
+# (rtl/*/generated/), and hand-authored RTL (rtl/*/src/) are all tracked --
+# they are meaningful state, not run-to-run noise.
+# =============================================================================
+
+# ---- Icarus Verilog simulation outputs (simulation/iverilog/) ----
+simulation/iverilog/*.vvp
+simulation/iverilog/*.log
+# (Icarus vvp is a runnable object file, .log is per-run console output --
+#  both regenerate every scripts/sim.sh run and have zero value to track.)
+
+# ---- SymbiYosys formal-proof working directories ----
+# sby writes a working dir per job run (BMC traces, solver engine state,
+# counterexample VCDs). Default naming mirrors the .sby basename with no
+# fixed suffix, so this is deliberately broad under verification/formal/.
+verification/formal/**/engine_*/
+verification/formal/**/*_work/
+verification/formal/**/logfile.txt
+verification/formal/**/*.vcd
+
+# sby's default top-level output dir is <basename>_<taskname>/, created
+# right next to the .sby file for each task it runs (scripts/formal.sh
+# invokes sby from within the .sby's own directory). These four suffixes
+# are SymbiYosys's standard mode-based task names, so this pattern covers
+# any future .sby file's default output directories too, not just this one.
+verification/formal/**/*_bmc/
+verification/formal/**/*_prove/
+verification/formal/**/*_cover/
+verification/formal/**/*_live/
+
+# ---- Coverage / regression run artifacts ----
+verification/coverage/*
+!verification/coverage/.gitkeep
+verification/regression/*
+!verification/regression/.gitkeep
+
+# ---- Synthesis / bitstream build outputs ----
+synthesis/yosys/*
+!synthesis/yosys/.gitkeep
+synthesis/openlane/*
+!synthesis/openlane/.gitkeep
+synthesis/reports/*
+!synthesis/reports/.gitkeep
+
+# ---- General run-output tree ----
+output/logs/*
+output/waves/*
+output/bitstreams/*
+output/netlists/*
+output/reports/*
+!output/**/.gitkeep
+
+# ---- Waveform dumps wherever they land ----
+*.vcd
+*.fst
+*.fst.hier
+
+# ---- Python (pkggen / reggen / check_coverage) ----
+__pycache__/
+*.pyc
+*.pyo
+tools/**/__pycache__/
+
+# ---- Editor / OS cruft ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# ---- Stale language-server / tooling leftovers ----
+# (.slang/ was an orphaned VS Code slang-LSP cache from an earlier toolchain
+#  version; guard against it quietly reappearing if an extension regenerates it.)
+.slang/
+
+# ---- Local secrets / machine-specific config (should never be committed) ----
+.env
+*.local
+
+# =============================================================================
+# NOTE ON GENERATED RTL (rtl/*/generated/, include/*.sv):
+# These ARE tracked deliberately, even though a tool produces them, because:
+#   1. CLAUDE.md's hooks treat them as a frozen layer other RTL depends on --
+#      they are not regenerated as part of the normal edit/compile/test loop,
+#      only when REG/ARCH content actually changes.
+#   2. Committing them means anyone (including a future contract designer)
+#      can build without first re-running pkggen/reggen against the JSON.
+# If you'd rather NOT track generated .sv and instead always regenerate from
+# tools/pkggen + tools/reggen at build time, uncomment the two lines below --
+# but note CLAUDE.md's skill/hook text currently assumes these files exist on
+# disk and would need a "run the generator first" step added to your workflow.
+# rtl/*/generated/*.sv
+# include/*.sv

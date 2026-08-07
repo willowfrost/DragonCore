@@ -1,0 +1,44 @@
+{
+  "package": "dfc_version_pkg",
+  "_source": "ASSEMBLED directly from dfc_registers_pkg.json's already-verified CONST Identification-block fields (REG-002 0x0000-0x0010); no separate extractor, since the source values are quoted verbatim in REG-002 and already mechanically confirmed by extract_registers.py.",
+  "imports": [],
+  "params": [
+    {
+      "name": "DFC_DEVICE_ID",
+      "width": 32,
+      "value": "0x44464331",
+      "trace": "REG-002 DFC_DEVICE_ID (0x0000) -- 'DFC1' ASCII product identifier"
+    },
+    {
+      "name": "DFC_PRODUCT_REV_MAJOR",
+      "width": 16,
+      "value": "0x0001",
+      "trace": "REG-002 DFC_PRODUCT_REV (0x0004) MAJOR -- Revision A = 1.0"
+    },
+    {
+      "name": "DFC_PRODUCT_REV_MINOR",
+      "width": 16,
+      "value": "0x0000",
+      "trace": "REG-002 DFC_PRODUCT_REV (0x0004) MINOR"
+    },
+    {
+      "name": "DFC_REGMAP_REV_MAJOR",
+      "width": 16,
+      "value": "0x0003",
+      "trace": "REG-002 DFC_REGMAP_REV (0x0008) MAJOR -- register-contract semantic version"
+    },
+    {
+      "name": "DFC_REGMAP_REV_MINOR",
+      "width": 16,
+      "value": "0x0001",
+      "trace": "REG-002 DFC_REGMAP_REV (0x0008) MINOR"
+    },
+    {
+      "name": "DFC_CAPABILITY0_RESET",
+      "width": 24,
+      "value": "0xFFFFFF",
+      "trace": "REG-002 DFC_CAPABILITY0 (0x0010) MODULE_PRESENT reset -- RTL-001..24 presence bitmap"
+    }
+  ],
+  "note": "DFC_BUILD_ID intentionally omitted: REG-002 defines it as the generated build parameter BUILD_ID (default 0x00000000), not a fixed document-derived constant; supplying a literal here would invent a value the doc does not fix."
+}

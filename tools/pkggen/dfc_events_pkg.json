@@ -1,0 +1,383 @@
+{
+  "package": "dfc_events_pkg",
+  "_source": "ASSEMBLED from dfc_irqfault.json's event_sources (ARCH-002 C.5) and event_registry (ARCH-002 C.7), both mechanically extracted and verified by extract_irqfault.py.",
+  "imports": [
+    "dfc_constants_pkg"
+  ],
+  "event_sources": [
+    {
+      "index": 0,
+      "source_id": "0x01",
+      "producer": "RTL-001",
+      "allowed_event_ids": "0x0002; 0x0003",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-001.status_o.event_overflow; EVT_DROP_SOURCE[0]; saturating source loss count"
+    },
+    {
+      "index": 1,
+      "source_id": "0x02",
+      "producer": "RTL-002",
+      "allowed_event_ids": "0x0001; 0x0004",
+      "arbitration": "one stable pending record; reset > fault/illegal > degraded > test > startup/normal; state event 0x0001 and reset event 0x0004; handshake clears record only",
+      "overflow_route": "occupied-slot arrivals increment saturating loss count, set event_overflow, and schedule 0x007E; disabled normal events are suppressed without overflow; safety/overflow bypass"
+    },
+    {
+      "index": 2,
+      "source_id": "0x03",
+      "producer": "RTL-003",
+      "allowed_event_ids": "0x0008; 0x007E",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-003.status_o.event_overflow; EVT_DROP_SOURCE[2]; saturating source loss count"
+    },
+    {
+      "index": 3,
+      "source_id": "0x04",
+      "producer": "RTL-004",
+      "allowed_event_ids": "0x0009; 0x007E",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-004.status_o.event_overflow; EVT_DROP_SOURCE[3]; saturating source loss count"
+    },
+    {
+      "index": 4,
+      "source_id": "0x05",
+      "producer": "RTL-005",
+      "allowed_event_ids": "0x000A; 0x007E; 0x007F",
+      "arbitration": "event-store overflow has priority over source overflow; internally generated overflow records use the nonrecursive path in ARCH-EVT-007",
+      "overflow_route": "RTL-005.status_o.event_overflow; EVT_DROP_SOURCE[4]; saturating source and store loss counts"
+    },
+    {
+      "index": 5,
+      "source_id": "0x06",
+      "producer": "RTL-006",
+      "allowed_event_ids": "0x0010",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-006.status_o.event_overflow; EVT_DROP_SOURCE[5]; saturating source loss count"
+    },
+    {
+      "index": 6,
+      "source_id": "0x07",
+      "producer": "RTL-007",
+      "allowed_event_ids": "0x0030",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-007.status_o.event_overflow; EVT_DROP_SOURCE[6]; saturating source loss count"
+    },
+    {
+      "index": 7,
+      "source_id": "0x08",
+      "producer": "RTL-008",
+      "allowed_event_ids": "0x0031",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-008.status_o.event_overflow; EVT_DROP_SOURCE[7]; saturating source loss count"
+    },
+    {
+      "index": 8,
+      "source_id": "0x09",
+      "producer": "RTL-009",
+      "allowed_event_ids": "0x0032",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-009.status_o.event_overflow; EVT_DROP_SOURCE[8]; saturating source loss count"
+    },
+    {
+      "index": 9,
+      "source_id": "0x0A",
+      "producer": "RTL-010",
+      "allowed_event_ids": "0x0033",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-010.status_o.event_overflow; EVT_DROP_SOURCE[9]; saturating source loss count"
+    },
+    {
+      "index": 10,
+      "source_id": "0x0B",
+      "producer": "RTL-011",
+      "allowed_event_ids": "0x0034",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-011.status_o.event_overflow; EVT_DROP_SOURCE[10]; saturating source loss count"
+    },
+    {
+      "index": 11,
+      "source_id": "0x0C",
+      "producer": "RTL-012",
+      "allowed_event_ids": "0x0040",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-012.status_o.event_overflow; EVT_DROP_SOURCE[11]; saturating source loss count"
+    },
+    {
+      "index": 12,
+      "source_id": "0x0D",
+      "producer": "RTL-013",
+      "allowed_event_ids": "0x0041",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-013.status_o.event_overflow; EVT_DROP_SOURCE[12]; saturating source loss count"
+    },
+    {
+      "index": 13,
+      "source_id": "0x0E",
+      "producer": "RTL-014",
+      "allowed_event_ids": "0x0042",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-014.status_o.event_overflow; EVT_DROP_SOURCE[13]; saturating source loss count"
+    },
+    {
+      "index": 14,
+      "source_id": "0x0F",
+      "producer": "RTL-015",
+      "allowed_event_ids": "0x0043",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-015.status_o.event_overflow; EVT_DROP_SOURCE[14]; saturating source loss count"
+    },
+    {
+      "index": 15,
+      "source_id": "0x10",
+      "producer": "RTL-016",
+      "allowed_event_ids": "0x0044",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-016.status_o.event_overflow; EVT_DROP_SOURCE[15]; saturating source loss count"
+    },
+    {
+      "index": 16,
+      "source_id": "0x11",
+      "producer": "RTL-017",
+      "allowed_event_ids": "0x0020",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-017.status_o.event_overflow; EVT_DROP_SOURCE[16]; saturating source loss count"
+    },
+    {
+      "index": 17,
+      "source_id": "0x12",
+      "producer": "RTL-018",
+      "allowed_event_ids": "0x0021",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-018.status_o.event_overflow; EVT_DROP_SOURCE[17]; saturating source loss count"
+    },
+    {
+      "index": 18,
+      "source_id": "0x13",
+      "producer": "RTL-019",
+      "allowed_event_ids": "0x0022",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-019.status_o.event_overflow; EVT_DROP_SOURCE[18]; saturating source loss count"
+    },
+    {
+      "index": 19,
+      "source_id": "0x14",
+      "producer": "RTL-020",
+      "allowed_event_ids": "0x0023",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-020.status_o.event_overflow; EVT_DROP_SOURCE[19]; saturating source loss count"
+    },
+    {
+      "index": 20,
+      "source_id": "0x15",
+      "producer": "RTL-021",
+      "allowed_event_ids": "0x0024",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-021.status_o.event_overflow; EVT_DROP_SOURCE[20]; saturating source loss count"
+    },
+    {
+      "index": 21,
+      "source_id": "0x16",
+      "producer": "RTL-022",
+      "allowed_event_ids": "0x0050",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-022.status_o.event_overflow; EVT_DROP_SOURCE[21]; saturating source loss count"
+    },
+    {
+      "index": 22,
+      "source_id": "0x17",
+      "producer": "RTL-023",
+      "allowed_event_ids": "0x0051",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-023.status_o.event_overflow; EVT_DROP_SOURCE[22]; saturating source loss count"
+    },
+    {
+      "index": 23,
+      "source_id": "0x18",
+      "producer": "RTL-024",
+      "allowed_event_ids": "0x0005; 0x0006; 0x0007",
+      "arbitration": "one complete stable 128-bit record; 24-source rotating round-robin; one accept per CORE_CLK",
+      "overflow_route": "RTL-024.status_o.event_overflow; EVT_DROP_SOURCE[23]; saturating source loss count"
+    }
+  ],
+  "event_registry": [
+    {
+      "event_id": "0x0001",
+      "event_class": "Operating-state transition",
+      "legal_subtypes": "0 entry, 1 exit, 2 degraded acknowledge",
+      "data_detail": "prior and new three-bit states packed in bits 2:0 and 6:4"
+    },
+    {
+      "event_id": "0x0002",
+      "event_class": "Configuration transaction",
+      "legal_subtypes": "0 accepted, 1 rejected, 2 protected failure",
+      "data_detail": "low sixteen bits of register word offset"
+    },
+    {
+      "event_id": "0x0003",
+      "event_class": "Register endpoint/protection error",
+      "legal_subtypes": "0 decode, 1 access, 2 protection, 3 endpoint, 4 timeout",
+      "data_detail": "DRI code and first-error code"
+    },
+    {
+      "event_id": "0x0004",
+      "event_class": "Controlled reset",
+      "legal_subtypes": "0 requested, 1 complete, 2 rejected, 3 timeout",
+      "data_detail": "reset-scope bit index and result"
+    },
+    {
+      "event_id": "0x0005",
+      "event_class": "SPI host transaction",
+      "legal_subtypes": "0 accepted, 1 complete, 2 rejected, 3 timeout, 4 pre-acceptance abort, 5 response truncation, 6 CRC error",
+      "data_detail": "status and completed count"
+    },
+    {
+      "event_id": "0x0006",
+      "event_class": "Clock/reset integration",
+      "legal_subtypes": "0 release, 1 illegal release attempt, 2 clock fault, 3 recovery",
+      "data_detail": "integration status"
+    },
+    {
+      "event_id": "0x0007",
+      "event_class": "Production test",
+      "legal_subtypes": "0 authorized, 1 deauthorized, 2 complete, 3 rejected, 4 aborted, 5 safety blocked",
+      "data_detail": "opcode and result"
+    },
+    {
+      "event_id": "0x0008",
+      "event_class": "Interrupt controller",
+      "legal_subtypes": "0 reserved-source attempt, 1 illegal injection, 2 vector-state error",
+      "data_detail": "source and result"
+    },
+    {
+      "event_id": "0x0009",
+      "event_class": "Timestamp",
+      "legal_subtypes": "0 correlation commit, 1 arithmetic error, 2 snapshot complete",
+      "data_detail": "update sequence or error detail"
+    },
+    {
+      "event_id": "0x000A",
+      "event_class": "Event logger operation",
+      "legal_subtypes": "0 not-empty transition, 1 pop error, 2 clear complete",
+      "data_detail": "level and operation result"
+    },
+    {
+      "event_id": "0x0010",
+      "event_class": "GPIO",
+      "legal_subtypes": "0 rising, 1 falling, 2 high level, 3 low level",
+      "data_detail": "qualified GPIO bitmap"
+    },
+    {
+      "event_id": "0x0020",
+      "event_class": "ARINC receive",
+      "legal_subtypes": "0 word, 1 overflow, 2 parity, 3 framing, 4 adapter error, 5 recovery",
+      "data_detail": "sequence and error flags"
+    },
+    {
+      "event_id": "0x0021",
+      "event_class": "ARINC transmit",
+      "legal_subtypes": "0 complete, 1 rejected, 2 overflow, 3 underrun, 4 adapter error, 5 recovery",
+      "data_detail": "sequence and result"
+    },
+    {
+      "event_id": "0x0022",
+      "event_class": "CAN",
+      "legal_subtypes": "0 receive, 1 transmit, 2 arbitration loss, 3 protocol error, 4 overflow, 5 bus-off, 6 recovery, 7 transceiver error",
+      "data_detail": "sequence and CAN error state"
+    },
+    {
+      "event_id": "0x0023",
+      "event_class": "UART",
+      "legal_subtypes": "0 receive, 1 transmit, 2 framing, 3 parity, 4 overflow, 5 underflow, 6 break, 7 recovery",
+      "data_detail": "sequence and error flags"
+    },
+    {
+      "event_id": "0x0024",
+      "event_class": "Message routing",
+      "legal_subtypes": "0 commit, 1 reject, 2 forward, 3 drop, 4 filter mismatch, 5 unauthorized",
+      "data_detail": "route entry and destination"
+    },
+    {
+      "event_id": "0x0030",
+      "event_class": "Rotor RPM",
+      "legal_subtypes": "0 low, 1 high, 2 timeout, 3 updated, 4 saturation, 5 recovery, 6 configuration reject",
+      "data_detail": "saturated RPM"
+    },
+    {
+      "event_id": "0x0031",
+      "event_class": "Engine RPM",
+      "legal_subtypes": "0 low, 1 high, 2 timeout, 3 updated, 4 saturation, 5 recovery, 6 configuration reject",
+      "data_detail": "saturated RPM"
+    },
+    {
+      "event_id": "0x0032",
+      "event_class": "Pulse/frequency",
+      "legal_subtypes": "0 low, 1 high, 2 timeout, 3 updated, 4 saturation, 5 recovery, 6 configuration reject",
+      "data_detail": "upper sixteen bits of Q17.15 value"
+    },
+    {
+      "event_id": "0x0033",
+      "event_class": "Sampled sensor",
+      "legal_subtypes": "0 low, 1 high, 2 stale, 3 invalid, 4 updated, 5 recovery, 6 rejected",
+      "data_detail": "source and sequence low bits"
+    },
+    {
+      "event_id": "0x0034",
+      "event_class": "Health/discrete",
+      "legal_subtypes": "0 asserted, 1 deasserted, 2 qualification failure, 3 recovery",
+      "data_detail": "active and sticky masks"
+    },
+    {
+      "event_id": "0x0040",
+      "event_class": "Watchdog",
+      "legal_subtypes": "0 early, 1 late, 2 missing/timeout, 3 invalid key, 4 recovered, 5 service accepted",
+      "data_detail": "elapsed-time low bits"
+    },
+    {
+      "event_id": "0x0041",
+      "event_class": "Fault manager",
+      "legal_subtypes": "0 asserted, 1 recovered, 2 cleared, 3 response requested",
+      "data_detail": "fault bit and class"
+    },
+    {
+      "event_id": "0x0042",
+      "event_class": "Interlock",
+      "legal_subtypes": "0 violation, 1 satisfied/recovered, 2 commit accepted, 3 commit rejected",
+      "data_detail": "expression and error code"
+    },
+    {
+      "event_id": "0x0043",
+      "event_class": "Lost link",
+      "legal_subtypes": "0 lost, 1 recovered, 2 configuration rejected, 3 injection",
+      "data_detail": "elapsed-time low bits"
+    },
+    {
+      "event_id": "0x0044",
+      "event_class": "Safety output",
+      "legal_subtypes": "0 request, 1 activation, 2 inhibited, 3 deactivation, 4 configuration rejected",
+      "data_detail": "requested/effective/inhibit summary"
+    },
+    {
+      "event_id": "0x0050",
+      "event_class": "User Logic Island",
+      "legal_subtypes": "0 diagnostic input, 1 mailbox, 2 parameter rejected, 3 reset",
+      "data_detail": "mailbox level or parameter index"
+    },
+    {
+      "event_id": "0x0051",
+      "event_class": "User signal routing",
+      "legal_subtypes": "0 commit, 1 reject, 2 activity, 3 conflict, 4 forbidden destination",
+      "data_detail": "entry and destination"
+    },
+    {
+      "event_id": "0x007E",
+      "event_class": "Producer-slot overflow",
+      "legal_subtypes": "0 only",
+      "data_detail": "Saturating source-loss count low sixteen bits"
+    },
+    {
+      "event_id": "0x007F",
+      "event_class": "Event-store overwrite",
+      "legal_subtypes": "0 only",
+      "data_detail": "Saturating store-overflow count low sixteen bits"
+    }
+  ]
+}
