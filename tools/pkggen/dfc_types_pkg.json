@@ -191,8 +191,8 @@
     },
     {
       "name": "dfc_rtl002_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl002_control_t (57 bits, rich format)",
-      "width": 57,
+      "trace": "ARCH-002 Appendix B dfc_rtl002_control_t (59 bits, rich format)",
+      "width": 59,
       "fields": [
         {
           "name": "sys_control__operational_enable",
@@ -292,13 +292,31 @@
           "signed": false,
           "reset": "0",
           "semantic": "command_pulse"
+        },
+        {
+          "name": "reset_status__timeout",
+          "hi": 57,
+          "lo": 57,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C controlled-reset timeout evidence"
+        },
+        {
+          "name": "reset_status__recovery_failure",
+          "hi": 58,
+          "lo": 58,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C failure to regain required ready state"
         }
       ]
     },
     {
       "name": "dfc_rtl002_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl002_status_t (109 bits, rich format)",
-      "width": 109,
+      "trace": "ARCH-002 Appendix B dfc_rtl002_status_t (112 bits, rich format)",
+      "width": 112,
       "fields": [
         {
           "name": "ready",
@@ -488,6 +506,33 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "sys_status__effective_operational_enable",
+          "hi": 109,
+          "lo": 109,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "independent current-state readback; never inferred from commanded enable"
+        },
+        {
+          "name": "reset_status__timeout",
+          "hi": 110,
+          "lo": 110,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky controlled-reset timeout evidence"
+        },
+        {
+          "name": "reset_status__recovery_failure",
+          "hi": 111,
+          "lo": 111,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky failure to regain required ready state"
         }
       ]
     },
@@ -836,8 +881,8 @@
     },
     {
       "name": "dfc_rtl005_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl005_control_t (96 bits, rich format)",
-      "width": 96,
+      "trace": "ARCH-002 Appendix B dfc_rtl005_control_t (128 bits, rich format)",
+      "width": 128,
       "fields": [
         {
           "name": "evt_control__logger_enable",
@@ -937,13 +982,22 @@
           "signed": false,
           "reset": "0",
           "semantic": "clear_mask"
+        },
+        {
+          "name": "evt_pop_error_count__count",
+          "hi": 127,
+          "lo": 96,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear for rejected empty POP operations"
         }
       ]
     },
     {
       "name": "dfc_rtl005_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl005_status_t (236 bits, rich format)",
-      "width": 236,
+      "trace": "ARCH-002 Appendix B dfc_rtl005_status_t (268 bits, rich format)",
+      "width": 268,
       "fields": [
         {
           "name": "ready",
@@ -1151,13 +1205,22 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "evt_pop_error_count__count",
+          "hi": 267,
+          "lo": 236,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating count of rejected empty POP operations"
         }
       ]
     },
     {
       "name": "dfc_rtl006_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl006_control_t (114 bits, rich format)",
-      "width": 114,
+      "trace": "ARCH-002 Appendix B dfc_rtl006_control_t (122 bits, rich format)",
+      "width": 122,
       "fields": [
         {
           "name": "gpio_control__enable",
@@ -1302,13 +1365,22 @@
           "signed": false,
           "reset": "0",
           "semantic": "control_value"
+        },
+        {
+          "name": "gpio_dir__direction",
+          "hi": 121,
+          "lo": 114,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "RTL-006-owned direction configuration; one means output"
         }
       ]
     },
     {
       "name": "dfc_rtl006_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl006_status_t (51 bits, rich format)",
-      "width": 51,
+      "trace": "ARCH-002 Appendix B dfc_rtl006_status_t (83 bits, rich format)",
+      "width": 83,
       "fields": [
         {
           "name": "ready",
@@ -1381,6 +1453,42 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "gpio_status__commanded_output",
+          "hi": 58,
+          "lo": 51,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current pre-permit commanded output"
+        },
+        {
+          "name": "gpio_status__effective_output",
+          "hi": 66,
+          "lo": 59,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current post-permit output data"
+        },
+        {
+          "name": "gpio_status__direction",
+          "hi": 74,
+          "lo": 67,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "active per-channel direction readback"
+        },
+        {
+          "name": "gpio_status__qualification_in_progress",
+          "hi": 82,
+          "lo": 75,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current per-channel qualification-in-progress state"
         }
       ]
     },
@@ -2765,8 +2873,8 @@
     },
     {
       "name": "dfc_rtl011_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl011_control_t (113 bits, rich format)",
-      "width": 113,
+      "trace": "ARCH-002 Appendix B dfc_rtl011_control_t (121 bits, rich format)",
+      "width": 121,
       "fields": [
         {
           "name": "health_control__enable",
@@ -2902,13 +3010,22 @@
           "signed": false,
           "reset": "0",
           "semantic": "control_value"
+        },
+        {
+          "name": "health_sticky__qualification_failure",
+          "hi": 120,
+          "lo": 113,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C mask for sticky per-channel qualification failure"
         }
       ]
     },
     {
       "name": "dfc_rtl011_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl011_status_t (67 bits, rich format)",
-      "width": 67,
+      "trace": "ARCH-002 Appendix B dfc_rtl011_status_t (84 bits, rich format)",
+      "width": 84,
       "fields": [
         {
           "name": "ready",
@@ -2999,6 +3116,33 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "health_qualification__in_progress",
+          "hi": 74,
+          "lo": 67,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current per-channel qualification-in-progress state"
+        },
+        {
+          "name": "health_sticky__qualification_failure",
+          "hi": 82,
+          "lo": 75,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky per-channel qualification-failure evidence"
+        },
+        {
+          "name": "health_status__aggregate_fault",
+          "hi": 83,
+          "lo": 83,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current OR of active fault-enabled health channels"
         }
       ]
     },
@@ -4068,8 +4212,8 @@
     },
     {
       "name": "dfc_rtl016_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl016_control_t (52 bits, rich format)",
-      "width": 52,
+      "trace": "ARCH-002 Appendix B dfc_rtl016_control_t (53 bits, rich format)",
+      "width": 53,
       "fields": [
         {
           "name": "safety_control__enable",
@@ -4160,13 +4304,22 @@
           "signed": false,
           "reset": "0",
           "semantic": "control_value"
+        },
+        {
+          "name": "safety_control__global_inhibit",
+          "hi": 52,
+          "lo": 52,
+          "width": 1,
+          "signed": false,
+          "reset": "1",
+          "semantic": "explicit global inhibit; independent of controller enable"
         }
       ]
     },
     {
       "name": "dfc_rtl016_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl016_status_t (47 bits, rich format)",
-      "width": 47,
+      "trace": "ARCH-002 Appendix B dfc_rtl016_status_t (52 bits, rich format)",
+      "width": 52,
       "fields": [
         {
           "name": "ready",
@@ -4247,7 +4400,7 @@
           "width": 1,
           "signed": false,
           "reset": "0",
-          "semantic": "readback_value"
+          "semantic": "current requested state before latch policy"
         },
         {
           "name": "safety_channel_status__effective_output",
@@ -4320,13 +4473,58 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "safety_channel_status__latched_request",
+          "hi": 47,
+          "lo": 47,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "retained request state for selected channel"
+        },
+        {
+          "name": "safety_channel_status__commanded",
+          "hi": 48,
+          "lo": 48,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current requested OR latched-request state"
+        },
+        {
+          "name": "safety_channel_status__controller_disabled",
+          "hi": 49,
+          "lo": 49,
+          "width": 1,
+          "signed": false,
+          "reset": "1",
+          "semantic": "current controller-disabled cause"
+        },
+        {
+          "name": "safety_channel_status__global_inhibit",
+          "hi": 50,
+          "lo": 50,
+          "width": 1,
+          "signed": false,
+          "reset": "1",
+          "semantic": "current explicit global-inhibit cause"
+        },
+        {
+          "name": "safety_channel_status__operational_inhibit",
+          "hi": 51,
+          "lo": 51,
+          "width": 1,
+          "signed": false,
+          "reset": "1",
+          "semantic": "current effective-operational-enable inhibit cause"
         }
       ]
     },
     {
       "name": "dfc_rtl017_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl017_control_t (70 bits, rich format)",
-      "width": 70,
+      "trace": "ARCH-002 Appendix B dfc_rtl017_control_t (103 bits, rich format)",
+      "width": 103,
       "fields": [
         {
           "name": "arx_status__parity_error",
@@ -4399,13 +4597,31 @@
           "signed": false,
           "reset": "0",
           "semantic": "clear_mask"
+        },
+        {
+          "name": "arx_status__pop_rejected",
+          "hi": 70,
+          "lo": 70,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C rejected empty-POP evidence"
+        },
+        {
+          "name": "arx_rejected_access_count__count",
+          "hi": 102,
+          "lo": 71,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear for rejected queue access"
         }
       ]
     },
     {
       "name": "dfc_rtl017_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl017_status_t (223 bits, rich format)",
-      "width": 223,
+      "trace": "ARCH-002 Appendix B dfc_rtl017_status_t (256 bits, rich format)",
+      "width": 256,
       "fields": [
         {
           "name": "ready",
@@ -4622,13 +4838,31 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "arx_status__pop_rejected",
+          "hi": 223,
+          "lo": 223,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky rejected empty-POP evidence"
+        },
+        {
+          "name": "arx_rejected_access_count__count",
+          "hi": 255,
+          "lo": 224,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating count of rejected queue accesses"
         }
       ]
     },
     {
       "name": "dfc_rtl018_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl018_control_t (130 bits, rich format)",
-      "width": 130,
+      "trace": "ARCH-002 Appendix B dfc_rtl018_control_t (162 bits, rich format)",
+      "width": 162,
       "fields": [
         {
           "name": "atx_control__enable",
@@ -4782,13 +5016,22 @@
           "signed": false,
           "reset": "4",
           "semantic": "control_value"
+        },
+        {
+          "name": "atx_rejected_push_count__count",
+          "hi": 161,
+          "lo": 130,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear for full or invalid PUSH rejection"
         }
       ]
     },
     {
       "name": "dfc_rtl018_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl018_status_t (95 bits, rich format)",
-      "width": 95,
+      "trace": "ARCH-002 Appendix B dfc_rtl018_status_t (127 bits, rich format)",
+      "width": 127,
       "fields": [
         {
           "name": "ready",
@@ -4924,13 +5167,22 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "atx_rejected_push_count__count",
+          "hi": 126,
+          "lo": 95,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating count of full or invalid PUSH rejection"
         }
       ]
     },
     {
       "name": "dfc_rtl019_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl019_control_t (138 bits, rich format)",
-      "width": 138,
+      "trace": "ARCH-002 Appendix B dfc_rtl019_control_t (203 bits, rich format)",
+      "width": 203,
       "fields": [
         {
           "name": "can_control__enable",
@@ -5147,13 +5399,40 @@
           "signed": false,
           "reset": "0",
           "semantic": "command_pulse"
+        },
+        {
+          "name": "can_status__rx_pop_rejected",
+          "hi": 138,
+          "lo": 138,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C rejected empty-POP evidence"
+        },
+        {
+          "name": "can_rx_overflow_count__count",
+          "hi": 170,
+          "lo": 139,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear"
+        },
+        {
+          "name": "can_tx_rejected_count__count",
+          "hi": 202,
+          "lo": 171,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear"
         }
       ]
     },
     {
       "name": "dfc_rtl019_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl019_status_t (261 bits, rich format)",
-      "width": 261,
+      "trace": "ARCH-002 Appendix B dfc_rtl019_status_t (326 bits, rich format)",
+      "width": 326,
       "fields": [
         {
           "name": "ready",
@@ -5424,13 +5703,40 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "can_status__rx_pop_rejected",
+          "hi": 261,
+          "lo": 261,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky rejected empty-POP evidence"
+        },
+        {
+          "name": "can_rx_overflow_count__count",
+          "hi": 293,
+          "lo": 262,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating RX overflow/drop count"
+        },
+        {
+          "name": "can_tx_rejected_count__count",
+          "hi": 325,
+          "lo": 294,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating full or invalid TX PUSH rejection count"
         }
       ]
     },
     {
       "name": "dfc_rtl020_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl020_control_t (85 bits, rich format)",
-      "width": 85,
+      "trace": "ARCH-002 Appendix B dfc_rtl020_control_t (215 bits, rich format)",
+      "width": 215,
       "fields": [
         {
           "name": "uart_control__enable",
@@ -5566,13 +5872,67 @@
           "signed": false,
           "reset": "0",
           "semantic": "clear_mask"
+        },
+        {
+          "name": "uart_status__rx_underflow",
+          "hi": 85,
+          "lo": 85,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C rejected empty RX POP evidence"
+        },
+        {
+          "name": "uart_status__tx_rejected",
+          "hi": 86,
+          "lo": 86,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C rejected full or invalid TX PUSH evidence"
+        },
+        {
+          "name": "uart_rx_overflow_count__count",
+          "hi": 118,
+          "lo": 87,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear"
+        },
+        {
+          "name": "uart_rx_underflow_count__count",
+          "hi": 150,
+          "lo": 119,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear"
+        },
+        {
+          "name": "uart_tx_rejected_count__count",
+          "hi": 182,
+          "lo": 151,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear"
+        },
+        {
+          "name": "uart_tx_underflow_count__count",
+          "hi": 214,
+          "lo": 183,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear"
         }
       ]
     },
     {
       "name": "dfc_rtl020_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl020_status_t (87 bits, rich format)",
-      "width": 87,
+      "trace": "ARCH-002 Appendix B dfc_rtl020_status_t (217 bits, rich format)",
+      "width": 217,
       "fields": [
         {
           "name": "ready",
@@ -5744,13 +6104,67 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "uart_status__rx_underflow",
+          "hi": 87,
+          "lo": 87,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky rejected empty RX POP evidence"
+        },
+        {
+          "name": "uart_status__tx_rejected",
+          "hi": 88,
+          "lo": 88,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky rejected full or invalid TX PUSH evidence"
+        },
+        {
+          "name": "uart_rx_overflow_count__count",
+          "hi": 120,
+          "lo": 89,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating RX overflow/drop count"
+        },
+        {
+          "name": "uart_rx_underflow_count__count",
+          "hi": 152,
+          "lo": 121,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating rejected empty RX POP count"
+        },
+        {
+          "name": "uart_tx_rejected_count__count",
+          "hi": 184,
+          "lo": 153,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating full or invalid TX PUSH count"
+        },
+        {
+          "name": "uart_tx_underflow_count__count",
+          "hi": 216,
+          "lo": 185,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating TX underflow count"
         }
       ]
     },
     {
       "name": "dfc_rtl021_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl021_control_t (125 bits, rich format)",
-      "width": 125,
+      "trace": "ARCH-002 Appendix B dfc_rtl021_control_t (135 bits, rich format)",
+      "width": 135,
       "fields": [
         {
           "name": "route_control__enable",
@@ -5913,13 +6327,31 @@
           "signed": false,
           "reset": "0",
           "semantic": "clear_mask"
+        },
+        {
+          "name": "route_ingress_loss_count__clear",
+          "hi": 129,
+          "lo": 125,
+          "width": 5,
+          "signed": false,
+          "reset": "0",
+          "semantic": "one whole-counter-clear pulse per ingress source"
+        },
+        {
+          "name": "route_destination_drop_count__clear",
+          "hi": 134,
+          "lo": 130,
+          "width": 5,
+          "signed": false,
+          "reset": "0",
+          "semantic": "one whole-counter-clear pulse per destination"
         }
       ]
     },
     {
       "name": "dfc_rtl021_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl021_status_t (176 bits, rich format)",
-      "width": 176,
+      "trace": "ARCH-002 Appendix B dfc_rtl021_status_t (336 bits, rich format)",
+      "width": 336,
       "fields": [
         {
           "name": "ready",
@@ -6100,13 +6532,31 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "route_ingress_loss_count__count",
+          "hi": 255,
+          "lo": 176,
+          "width": 80,
+          "signed": false,
+          "reset": "0",
+          "semantic": "five packed 16-bit saturating counts, source IDs 0 through 4 in ascending slices"
+        },
+        {
+          "name": "route_destination_drop_count__count",
+          "hi": 335,
+          "lo": 256,
+          "width": 80,
+          "signed": false,
+          "reset": "0",
+          "semantic": "five packed 16-bit saturating counts, destination IDs 0 through 4 in ascending slices"
         }
       ]
     },
     {
       "name": "dfc_rtl022_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl022_control_t (300 bits, rich format)",
-      "width": 300,
+      "trace": "ARCH-002 Appendix B dfc_rtl022_control_t (308 bits, rich format)",
+      "width": 308,
       "fields": [
         {
           "name": "uli_control__enable",
@@ -6269,13 +6719,31 @@
           "signed": false,
           "reset": "0",
           "semantic": "control_value"
+        },
+        {
+          "name": "uli_mailbox_status__overflow_underflow_clear",
+          "hi": 303,
+          "lo": 300,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C input overflow, input underflow, output overflow, output underflow evidence"
+        },
+        {
+          "name": "uli_mailbox_loss_count__clear",
+          "hi": 307,
+          "lo": 304,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "one whole-counter-clear pulse for each mailbox loss class"
         }
       ]
     },
     {
       "name": "dfc_rtl022_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl022_status_t (69 bits, rich format)",
-      "width": 69,
+      "trace": "ARCH-002 Appendix B dfc_rtl022_status_t (137 bits, rich format)",
+      "width": 137,
       "fields": [
         {
           "name": "ready",
@@ -6420,6 +6888,24 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "uli_mailbox_status__overflow_underflow",
+          "hi": 72,
+          "lo": 69,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky input overflow, input underflow, output overflow, output underflow evidence"
+        },
+        {
+          "name": "uli_mailbox_loss_count__count",
+          "hi": 136,
+          "lo": 73,
+          "width": 64,
+          "signed": false,
+          "reset": "0",
+          "semantic": "four packed 16-bit saturating counts in evidence-bit order"
         }
       ]
     },
@@ -6727,20 +7213,83 @@
     },
     {
       "name": "dfc_rtl024_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl024_control_t (232 bits, rich format)",
-      "width": 232,
+      "trace": "ARCH-002 Appendix B dfc_rtl024_control_t (278 bits, rich format)",
+      "width": 278,
       "fields": [
         {
-          "name": "gpio_dir__direction",
-          "hi": 7,
+          "name": "host_status__response_truncated",
+          "hi": 0,
           "lo": 0,
-          "width": 8,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
+        },
+        {
+          "name": "host_control__event_enable",
+          "hi": 1,
+          "lo": 1,
+          "width": 1,
           "signed": false,
           "reset": "0",
           "semantic": "control_value"
         },
         {
-          "name": "host_status__response_truncated",
+          "name": "host_control__irq_enable",
+          "hi": 2,
+          "lo": 2,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "host_status__invalid_opcode",
+          "hi": 3,
+          "lo": 3,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
+        },
+        {
+          "name": "host_status__invalid_length",
+          "hi": 4,
+          "lo": 4,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
+        },
+        {
+          "name": "host_status__unaligned",
+          "hi": 5,
+          "lo": 5,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
+        },
+        {
+          "name": "host_status__invalid_address",
+          "hi": 6,
+          "lo": 6,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
+        },
+        {
+          "name": "host_status__access_error",
+          "hi": 7,
+          "lo": 7,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
+        },
+        {
+          "name": "host_status__protected_error",
           "hi": 8,
           "lo": 8,
           "width": 1,
@@ -6749,25 +7298,25 @@
           "semantic": "clear_mask"
         },
         {
-          "name": "host_control__event_enable",
+          "name": "host_status__crc_error",
           "hi": 9,
           "lo": 9,
           "width": 1,
           "signed": false,
           "reset": "0",
-          "semantic": "control_value"
+          "semantic": "clear_mask"
         },
         {
-          "name": "host_control__irq_enable",
+          "name": "host_status__timeout",
           "hi": 10,
           "lo": 10,
           "width": 1,
           "signed": false,
           "reset": "0",
-          "semantic": "control_value"
+          "semantic": "clear_mask"
         },
         {
-          "name": "host_status__invalid_opcode",
+          "name": "host_status__endpoint_error",
           "hi": 11,
           "lo": 11,
           "width": 1,
@@ -6776,7 +7325,7 @@
           "semantic": "clear_mask"
         },
         {
-          "name": "host_status__invalid_length",
+          "name": "host_status__aborted",
           "hi": 12,
           "lo": 12,
           "width": 1,
@@ -6785,81 +7334,9 @@
           "semantic": "clear_mask"
         },
         {
-          "name": "host_status__unaligned",
-          "hi": 13,
-          "lo": 13,
-          "width": 1,
-          "signed": false,
-          "reset": "0",
-          "semantic": "clear_mask"
-        },
-        {
-          "name": "host_status__invalid_address",
-          "hi": 14,
-          "lo": 14,
-          "width": 1,
-          "signed": false,
-          "reset": "0",
-          "semantic": "clear_mask"
-        },
-        {
-          "name": "host_status__access_error",
-          "hi": 15,
-          "lo": 15,
-          "width": 1,
-          "signed": false,
-          "reset": "0",
-          "semantic": "clear_mask"
-        },
-        {
-          "name": "host_status__protected_error",
-          "hi": 16,
-          "lo": 16,
-          "width": 1,
-          "signed": false,
-          "reset": "0",
-          "semantic": "clear_mask"
-        },
-        {
-          "name": "host_status__crc_error",
-          "hi": 17,
-          "lo": 17,
-          "width": 1,
-          "signed": false,
-          "reset": "0",
-          "semantic": "clear_mask"
-        },
-        {
-          "name": "host_status__timeout",
-          "hi": 18,
-          "lo": 18,
-          "width": 1,
-          "signed": false,
-          "reset": "0",
-          "semantic": "clear_mask"
-        },
-        {
-          "name": "host_status__endpoint_error",
-          "hi": 19,
-          "lo": 19,
-          "width": 1,
-          "signed": false,
-          "reset": "0",
-          "semantic": "clear_mask"
-        },
-        {
-          "name": "host_status__aborted",
-          "hi": 20,
-          "lo": 20,
-          "width": 1,
-          "signed": false,
-          "reset": "0",
-          "semantic": "clear_mask"
-        },
-        {
           "name": "host_completed_count__count",
-          "hi": 52,
-          "lo": 21,
+          "hi": 44,
+          "lo": 13,
           "width": 32,
           "signed": false,
           "reset": "0",
@@ -6867,8 +7344,8 @@
         },
         {
           "name": "host_crc_error_count__count",
-          "hi": 84,
-          "lo": 53,
+          "hi": 76,
+          "lo": 45,
           "width": 32,
           "signed": false,
           "reset": "0",
@@ -6876,8 +7353,8 @@
         },
         {
           "name": "host_abort_count__count",
-          "hi": 116,
-          "lo": 85,
+          "hi": 108,
+          "lo": 77,
           "width": 32,
           "signed": false,
           "reset": "0",
@@ -6885,8 +7362,8 @@
         },
         {
           "name": "host_timeout_count__count",
-          "hi": 148,
-          "lo": 117,
+          "hi": 140,
+          "lo": 109,
           "width": 32,
           "signed": false,
           "reset": "0",
@@ -6894,8 +7371,8 @@
         },
         {
           "name": "host_access_error_count__count",
-          "hi": 180,
-          "lo": 149,
+          "hi": 172,
+          "lo": 141,
           "width": 32,
           "signed": false,
           "reset": "0",
@@ -6903,8 +7380,8 @@
         },
         {
           "name": "test_control__enable",
-          "hi": 181,
-          "lo": 181,
+          "hi": 173,
+          "lo": 173,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -6912,8 +7389,8 @@
         },
         {
           "name": "test_control__loopback_enable",
-          "hi": 182,
-          "lo": 182,
+          "hi": 174,
+          "lo": 174,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -6921,8 +7398,8 @@
         },
         {
           "name": "test_control__injection_enable",
-          "hi": 183,
-          "lo": 183,
+          "hi": 175,
+          "lo": 175,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -6930,8 +7407,8 @@
         },
         {
           "name": "test_status__command_complete",
-          "hi": 184,
-          "lo": 184,
+          "hi": 176,
+          "lo": 176,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -6939,8 +7416,8 @@
         },
         {
           "name": "test_status__command_rejected",
-          "hi": 185,
-          "lo": 185,
+          "hi": 177,
+          "lo": 177,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -6948,8 +7425,8 @@
         },
         {
           "name": "test_status__safety_blocked",
-          "hi": 186,
-          "lo": 186,
+          "hi": 178,
+          "lo": 178,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -6957,8 +7434,8 @@
         },
         {
           "name": "test_command__command",
-          "hi": 194,
-          "lo": 187,
+          "hi": 186,
+          "lo": 179,
           "width": 8,
           "signed": false,
           "reset": "0",
@@ -6966,8 +7443,8 @@
         },
         {
           "name": "test_command__argument",
-          "hi": 218,
-          "lo": 195,
+          "hi": 210,
+          "lo": 187,
           "width": 24,
           "signed": false,
           "reset": "0",
@@ -6975,8 +7452,8 @@
         },
         {
           "name": "test_loopback__loopback_select",
-          "hi": 226,
-          "lo": 219,
+          "hi": 218,
+          "lo": 211,
           "width": 8,
           "signed": false,
           "reset": "0",
@@ -6984,8 +7461,8 @@
         },
         {
           "name": "arx_control__enable",
-          "hi": 227,
-          "lo": 227,
+          "hi": 219,
+          "lo": 219,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -6993,8 +7470,8 @@
         },
         {
           "name": "arx_control__high_speed",
-          "hi": 228,
-          "lo": 228,
+          "hi": 220,
+          "lo": 220,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -7002,8 +7479,8 @@
         },
         {
           "name": "arx_control__event_enable",
-          "hi": 229,
-          "lo": 229,
+          "hi": 221,
+          "lo": 221,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -7011,8 +7488,8 @@
         },
         {
           "name": "arx_control__irq_enable",
-          "hi": 230,
-          "lo": 230,
+          "hi": 222,
+          "lo": 222,
           "width": 1,
           "signed": false,
           "reset": "0",
@@ -7020,19 +7497,82 @@
         },
         {
           "name": "arx_control__accept_parity_error",
-          "hi": 231,
-          "lo": 231,
+          "hi": 223,
+          "lo": 223,
           "width": 1,
           "signed": false,
           "reset": "0",
           "semantic": "control_value"
+        },
+        {
+          "name": "test_status__extended_evidence_clear",
+          "hi": 227,
+          "lo": 224,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C unsafe rejection, deauthorization abort, natural-fault, injected-fault evidence"
+        },
+        {
+          "name": "test_rejection_abort_count__count",
+          "hi": 259,
+          "lo": 228,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter clear"
+        },
+        {
+          "name": "clock_reset_status__evidence_clear",
+          "hi": 261,
+          "lo": 260,
+          "width": 2,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C clock-fault and illegal-release evidence"
+        },
+        {
+          "name": "buffer_status__client_error_clear",
+          "hi": 268,
+          "lo": 262,
+          "width": 7,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C per-client error evidence"
+        },
+        {
+          "name": "buffer_status__internal_error_clear",
+          "hi": 269,
+          "lo": 269,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "W1C internal service error evidence"
+        },
+        {
+          "name": "buffer_client_error_count__clear",
+          "hi": 276,
+          "lo": 270,
+          "width": 7,
+          "signed": false,
+          "reset": "0",
+          "semantic": "one whole-counter-clear pulse per client"
+        },
+        {
+          "name": "buffer_internal_error_count__clear",
+          "hi": 277,
+          "lo": 277,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "whole-counter-clear pulse"
         }
       ]
     },
     {
       "name": "dfc_rtl024_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl024_status_t (272 bits, rich format)",
-      "width": 272,
+      "trace": "ARCH-002 Appendix B dfc_rtl024_status_t (467 bits, rich format)",
+      "width": 467,
       "fields": [
         {
           "name": "ready",
@@ -7185,7 +7725,7 @@
           "width": 8,
           "signed": false,
           "reset": "0",
-          "semantic": "readback_value"
+          "semantic": "terminal reconciliation SPI status"
         },
         {
           "name": "host_last_result__dri_code",
@@ -7194,7 +7734,7 @@
           "width": 3,
           "signed": false,
           "reset": "0",
-          "semantic": "readback_value"
+          "semantic": "terminal reconciliation endpoint result"
         },
         {
           "name": "host_last_result__completed_count",
@@ -7203,7 +7743,7 @@
           "width": 5,
           "signed": false,
           "reset": "0",
-          "semantic": "readback_value"
+          "semantic": "terminal reconciliation completed-word count"
         },
         {
           "name": "host_last_result__opcode",
@@ -7212,7 +7752,7 @@
           "width": 8,
           "signed": false,
           "reset": "0",
-          "semantic": "readback_value"
+          "semantic": "terminal reconciliation accepted opcode"
         },
         {
           "name": "host_last_result__sequence",
@@ -7221,7 +7761,7 @@
           "width": 11,
           "signed": false,
           "reset": "0",
-          "semantic": "readback_value"
+          "semantic": "terminal reconciliation transaction sequence"
         },
         {
           "name": "host_last_address__address",
@@ -7230,7 +7770,7 @@
           "width": 32,
           "signed": false,
           "reset": "0",
-          "semantic": "readback_value"
+          "semantic": "terminal reconciliation starting byte address"
         },
         {
           "name": "host_completed_count__count",
@@ -7239,7 +7779,7 @@
           "width": 32,
           "signed": false,
           "reset": "0",
-          "semantic": "readback_value"
+          "semantic": "saturating count of successful terminal accepted commands"
         },
         {
           "name": "host_crc_error_count__count",
@@ -7348,6 +7888,141 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "host_last_result__valid",
+          "hi": 272,
+          "lo": 272,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "terminal host-reconciliation record valid"
+        },
+        {
+          "name": "test_status__busy",
+          "hi": 273,
+          "lo": 273,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current command activity"
+        },
+        {
+          "name": "test_status__unsafe_rejected",
+          "hi": 274,
+          "lo": 274,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky unsafe-command rejection evidence"
+        },
+        {
+          "name": "test_status__deauthorization_aborted",
+          "hi": 275,
+          "lo": 275,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky deauthorization-abort evidence"
+        },
+        {
+          "name": "test_status__loopback_active",
+          "hi": 276,
+          "lo": 276,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current qualified loopback state"
+        },
+        {
+          "name": "test_status__injection_enabled",
+          "hi": 277,
+          "lo": 277,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current qualified injection permission"
+        },
+        {
+          "name": "test_status__natural_fault_observed",
+          "hi": 278,
+          "lo": 278,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky natural-fault evidence during authorized test"
+        },
+        {
+          "name": "test_status__injected_fault_observed",
+          "hi": 279,
+          "lo": 279,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "sticky accepted-injection evidence"
+        },
+        {
+          "name": "test_status__terminal_reason",
+          "hi": 287,
+          "lo": 280,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "ARCH-TEST-018 terminal result"
+        },
+        {
+          "name": "test_rejection_abort_count__count",
+          "hi": 319,
+          "lo": 288,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating rejected-or-aborted test-command count"
+        },
+        {
+          "name": "clock_reset_status__clock_fault_active",
+          "hi": 320,
+          "lo": 320,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "current platform-reported clock fault"
+        },
+        {
+          "name": "clock_reset_status__clock_fault_sticky",
+          "hi": 321,
+          "lo": 321,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "retained invalid/lost-clock evidence"
+        },
+        {
+          "name": "clock_reset_status__illegal_release",
+          "hi": 322,
+          "lo": 322,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "retained illegal reset-release evidence"
+        },
+        {
+          "name": "buffer_client_error_count__count",
+          "hi": 434,
+          "lo": 323,
+          "width": 112,
+          "signed": false,
+          "reset": "0",
+          "semantic": "seven packed 16-bit saturating client-error counts, clients 0 through 6 in ascending slices"
+        },
+        {
+          "name": "buffer_internal_error_count__count",
+          "hi": 466,
+          "lo": 435,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "saturating shared-buffer internal-error count"
         }
       ]
     },

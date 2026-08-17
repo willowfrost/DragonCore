@@ -20,7 +20,7 @@ module dri_transaction_tb;
 
   always #10 core_clk_i = ~core_clk_i;
 
-  dfc_rtl001 dut (.*);
+  dfc_rtl001 dut (.*, .dbg_regbank_write_en_o());
 
   int errors = 0, checks = 0;
   task automatic check(string what, logic [31:0] got, logic [31:0] expected);

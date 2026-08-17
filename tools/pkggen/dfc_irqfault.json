@@ -829,26 +829,26 @@
     {
       "event_id": "0x0004",
       "event_class": "Controlled reset",
-      "legal_subtypes": "0 requested, 1 complete, 2 rejected, 3 timeout",
+      "legal_subtypes": "0 requested, 1 complete, 2 rejected, 3 timeout, 4 recovery failure",
       "data_detail": "reset-scope bit index and result"
     },
     {
       "event_id": "0x0005",
       "event_class": "SPI host transaction",
-      "legal_subtypes": "0 accepted, 1 complete, 2 rejected, 3 timeout, 4 pre-acceptance abort, 5 response truncation, 6 CRC error",
-      "data_detail": "status and completed count"
+      "legal_subtypes": "0 accepted, 1 complete, 2 rejected, 3 timeout, 4 pre-acceptance abort, 5 response truncation, 6 CRC error, 7 access/protection failure, 8 endpoint failure",
+      "data_detail": "reconciliation sequence, status, and completed count"
     },
     {
       "event_id": "0x0006",
       "event_class": "Clock/reset integration",
-      "legal_subtypes": "0 release, 1 illegal release attempt, 2 clock fault, 3 recovery",
-      "data_detail": "integration status"
+      "legal_subtypes": "0 release, 1 illegal release attempt, 2 clock fault, 3 clock recovery",
+      "data_detail": "integration status and source"
     },
     {
       "event_id": "0x0007",
       "event_class": "Production test",
-      "legal_subtypes": "0 authorized, 1 deauthorized, 2 complete, 3 rejected, 4 aborted, 5 safety blocked",
-      "data_detail": "opcode and result"
+      "legal_subtypes": "0 authorized, 1 deauthorized, 2 complete, 3 rejected, 4 aborted, 5 safety blocked, 6 unsafe rejected, 7 natural fault observed, 8 injected fault observed",
+      "data_detail": "opcode and ARCH-TEST-018 result"
     },
     {
       "event_id": "0x0008",

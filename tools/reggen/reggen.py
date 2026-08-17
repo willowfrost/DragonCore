@@ -53,7 +53,10 @@ def emit_regbank(module, regs):
     lines.append(f"// Source: dfc_rtl001_regbank_slice.json + dfc_registers_pkg.json "
                  f"({len(regs)} registers)")
     lines.append("")
-    lines.append("import dfc_registers_pkg::*;")
+    # RTLSTD-LANG-008 prohibits wildcard imports; confirmed via real Yosys
+    # synthesis that this construct fails to parse regardless of version.
+    # Every DFC_ADDR_<NAME> reference below is fully package-qualified
+    # instead -- no import statement is emitted.
     lines.append("")
     mod_ident = sv_ident(module).replace("-", "")
 
@@ -93,7 +96,7 @@ def emit_regbank(module, regs):
                     f"(\"{reset}\"); 0x00000000 used as a placeholder, not "
                     f"invented from the doc -- see registers.json.")
         counts[rb] = counts.get(rb, 0) + 1
-        wr_en = f"write_en_i && (addr_i == DFC_ADDR_{r['name']})"
+        wr_en = f"write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_{r['name']})"
 
         if rb == "internal_reg":
             lines.append(f"  // {r['name']} (0x{r['addr']:04X}) -- {r['access_summary']}, "
@@ -155,7 +158,7 @@ def emit_regbank(module, regs):
         illegal = "1'b1" if r["readback"] in ("const", "external") else "1'b0"
         prot = r.get("protection", "?")
         protected = "1'b1" if (prot == "Yes" or (prot not in ("No", "?"))) else "1'b0"
-        lines.append(f"      DFC_ADDR_{r['name']}: begin rdata_o = {nm}_q; "
+        lines.append(f"      dfc_registers_pkg::DFC_ADDR_{r['name']}: begin rdata_o = {nm}_q; "
                      f"decode_hit_o = 1'b1; write_illegal_o = {illegal}; "
                      f"protected_o = {protected}; end")
     lines.append("      default: begin end  // decode_hit_o stays 0 -> DECODE_ERROR upstream")

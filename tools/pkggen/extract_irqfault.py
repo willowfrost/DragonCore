@@ -161,7 +161,7 @@ def main():
         print("usage: extract_irqfault.py <ARCH-002.md> <out.json>", file=sys.stderr)
         sys.exit(2)
     arch_path, out_path = sys.argv[1], sys.argv[2]
-    lines = open(arch_path).read().split("\n")
+    lines = open(arch_path, encoding="utf-8").read().split("\n")
 
     irq, e1 = parse_irq(lines)
     event, e2 = parse_event(lines)
@@ -189,7 +189,7 @@ def main():
         "fault_sources": fault,
         "event_registry": eventreg,
     }
-    json.dump(spec, open(out_path, "w"), indent=2)
+    json.dump(spec, open(out_path, "w", encoding="utf-8"), indent=2)
     print(f"OK: C.4 irq {len(irq)} rows (24 assigned + 8 reserved); "
           f"C.5 event {len(event)} rows (24 assigned); "
           f"C.6 fault {len(fault)} rows (17 assigned + 15 reserved); "

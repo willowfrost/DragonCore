@@ -42,7 +42,7 @@ def cells(line):
 
 
 def parse(path):
-    lines = open(path).read().split("\n")
+    lines = open(path, encoding="utf-8").read().split("\n")
     structs, errors = [], []
     # scope to Appendix B only
     start = end = None
@@ -162,7 +162,7 @@ def emit(structs, out_path):
         "imports": ["dfc_constants_pkg"],
         "structs": out_structs,
     }
-    json.dump(spec, open(out_path, "w"), indent=2)
+    json.dump(spec, open(out_path, "w", encoding="utf-8"), indent=2)
 
 
 def main():

@@ -12,24 +12,62 @@ prove: depth 40
 smtbmc boolector
 
 [script]
+# `formal_top` now instantiates the real dfc_rtl001 (see
+# dri_one_outstanding_formal.sv's own header for the full history of how
+# this file reached its current form). This means sby must now read
+# dfc_rtl001's real dependencies too, not just the formal harness file --
+# the error this section previously produced ("Module `dfc_rtl001' ...
+# is not part of the design") was exactly this: [files] only listed the
+# harness itself, so sby never copied/read RTL-001 or its packages at all.
+# Read order matters (packages before what references their symbols),
+# same order used throughout this project's build/sim scripts.
+read -formal dfc_constants_pkg.sv
+read -formal dfc_registers_pkg.sv
+read -formal dfc_config_regbank_regs.sv
+read -formal dfc_rtl001.sv
 read -formal dri_one_outstanding_formal.sv
 prep -top formal_top
 
 [files]
+../../../include/dfc_constants_pkg.sv
+../../../include/dfc_registers_pkg.sv
+../../../rtl/infrastructure/generated/dfc_config_regbank_regs.sv
+../../../rtl/infrastructure/src/dfc_rtl001.sv
 dri_one_outstanding_formal.sv
 
-# --- NOT YET RUN IN THIS REPOSITORY -----------------------------------
-# No formal toolchain (yosys/sby) was available in the sandbox this file
-# was authored in, so this task has NOT been executed and its properties
-# are NOT yet formally confirmed. Every other generated/authored artifact
-# this session was verified with a real tool (Icarus Verilog for the .sv
-# packages/testbench, grep-based citation resolution for the docs); this
-# is the one exception. Run both tasks before trusting this harness:
+# --- HISTORY: how this file reached its current form -----------------
+# Multiple real toolchain findings were needed before this ran cleanly,
+# each confirmed by an actual sby/yosys run, not assumed:
+#   1. `default clocking`/`default disable iff` -- fails to parse under
+#      both Icarus and Yosys's native frontend. Fixed by giving each
+#      property its own explicit clocking clause.
+#   2. Yosys's native frontend cannot parse concurrent SVA
+#      (`assert property`, |->, |=>) at all -- confirmed on two Yosys
+#      versions three years apart.
+#   3. `read_slang` (tried as a fix for #2) parses the syntax correctly,
+#      but the Yosys-slang plugin does not yet translate |-> / |=> into
+#      checkable formal properties -- confirmed directly via a real
+#      design.log: "error: encountered unsupported SVA feature."
+#   4. dri_one_outstanding_formal.sv rewritten to use immediate assertions
+#      instead of concurrent ones (see that file's own header for the full
+#      per-property translation, including one property --
+#      P_EXACTLY_ONE_RSP -- deliberately dropped as genuinely redundant
+#      once expressed this way, not silently lost). Confirmed to parse
+#      cleanly and produce real $assert cells under Yosys's native
+#      frontend, so `read -formal` is used, with no dependency on
+#      read_slang.
+#   5. `formal_top` updated to instantiate the REAL dfc_rtl001 (it was a
+#      signal-only stub through finding #4; RTL-001 is now real, tested,
+#      and synthesis-verified, so the stub is no longer needed for 4 of
+#      the 5 properties). This required adding RTL-001's own real
+#      dependencies to [files]/[script] above. One property
+#      (P_WRITE_COMMIT_SAME_CYCLE_AS_OK) remains bound to a free input --
+#      see that property's own comment in dri_one_outstanding_formal.sv
+#      for the specific, confirmed reason (a hierarchical reference into
+#      the DUT's internal signal does not resolve under Yosys's native
+#      frontend).
 #
-#   sby -f dri_one_outstanding.sby bmc
-#   sby -f dri_one_outstanding.sby prove
-#
-# `formal_top` is a signal-only stub (see dri_one_outstanding_formal.sv's
-# header) -- it is not RTL-001's actual DRI endpoint, which does not exist
-# yet in this repository. Once RTL-001's DRI endpoint RTL is written, bind
-# these same properties against it directly rather than against the stub.
+# `formal_top` now binds against the REAL RTL-001 DRI endpoint for 4 of 5
+# properties -- passing/failing against it is a genuine statement about
+# RTL-001's actual behavior for those 4, not merely self-consistency of an
+# isolated stub.

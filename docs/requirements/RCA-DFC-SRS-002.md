@@ -12,7 +12,9 @@ This System Requirements Specification is the sole normative owner of externally
 
 This specification does not redefine the product mission or exclusions, responsibility allocation, internal decomposition, internal interfaces, algorithms, state encodings, numeric source allocations, register layout, implementation rules, verification methods, or trace relationships. Those subjects remain with the owners assigned by `RCA-DFC-CHTR-002`, Section 3.
 
-The requirements in this specification are sufficient to derive the externally observable obligations of the Architecture Specification, Register Map Specification, RTL module specifications, RTL, host-interface artifacts, and verification cases without introducing new product behavior.
+The requirements in this specification are sufficient to derive the externally observable obligations of the Architecture Specification, Register Map Specification, RTL module specifications, RTL, host-interface artifacts, external host-software requirements that interact with Dragon Core, and verification cases without introducing new product behavior.
+
+This specification defines the complete device-side contract needed by external software. It does not prescribe the external software architecture, application programming interfaces, task or thread model, persistence schema, operating-system integration, installation-specific configuration policy, maintenance workflow, or aircraft application policy. Those software-design subjects belong to subordinate software specifications under the responsibility allocations in `RCA-DFC-PBIO-002`.
 
 ## 2. Normative Language and Specification Relationships
 
@@ -34,20 +36,33 @@ Named commands, status concepts, and configuration concepts in this SRS identify
 | Term | Definition |
 |---|---|
 | Accepted host command | A complete SPI command whose framing, length, opcode, address rules, and command CRC have been validated while chip select remains asserted and whose execution has begun or has produced a definitive rejection status. |
+| Active condition | A currently asserted hardware condition evaluated from current qualified inputs, active configuration, and current internal state. An active condition is distinct from historical sticky evidence. |
 | Authorized operation | An operation permitted by the active configuration and, where required, a valid protected-write or test-authorization condition. |
 | Canonical message | The fixed 192-bit internal message representation used for bounded databus routing. Its field layout and numeric encodings are owned by the Architecture Specification. |
+| Commanded state | The requested action after application of request selection and latch policy but before enable, inhibit, interlock, fault, reset, observation, and test gating. |
 | Conditioned digital input | A digital signal already protected, limited, translated, and shaped for connection to a device pad as allocated by the PBIO Specification. |
 | Correlated timestamp | The raw timestamp plus the active signed host-correlation offset; correlation never changes the raw timestamp. |
 | Definitive transaction status | Exactly one status code that reports success or the applicable failure class for an accepted SPI command. |
 | Dragon Core logical wrapper | The technology-independent top-level logical interface implemented by RTL-024 and preserved by FPGA and ASIC wrappers. |
+| Effective state | The functional action remaining after enable, operating-state, inhibit, interlock, fault, reset, observation, and test gating. For a logical safety output, effective state reports active versus inactive before conversion through configured output polarity; external-pad logical level is a separate interface result. |
 | Effective operational enable | The internally distributed permission for externally effective operational actions, derived from the host operational enable and system state as specified herein. |
 | External host | A computing system outside the fabricated Dragon Core device that configures, services, and observes Dragon Core. |
+| Host-reconciliation record | The coherent tuple for the most recent terminal accepted SPI command consisting of transaction sequence, opcode, starting address, completed-word count, SPI status, and internal endpoint result. |
+| Inhibited state | A requested action prevented from becoming effective by one or more independently reportable gating causes. |
+| Latched request state | A retained requested state that persists according to the configured latch and recovery policy after the initiating source is no longer active. |
 | Logical safety output | A low-voltage digital command that requires external circuitry to control aircraft energy. |
 | Mask-defined user logic | Finite hardware whose structure is fixed by fabrication masks and cannot be structurally reprogrammed after fabrication. |
 | Observational mode | A mode that permits monitoring, communication reception, evidence collection, and host observation while inhibiting operational safety-output activation and other externally effective actions identified by the Architecture Specification. |
+| Pending evidence | A retained indication awaiting its defined service, acknowledgement, clear, or source-clearing condition. |
+| Qualification failure | A retained indication that an enabled finite qualification interval completed without the input satisfying the Architecture-defined stability criterion. |
+| Qualification in progress | A current indication that a synchronized input differs from its last qualified state and has not yet satisfied the configured qualification interval. |
 | Raw timestamp | The always-running 64-bit monotonic microsecond counter driven by CORE_CLK after functional reset release. |
+| Requested state | The combinational or registered OR of currently active authorized response sources before latch policy and permit gating. |
+| Reset-held state | A current indication that reset or reset-recovery sequencing is forcing the subject function or output to its reset-safe state. |
 | Safe state | A defined state that prevents unintended activation during reset, startup, disabled, inhibited, invalid, unconfigured, or test operation. |
 | Saturating counter | A counter that stops at its maximum value and does not wrap. |
+| Sticky evidence | Historical evidence set by a qualifying occurrence and retained until its defined authorized clear or applicable reset; disappearance of the active condition does not clear sticky evidence. |
+| Transaction sequence | The 11-bit value allocated to an accepted SPI command by advancing a sequence allocator exactly once modulo 2048 at command acceptance. The allocated value becomes the sequence member of the host-reconciliation record only when that same command reaches terminal status. A pre-acceptance abort allocates no value; a post-acceptance response truncation does not cancel the allocated value. |
 | Valid CORE_CLK edge | A rising edge satisfying the clock requirements of Section 6.2 after the applicable platform reset condition permits clocked operation. |
 
 Numeric values are unsigned unless explicitly identified as signed. Sensor values, sensor thresholds, and sensor hysteresis operands are signed 32-bit two's-complement quantities. Register addresses are 32-bit byte offsets. Time intervals stated in CORE_CLK cycles are evaluated using valid rising edges.
@@ -57,6 +72,8 @@ Numeric values are unsigned unless explicitly identified as signed. Sensor value
 After valid power, clock, and reset, Dragon Core loads safe volatile defaults, reaches host-interface-ready operation, accepts conforming mapped host transactions, performs enabled monitoring and digital-databus functions, records evidence, reports interrupts and faults, and enforces configured hardware safety supervision without executing on-device software.
 
 The external host may verify device identity and status, apply authorized nondefault volatile configuration, retrieve status and evidence, service watchdog and interrupt functions, and issue permitted commands. Persistent configuration storage, long-term data retention, and aircraft application policy remain external.
+
+The device-side contract supports deterministic external-software initialization and recovery. The host can determine current operating state, read every active configurable value, distinguish current conditions from historical evidence, reconcile the most recent accepted transaction after response loss, retrieve retained event and diagnostic evidence, and reapply nondefault configuration after reset or power loss. No software-facing behavior depends on hidden persistent state inside Dragon Core.
 
 ### 4.1 Externally Observable Operating States
 
@@ -85,7 +102,7 @@ The operating-state priority shall be RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, 
 | **DFC-FUNC-0004** | Dragon Core shall report successful completion or a definitive rejection reason for every accepted host command. |
 | **DFC-FUNC-0005** | Dragon Core shall prevent a rejected, malformed, unsupported, out-of-range, unaligned, unauthorized, or failed host command from modifying the target or unrelated functional state, except for diagnostic evidence explicitly required for the failure. |
 | **DFC-FUNC-0006** | Dragon Core shall implement and report the six primary operating states defined in Section 4.1 using the specified priority. |
-| **DFC-FUNC-0007** | Dragon Core shall report `HOST_READY`, `INIT_COMPLETE`, `INIT_FAILED`, `OBSERVATIONAL_MODE`, and `EFFECTIVE_OPERATIONAL_ENABLE` independently of the primary operating-state encoding. |
+| **DFC-FUNC-0007** | Dragon Core shall provide independent host-visible current-state readback of `HOST_READY`, `INIT_COMPLETE`, `INIT_FAILED`, `OBSERVATIONAL_MODE`, and `EFFECTIVE_OPERATIONAL_ENABLE`; none of these qualifiers shall require inference from the primary operating-state encoding or from a commanded control value. |
 | **DFC-FUNC-0008** | Effective operational enable shall be asserted if and only if `OPERATIONAL_ENABLE` and `INIT_COMPLETE` are asserted, `INIT_FAILED` is deasserted, the primary state is NORMAL or DEGRADED, and both `OBSERVATIONAL_MODE` and TEST_DEBUG are deasserted. |
 | **DFC-FUNC-0009** | Dragon Core shall distribute effective operational enable, global interrupt enable, and global event enable through deterministic registered control paths. |
 | **DFC-FUNC-0010** | Dragon Core shall keep mandatory functions enabled, permit independent control of optional-function enables, and exclude a disabled optional function from degraded-state determination. |
@@ -137,7 +154,7 @@ The operating-state priority shall be RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, 
 | **DFC-FUNC-0046** | Dragon Core shall provide eight independently configurable digital GPIO channels. |
 | **DFC-FUNC-0047** | Each GPIO channel shall support independently selected input or output operation, output value, input qualification, event enables, and interrupt enables. |
 | **DFC-FUNC-0048** | A GPIO configured as an input shall not drive its pad; a GPIO configured as an output shall drive only the configured logical value subject to reset and effective-operational gating. |
-| **DFC-FUNC-0049** | Dragon Core shall report synchronized input state, commanded output state, effective output state, direction, qualification state, and enabled event evidence for each GPIO channel. |
+| **DFC-FUNC-0049** | Dragon Core shall report raw input, synchronized input, qualified input, commanded output, effective output, direction, qualification-in-progress, and enabled retained event evidence independently for each GPIO channel. |
 | **DFC-FUNC-0050** | Dragon Core shall support qualified rising-edge, falling-edge, either-edge, active-high-level, and active-low-level GPIO event conditions. |
 | **DFC-FUNC-0051** | Each enabled qualifying GPIO event shall be eligible for timestamped event recording and the configured internal interrupt source. |
 | **DFC-FUNC-0052** | GPIO behavior shall remain limited to documented digital monitoring, indication, and bounded adaptation; electrical protection and level adaptation remain external as assigned by the PBIO Specification. |
@@ -195,7 +212,7 @@ The operating-state priority shall be RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, 
 | **DFC-FUNC-0094** | Low, high, stale, and invalid sensor conditions shall have independent event and interrupt enables. |
 | **DFC-FUNC-0095** | Dragon Core shall monitor eight independent conditioned digital health or discrete inputs. |
 | **DFC-FUNC-0096** | Each health input shall support polarity, qualification, asserted, deasserted, transition, sticky, recovery, event, interrupt, and optional external-fault-source behavior. |
-| **DFC-FUNC-0097** | Dragon Core shall report per-input raw, qualified, active, sticky, recovered, and qualification-failure state and an aggregate health fault indication. |
+| **DFC-FUNC-0097** | Dragon Core shall report per-input raw, synchronized, qualified, qualification-in-progress, active, sticky asserted, sticky recovered, and sticky qualification-failure state, together with the current aggregate health-fault indication; each reported concept shall be independently distinguishable. |
 
 ### 5.6 Hardware Safety-Supervision Functions
 
@@ -216,7 +233,7 @@ The operating-state priority shall be RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, 
 | **DFC-FUNC-0110** | Each enabled lost-link monitor shall assert loss after the configured absence interval and shall report active, sticky, recovered, source, elapsed-time, and response evidence. |
 | **DFC-FUNC-0111** | Dragon Core shall provide four independently controlled low-voltage logical safety-output channels. |
 | **DFC-FUNC-0112** | A logical safety output shall become active only from an active authorized hardware response source while its channel is enabled, effective operation is permitted, global inhibit is inactive, and every applicable interlock and fault inhibit is satisfied. |
-| **DFC-FUNC-0113** | Each logical safety output shall report requested, latched, commanded, effective, disabled, globally inhibited, interlock-inhibited, fault-inhibited, and reset-held state. |
+| **DFC-FUNC-0113** | Each logical safety output shall independently report requested state, latched-request state, commanded state, effective state, channel-disabled state, controller-disabled state, global-inhibit state, observational-inhibit state, test-inhibit state, interlock-inhibit state, fault-inhibit state, and reset-held state; an aggregate inhibited indication shall not replace any required cause indication. |
 | **DFC-FUNC-0114** | The host shall configure only response authorization, channel policy, polarity, latch policy, recovery policy, and clearing behavior; no host-visible register shall directly command a logical safety output active. |
 | **DFC-FUNC-0115** | The safety-response authorization mask shall contain 32 positions corresponding to the fixed Architecture-defined four-lane by eight-source mapping; writes that set any reserved authorization position shall be rejected. |
 | **DFC-FUNC-0116** | Simultaneous authorized safety requests for the same channel shall be combined by requested response action without allowing one source to suppress another active source. |
@@ -243,9 +260,15 @@ The operating-state priority shall be RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, 
 | **DFC-FUNC-0127** | Dragon Core shall provide one centralized logical 512-word by 32-bit shared-buffer service allocated by `PBIO-MEM-001` through `PBIO-MEM-004` while preserving each client's externally visible queue, mailbox, loss, and ordering behavior. |
 | **DFC-FUNC-0128** | The event store allocated by `PBIO-MEM-005` shall remain functionally independent of the centralized shared-buffer service. |
 | **DFC-FUNC-0129** | Dragon Core shall drive every externally visible output to its defined safe state until its function is valid and permitted to act. |
-| **DFC-FUNC-0130** | Dragon Core shall expose host-visible status for every detected host, GPIO, databus, pulse, health, logical safety-output, user-I/O, clock, reset, and test-interface fault and shall provide sticky evidence and saturating counts for host abort, host timeout, host access error, buffer overflow or underflow, dropped data, and test rejection. |
+| **DFC-FUNC-0130** | Dragon Core shall expose host-visible current status and sticky historical evidence for every Architecture-defined detected fault or error in the host, GPIO, databus, pulse, sampled-sensor, health, watchdog, fault-manager, interlock, lost-link, logical safety-output, user-I/O, user-routing, clock, reset, shared-buffer, event, and production-test functions. |
 | **DFC-FUNC-0131** | Dragon Core shall distinguish active condition, sticky historical evidence, and saturating count wherever those concepts are specified and shall not clear one as an undocumented side effect of reading another. |
 | **DFC-FUNC-0132** | Every externally observable reserved state, unused interface, disabled function, invalid encoding, timeout, overflow, and simultaneous command or event shall have deterministic behavior defined by this SRS or its designated downstream normative owner. |
+| **DFC-FUNC-0133** | Host-transport diagnostics shall independently report sticky invalid-opcode, invalid-length, unaligned-address, invalid-address, access-error, protected-write-failure, CRC-error, internal-timeout, endpoint-error, pre-acceptance-abort, and post-acceptance-response-truncation evidence and shall provide saturating counts for CRC errors, an aggregate of aborts and truncations, internal timeouts, and an aggregate of invalid-opcode, invalid-length, unaligned-address, invalid-address, access-error, protected-write-failure, and endpoint-error occurrences. |
+| **DFC-FUNC-0134** | Every finite queue or mailbox serviced by the host shall expose its applicable current empty, full, occupancy, or busy state and persistent overflow, underflow, rejected-access, and dropped-data evidence. Each such loss class and each loss at an internal ingress slot, event-pending slot, event store, or shared-buffer client shall have a saturating count that identifies the affected host-visible resource or internal source. |
+| **DFC-FUNC-0135** | Clock and reset diagnostics shall retain host-visible evidence of every Architecture-defined detectable invalid-clock, lost-clock, illegal-reset, reset-timeout, reset-rejection, and reset-recovery failure condition that permits subsequent host reporting. |
+| **DFC-FUNC-0136** | Production-test diagnostics shall independently report current authorization, qualified active state, busy state, terminal completion, terminal rejection reason, unsafe-command rejection, safety blocking, deauthorization abort, and injected-versus-natural fault evidence; rejected or aborted test commands shall set sticky evidence and increment a saturating rejection-or-abort count. |
+| **DFC-FUNC-0137** | A diagnostic clear shall affect only the explicitly selected clearable evidence or whole counter and shall not clear an active source, an unrelated diagnostic class, retained event records, or the host-reconciliation record. |
+| **DFC-FUNC-0138** | When the same occurrence contributes to module-local evidence, aggregate fault status, interrupt status, and event evidence, each reporting path shall preserve the same source identity and shall remain independently serviceable according to its defined clear behavior. |
 
 ## 6. External Interface Requirements
 
@@ -322,7 +345,7 @@ The Dragon Core logical wrapper has exactly 44 functional pad positions and thre
 | **DFC-INTF-0033** | A multiword command shall be non-atomic: words shall execute in increasing address order, execution shall stop at the first failing word, earlier completed words shall remain committed, and later words shall not execute. |
 | **DFC-INTF-0034** | Register-defined staging and commit operations shall remain the only mechanism for atomic activation of a multiregister configuration. |
 | **DFC-INTF-0035** | Each accepted SPI command shall produce at most one target request per word and exactly one definitive transaction status; an internal timeout shall prevent a later untracked target write from becoming externally effective. |
-| **DFC-INTF-0036** | The host interface shall expose ready, busy, last accepted opcode and address, last status, completed count, CRC error, pre-acceptance abort, response truncation, timeout, invalid address, access error, and protected-write failure evidence. |
+| **DFC-INTF-0036** | The host interface shall expose ready, busy, the complete host-reconciliation record, CRC error, pre-acceptance abort, response truncation, timeout, invalid address, access error, and protected-write-failure evidence. |
 
 ### 6.4 Host Interrupt, GPIO, and User I/O
 
@@ -367,6 +390,13 @@ The Dragon Core logical wrapper has exactly 44 functional pad positions and thre
 | **DFC-INTF-0058** | Production-test operation shall be bounded to identification, status, a 256-bit diagnostic capture vector, controlled serial shift, eight internal or fixture-safe loopback selections, and permitted fault-injection observations. |
 | **DFC-INTF-0059** | Production-test operation shall not activate a logical safety output, bypass an interlock or protected state, modify protected functional configuration, or create an undocumented functional interface. |
 | **DFC-INTF-0060** | Every unauthorized, malformed, reserved, busy, or unsafe production-test command shall be rejected with host-visible diagnostic evidence and no prohibited side effect. |
+
+### 6.8 Host Transaction Reconciliation
+
+| Requirement ID | Requirement |
+|---|---|
+| **DFC-INTF-0061** | One host read command spanning the host-reconciliation registers shall return one coherent snapshot of the preceding terminal accepted command; execution of that read command shall not replace any member of the returned snapshot until every requested reconciliation word has been captured for the response. |
+| **DFC-INTF-0062** | The transaction-sequence allocator shall reset to zero on functional reset, shall allocate sequence one to the first accepted command, shall then advance exactly once modulo 2048 for each later accepted command, and shall remain unchanged by a pre-acceptance abort. The sequence member and every other member of the host-reconciliation record shall be replaced atomically only when the identified accepted command reaches terminal status. |
 
 ## 7. Configuration and Protection Requirements
 
@@ -522,14 +552,14 @@ These requirements define invariant logical behavior and operating assumptions. 
 
 | Category | Identifier range | Requirements |
 |---|---|---:|
-| Functional behavior | `DFC-FUNC-0001` through `DFC-FUNC-0132` | 132 |
-| External and host interfaces | `DFC-INTF-0001` through `DFC-INTF-0060` | 60 |
+| Functional behavior | `DFC-FUNC-0001` through `DFC-FUNC-0138` | 138 |
+| External and host interfaces | `DFC-INTF-0001` through `DFC-INTF-0062` | 62 |
 | Configuration and protection | `DFC-CONF-0001` through `DFC-CONF-0035` | 35 |
 | Performance and timing | `DFC-PERF-0001` through `DFC-PERF-0026` | 26 |
 | Safety behavior | `DFC-SAFE-0001` through `DFC-SAFE-0023` | 23 |
 | Reliability and fault tolerance | `DFC-REL-0001` through `DFC-REL-0016` | 16 |
 | Environmental and physical integration | `DFC-ENV-0001` through `DFC-ENV-0006` | 6 |
 | Protected access, test, and diagnostics | `DFC-SEC-0001` through `DFC-SEC-0012` | 12 |
-| **Total** | | **310** |
+| **Total** | | **318** |
 
 Requirement identifiers are contiguous within each category. Verification methods and cases are owned by the Verification Plan; relationships among these requirements, Architecture contracts, register fields, RTL modules, and verification cases are owned by the RTM.

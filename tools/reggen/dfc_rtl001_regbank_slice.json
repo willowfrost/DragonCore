@@ -1,6 +1,6 @@
 {
   "module": "RTL-001",
-  "_source": "RTL-001's register bank must physically decode/store the FULL REG-002 address space; this slice is all 314 registers, each carrying readback classification and protection status for reggen.py v2's address-decode and access-class/protection output generation.",
+  "_source": "RTL-001's register bank must physically decode/store the FULL REG-002 address space; this slice is all 314 registers, each carrying readback classification and protection status for reggen.py v2's address-decode and access-class/protection output generation. UPDATED: 39 registers added mechanically from dfc_registers_pkg.json (REG-002 grew from 314 to 353 registers -- packed 16-bit counter-pair diagnostic registers, REG-ENC-021 -- this slice had not been re-synced since). Every added entry copied verbatim from the already-extracted, already-verified register metadata; nothing invented.",
   "registers": [
     {
       "name": "DFC_DEVICE_ID",
@@ -243,6 +243,16 @@
       "protection": "No"
     },
     {
+      "name": "RESET_DIAGNOSTIC",
+      "addr": 96,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0",
+      "owner": "RTL-002",
+      "readback": "external",
+      "contract_id": "REG-0060",
+      "protection": "No"
+    },
+    {
       "name": "IRQ_ENABLE",
       "addr": 256,
       "reset": "0x00000000",
@@ -423,6 +433,26 @@
       "protection": "No"
     },
     {
+      "name": "TIME_ACTIVE_OFFSET_LO",
+      "addr": 552,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-001 / RTL-004",
+      "readback": "external",
+      "contract_id": "REG-0228",
+      "protection": "No"
+    },
+    {
+      "name": "TIME_ACTIVE_OFFSET_HI",
+      "addr": 556,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-001 / RTL-004",
+      "readback": "external",
+      "contract_id": "REG-022C",
+      "protection": "No"
+    },
+    {
       "name": "EVT_CONTROL",
       "addr": 768,
       "reset": "0x00000003",
@@ -560,6 +590,16 @@
       "owner": "RTL-005",
       "readback": "external",
       "contract_id": "REG-0334",
+      "protection": "No"
+    },
+    {
+      "name": "EVT_POP_ERROR_COUNT",
+      "addr": 824,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-005",
+      "readback": "external",
+      "contract_id": "REG-0338",
       "protection": "No"
     },
     {
@@ -703,6 +743,16 @@
       "protection": "No"
     },
     {
+      "name": "GPIO_STATUS",
+      "addr": 1080,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-006",
+      "readback": "external",
+      "contract_id": "REG-0438",
+      "protection": "No"
+    },
+    {
       "name": "HOST_CONTROL",
       "addr": 1280,
       "reset": "0x00000001",
@@ -823,6 +873,66 @@
       "protection": "No"
     },
     {
+      "name": "CLOCK_RESET_STATUS",
+      "addr": 1328,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, W1C, RSV0",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0530",
+      "protection": "No"
+    },
+    {
+      "name": "BUFFER_CLIENT_ERROR_COUNT_0_1",
+      "addr": 1332,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0534",
+      "protection": "No"
+    },
+    {
+      "name": "BUFFER_CLIENT_ERROR_COUNT_2_3",
+      "addr": 1336,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0538",
+      "protection": "No"
+    },
+    {
+      "name": "BUFFER_CLIENT_ERROR_COUNT_4_5",
+      "addr": 1340,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-053C",
+      "protection": "No"
+    },
+    {
+      "name": "BUFFER_CLIENT_ERROR_COUNT_6",
+      "addr": 1344,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: COUNTER16-CLR, RSV0",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0540",
+      "protection": "No"
+    },
+    {
+      "name": "BUFFER_INTERNAL_ERROR_COUNT",
+      "addr": 1348,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0544",
+      "protection": "No"
+    },
+    {
       "name": "TEST_CONTROL",
       "addr": 1536,
       "reset": "0x00000000",
@@ -881,6 +991,16 @@
       "readback": "zero",
       "contract_id": "REG-0614",
       "protection": "Yes"
+    },
+    {
+      "name": "TEST_REJECTION_ABORT_COUNT",
+      "addr": 1560,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-024",
+      "readback": "external",
+      "contract_id": "REG-0618",
+      "protection": "No"
     },
     {
       "name": "ARX_CONTROL",
@@ -1003,6 +1123,16 @@
       "protection": "No"
     },
     {
+      "name": "ARX_REJECTED_ACCESS_COUNT",
+      "addr": 4144,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-017",
+      "readback": "external",
+      "contract_id": "REG-1030",
+      "protection": "No"
+    },
+    {
       "name": "ATX_CONTROL",
       "addr": 4352,
       "reset": "0x00000010",
@@ -1101,6 +1231,16 @@
       "readback": "internal_reg",
       "contract_id": "REG-1124",
       "protection": "Yes while enabled"
+    },
+    {
+      "name": "ATX_REJECTED_PUSH_COUNT",
+      "addr": 4392,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-018",
+      "readback": "external",
+      "contract_id": "REG-1128",
+      "protection": "No"
     },
     {
       "name": "CAN_CONTROL",
@@ -1313,6 +1453,26 @@
       "protection": "Yes"
     },
     {
+      "name": "CAN_RX_OVERFLOW_COUNT",
+      "addr": 4692,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1254",
+      "protection": "No"
+    },
+    {
+      "name": "CAN_TX_REJECTED_COUNT",
+      "addr": 4696,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-019",
+      "readback": "external",
+      "contract_id": "REG-1258",
+      "protection": "No"
+    },
+    {
       "name": "UART_CONTROL",
       "addr": 4864,
       "reset": "0x00000000",
@@ -1420,6 +1580,46 @@
       "owner": "RTL-020",
       "readback": "external",
       "contract_id": "REG-1328",
+      "protection": "No"
+    },
+    {
+      "name": "UART_RX_OVERFLOW_COUNT",
+      "addr": 4908,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-132C",
+      "protection": "No"
+    },
+    {
+      "name": "UART_RX_UNDERFLOW_COUNT",
+      "addr": 4912,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-1330",
+      "protection": "No"
+    },
+    {
+      "name": "UART_TX_REJECTED_COUNT",
+      "addr": 4916,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-1334",
+      "protection": "No"
+    },
+    {
+      "name": "UART_TX_UNDERFLOW_COUNT",
+      "addr": 4920,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER-CLR",
+      "owner": "RTL-020",
+      "readback": "external",
+      "contract_id": "REG-1338",
       "protection": "No"
     },
     {
@@ -1590,6 +1790,76 @@
       "owner": "RTL-021",
       "readback": "external",
       "contract_id": "REG-1440",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_INGRESS_LOSS_COUNT_0_1",
+      "addr": 5188,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1444",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_INGRESS_LOSS_COUNT_2_3",
+      "addr": 5192,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1448",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_INGRESS_LOSS_COUNT_4",
+      "addr": 5196,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: COUNTER16-CLR, RSV0",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-144C",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_DESTINATION_DROP_COUNT_0_1",
+      "addr": 5200,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1450",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_DESTINATION_DROP_COUNT_2_3",
+      "addr": 5204,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1454",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_DESTINATION_DROP_COUNT_4",
+      "addr": 5208,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: COUNTER16-CLR, RSV0",
+      "owner": "RTL-021",
+      "readback": "external",
+      "contract_id": "REG-1458",
+      "protection": "No"
+    },
+    {
+      "name": "ROUTE_ACTIVE_CONTROL",
+      "addr": 5212,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-001 / RTL-021",
+      "readback": "external",
+      "contract_id": "REG-145C",
       "protection": "No"
     },
     {
@@ -2383,6 +2653,26 @@
       "protection": "No"
     },
     {
+      "name": "HEALTH_QUALIFICATION",
+      "addr": 9268,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-011",
+      "readback": "external",
+      "contract_id": "REG-2434",
+      "protection": "No"
+    },
+    {
+      "name": "HEALTH_STATUS",
+      "addr": 9272,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-011",
+      "readback": "external",
+      "contract_id": "REG-2438",
+      "protection": "No"
+    },
+    {
       "name": "WDOG_CONTROL",
       "addr": 12288,
       "reset": "0x00000000",
@@ -2650,6 +2940,66 @@
       "owner": "RTL-014",
       "readback": "external",
       "contract_id": "REG-3224",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_STAGE_RESPONSE",
+      "addr": 12840,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RW, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "internal_reg",
+      "contract_id": "REG-3228",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_ACTIVE_TERMS",
+      "addr": 12844,
+      "reset": "0x00000000",
+      "access_summary": "RO",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "external",
+      "contract_id": "REG-322C",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_ACTIVE_LOGIC",
+      "addr": 12848,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "external",
+      "contract_id": "REG-3230",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_ACTIVE_GUARD",
+      "addr": 12852,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "external",
+      "contract_id": "REG-3234",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_ACTIVE_ENABLE",
+      "addr": 12856,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "external",
+      "contract_id": "REG-3238",
+      "protection": "No"
+    },
+    {
+      "name": "ILOCK_ACTIVE_RESPONSE",
+      "addr": 12860,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-001 / RTL-014",
+      "readback": "external",
+      "contract_id": "REG-323C",
       "protection": "No"
     },
     {
@@ -3033,6 +3383,36 @@
       "protection": "No"
     },
     {
+      "name": "ULI_MAILBOX_STATUS",
+      "addr": 16464,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: W1C, RSV0",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-4050",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_MAILBOX_LOSS_COUNT_0_1",
+      "addr": 16468,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-4054",
+      "protection": "No"
+    },
+    {
+      "name": "ULI_MAILBOX_LOSS_COUNT_2_3",
+      "addr": 16472,
+      "reset": "0x00000000",
+      "access_summary": "COUNTER16-CLR",
+      "owner": "RTL-022",
+      "readback": "external",
+      "contract_id": "REG-4058",
+      "protection": "No"
+    },
+    {
       "name": "UROUTE_CONTROL",
       "addr": 16640,
       "reset": "0x00000000",
@@ -3140,6 +3520,16 @@
       "owner": "RTL-023",
       "readback": "external",
       "contract_id": "REG-4128",
+      "protection": "No"
+    },
+    {
+      "name": "UROUTE_ACTIVE_CONTROL",
+      "addr": 16684,
+      "reset": "0x00000000",
+      "access_summary": "Mixed: RO, RSV0",
+      "owner": "RTL-001 / RTL-023",
+      "readback": "external",
+      "contract_id": "REG-412C",
       "protection": "No"
     }
   ]

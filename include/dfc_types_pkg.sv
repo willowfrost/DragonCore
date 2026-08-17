@@ -5,8 +5,6 @@
 
 package dfc_types_pkg;
 
-import dfc_constants_pkg::*;
-
   // ARCH-002 Appendix B dfc_event_record_t (128 bits, simple format)
   typedef struct packed {
     logic [31:0] event_data;
@@ -54,8 +52,10 @@ import dfc_constants_pkg::*;
   } dfc_rtl001_status_t;
   // total width: 19 bits
 
-  // ARCH-002 Appendix B dfc_rtl002_control_t (57 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl002_control_t (59 bits, rich format)
   typedef struct packed {
+    logic reset_status__recovery_failure;  //  reset=0 :: W1C failure to regain required ready state
+    logic reset_status__timeout;  //  reset=0 :: W1C controlled-reset timeout evidence
     logic reset_control__safety_domain_reset;  //  reset=0 :: command_pulse
     logic reset_status__rejected;  //  reset=0 :: clear_mask
     logic reset_status__complete;  //  reset=0 :: clear_mask
@@ -68,10 +68,13 @@ import dfc_constants_pkg::*;
     logic sys_control__observational_mode;  //  reset=1 :: control_value
     logic sys_control__operational_enable;  //  reset=0 :: control_value
   } dfc_rtl002_control_t;
-  // total width: 57 bits
+  // total width: 59 bits
 
-  // ARCH-002 Appendix B dfc_rtl002_status_t (109 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl002_status_t (112 bits, rich format)
   typedef struct packed {
+    logic reset_status__recovery_failure;  //  reset=0 :: sticky failure to regain required ready state
+    logic reset_status__timeout;  //  reset=0 :: sticky controlled-reset timeout evidence
+    logic sys_status__effective_operational_enable;  //  reset=0 :: independent current-state readback; never inferred from commanded enable
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [4:0] reset_status__last_result;  //  reset=0 :: readback_value
     logic [23:0] reset_status__last_scope;  //  reset=0 :: readback_value
@@ -94,7 +97,7 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl002_status_t;
-  // total width: 109 bits
+  // total width: 112 bits
 
   // ARCH-002 Appendix B dfc_rtl003_control_t (128 bits, rich format)
   typedef struct packed {
@@ -151,8 +154,9 @@ import dfc_constants_pkg::*;
   } dfc_rtl004_status_t;
   // total width: 105 bits
 
-  // ARCH-002 Appendix B dfc_rtl005_control_t (96 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl005_control_t (128 bits, rich format)
   typedef struct packed {
+    logic [31:0] evt_pop_error_count__count;  //  reset=0 :: whole-counter clear for rejected empty POP operations
     logic [31:0] evt_drop_source__source_drop;  //  reset=0 :: clear_mask
     logic evt_clear__clear_all;  //  reset=0 :: command_pulse
     logic evt_pop__pop;  //  reset=0 :: command_pulse
@@ -165,10 +169,11 @@ import dfc_constants_pkg::*;
     logic evt_status__overflow;  //  reset=0 :: clear_mask
     logic evt_control__logger_enable;  //  reset=1 :: control_value
   } dfc_rtl005_control_t;
-  // total width: 96 bits
+  // total width: 128 bits
 
-  // ARCH-002 Appendix B dfc_rtl005_status_t (236 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl005_status_t (268 bits, rich format)
   typedef struct packed {
+    logic [31:0] evt_pop_error_count__count;  //  reset=0 :: saturating count of rejected empty POP operations
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic evt_arb_status__arb_active;  //  reset=0 :: readback_value
     logic [4:0] evt_arb_status__next_source;  //  reset=0 :: readback_value
@@ -193,10 +198,11 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl005_status_t;
-  // total width: 236 bits
+  // total width: 268 bits
 
-  // ARCH-002 Appendix B dfc_rtl006_control_t (114 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl006_control_t (122 bits, rich format)
   typedef struct packed {
+    logic [7:0] gpio_dir__direction;  //  reset=0 :: RTL-006-owned direction configuration; one means output
     logic [7:0] gpio_qual_4_7__ch7_ms;  //  reset=0 :: control_value
     logic [7:0] gpio_qual_4_7__ch6_ms;  //  reset=0 :: control_value
     logic [7:0] gpio_qual_4_7__ch5_ms;  //  reset=0 :: control_value
@@ -214,10 +220,14 @@ import dfc_constants_pkg::*;
     logic gpio_control__qualification_enable;  //  reset=0 :: control_value
     logic gpio_control__enable;  //  reset=0 :: control_value
   } dfc_rtl006_control_t;
-  // total width: 114 bits
+  // total width: 122 bits
 
-  // ARCH-002 Appendix B dfc_rtl006_status_t (51 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl006_status_t (83 bits, rich format)
   typedef struct packed {
+    logic [7:0] gpio_status__qualification_in_progress;  //  reset=0 :: current per-channel qualification-in-progress state
+    logic [7:0] gpio_status__direction;  //  reset=0 :: active per-channel direction readback
+    logic [7:0] gpio_status__effective_output;  //  reset=0 :: current post-permit output data
+    logic [7:0] gpio_status__commanded_output;  //  reset=0 :: current pre-permit commanded output
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [7:0] gpio_event_status__event;  //  reset=0 :: readback_value
     logic [7:0] gpio_qual_in__qual_input;  //  reset=0 :: readback_value
@@ -227,7 +237,7 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl006_status_t;
-  // total width: 51 bits
+  // total width: 83 bits
 
   // ARCH-002 Appendix B dfc_rtl007_control_t (135 bits, rich format)
   typedef struct packed {
@@ -416,8 +426,9 @@ import dfc_constants_pkg::*;
   } dfc_rtl010_status_t;
   // total width: 225 bits
 
-  // ARCH-002 Appendix B dfc_rtl011_control_t (113 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl011_control_t (121 bits, rich format)
   typedef struct packed {
+    logic [7:0] health_sticky__qualification_failure;  //  reset=0 :: W1C mask for sticky per-channel qualification failure
     logic [7:0] health_qual_4_7__ch7_ms;  //  reset=0 :: control_value
     logic [7:0] health_qual_4_7__ch6_ms;  //  reset=0 :: control_value
     logic [7:0] health_qual_4_7__ch5_ms;  //  reset=0 :: control_value
@@ -434,10 +445,13 @@ import dfc_constants_pkg::*;
     logic [7:0] health_sticky__asserted;  //  reset=0 :: clear_mask
     logic health_control__enable;  //  reset=0 :: control_value
   } dfc_rtl011_control_t;
-  // total width: 113 bits
+  // total width: 121 bits
 
-  // ARCH-002 Appendix B dfc_rtl011_status_t (67 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl011_status_t (84 bits, rich format)
   typedef struct packed {
+    logic health_status__aggregate_fault;  //  reset=0 :: current OR of active fault-enabled health channels
+    logic [7:0] health_sticky__qualification_failure;  //  reset=0 :: sticky per-channel qualification-failure evidence
+    logic [7:0] health_qualification__in_progress;  //  reset=0 :: current per-channel qualification-in-progress state
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [7:0] health_sticky__recovered;  //  reset=0 :: readback_value
     logic [7:0] health_sticky__asserted;  //  reset=0 :: readback_value
@@ -449,7 +463,7 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl011_status_t;
-  // total width: 67 bits
+  // total width: 84 bits
 
   // ARCH-002 Appendix B dfc_rtl012_control_t (110 bits, rich format)
   typedef struct packed {
@@ -603,8 +617,9 @@ import dfc_constants_pkg::*;
   } dfc_rtl015_status_t;
   // total width: 75 bits
 
-  // ARCH-002 Appendix B dfc_rtl016_control_t (52 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl016_control_t (53 bits, rich format)
   typedef struct packed {
+    logic safety_control__global_inhibit;  //  reset=1 :: explicit global inhibit; independent of controller enable
     logic [7:0] safety_interlock_mask__required_interlocks;  //  reset=0 :: control_value
     logic [31:0] safety_response_mask__response_source_mask;  //  reset=0 :: control_value
     logic safety_channel_control__active_high;  //  reset=1 :: control_value
@@ -616,10 +631,15 @@ import dfc_constants_pkg::*;
     logic safety_control__event_enable;  //  reset=0 :: control_value
     logic safety_control__enable;  //  reset=0 :: control_value
   } dfc_rtl016_control_t;
-  // total width: 52 bits
+  // total width: 53 bits
 
-  // ARCH-002 Appendix B dfc_rtl016_status_t (47 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl016_status_t (52 bits, rich format)
   typedef struct packed {
+    logic safety_channel_status__operational_inhibit;  //  reset=1 :: current effective-operational-enable inhibit cause
+    logic safety_channel_status__global_inhibit;  //  reset=1 :: current explicit global-inhibit cause
+    logic safety_channel_status__controller_disabled;  //  reset=1 :: current controller-disabled cause
+    logic safety_channel_status__commanded;  //  reset=0 :: current requested OR latched-request state
+    logic safety_channel_status__latched_request;  //  reset=0 :: retained request state for selected channel
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic safety_channel_status__test_inhibit;  //  reset=1 :: readback_value
     logic safety_channel_status__reset_active;  //  reset=1 :: readback_value
@@ -628,7 +648,7 @@ import dfc_constants_pkg::*;
     logic safety_channel_status__observational_inhibit;  //  reset=1 :: readback_value
     logic safety_channel_status__disabled;  //  reset=1 :: readback_value
     logic safety_channel_status__effective_output;  //  reset=0 :: readback_value
-    logic safety_channel_status__command_request;  //  reset=0 :: readback_value
+    logic safety_channel_status__command_request;  //  reset=0 :: current requested state before latch policy
     logic [3:0] safety_status__event;  //  reset=0 :: readback_value
     logic [3:0] safety_status__faulted;  //  reset=0 :: readback_value
     logic [3:0] safety_status__inhibited;  //  reset=0 :: readback_value
@@ -638,10 +658,12 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl016_status_t;
-  // total width: 47 bits
+  // total width: 52 bits
 
-  // ARCH-002 Appendix B dfc_rtl017_control_t (70 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl017_control_t (103 bits, rich format)
   typedef struct packed {
+    logic [31:0] arx_rejected_access_count__count;  //  reset=0 :: whole-counter clear for rejected queue access
+    logic arx_status__pop_rejected;  //  reset=0 :: W1C rejected empty-POP evidence
     logic [31:0] arx_overflow_count__count;  //  reset=0 :: clear_mask
     logic [31:0] arx_error_count__count;  //  reset=0 :: clear_mask
     logic arx_pop__pop;  //  reset=0 :: command_pulse
@@ -651,10 +673,12 @@ import dfc_constants_pkg::*;
     logic arx_status__framing_error;  //  reset=0 :: clear_mask
     logic arx_status__parity_error;  //  reset=0 :: clear_mask
   } dfc_rtl017_control_t;
-  // total width: 70 bits
+  // total width: 103 bits
 
-  // ARCH-002 Appendix B dfc_rtl017_status_t (223 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl017_status_t (256 bits, rich format)
   typedef struct packed {
+    logic [31:0] arx_rejected_access_count__count;  //  reset=0 :: saturating count of rejected queue accesses
+    logic arx_status__pop_rejected;  //  reset=0 :: sticky rejected empty-POP evidence
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [31:0] arx_overflow_count__count;  //  reset=0 :: readback_value
     logic [31:0] arx_error_count__count;  //  reset=0 :: readback_value
@@ -680,10 +704,11 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl017_status_t;
-  // total width: 223 bits
+  // total width: 256 bits
 
-  // ARCH-002 Appendix B dfc_rtl018_control_t (130 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl018_control_t (162 bits, rich format)
   typedef struct packed {
+    logic [31:0] atx_rejected_push_count__count;  //  reset=0 :: whole-counter clear for full or invalid PUSH rejection
     logic [7:0] atx_interword_gap_bits__gap_bits;  //  reset=4 :: control_value
     logic [31:0] atx_underrun_count__count;  //  reset=0 :: clear_mask
     logic [31:0] atx_error_count__count;  //  reset=0 :: clear_mask
@@ -702,10 +727,11 @@ import dfc_constants_pkg::*;
     logic atx_control__high_speed;  //  reset=0 :: control_value
     logic atx_control__enable;  //  reset=0 :: control_value
   } dfc_rtl018_control_t;
-  // total width: 130 bits
+  // total width: 162 bits
 
-  // ARCH-002 Appendix B dfc_rtl018_status_t (95 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl018_status_t (127 bits, rich format)
   typedef struct packed {
+    logic [31:0] atx_rejected_push_count__count;  //  reset=0 :: saturating count of full or invalid PUSH rejection
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [31:0] atx_underrun_count__count;  //  reset=0 :: readback_value
     logic [31:0] atx_error_count__count;  //  reset=0 :: readback_value
@@ -722,10 +748,13 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl018_status_t;
-  // total width: 95 bits
+  // total width: 127 bits
 
-  // ARCH-002 Appendix B dfc_rtl019_control_t (138 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl019_control_t (203 bits, rich format)
   typedef struct packed {
+    logic [31:0] can_tx_rejected_count__count;  //  reset=0 :: whole-counter clear
+    logic [31:0] can_rx_overflow_count__count;  //  reset=0 :: whole-counter clear
+    logic can_status__rx_pop_rejected;  //  reset=0 :: W1C rejected empty-POP evidence
     logic can_recovery__request;  //  reset=0 :: command_pulse
     logic can_control__automatic_bus_off_recovery;  //  reset=0 :: control_value
     logic can_tx_push__push;  //  reset=0 :: command_pulse
@@ -751,10 +780,13 @@ import dfc_constants_pkg::*;
     logic can_control__loopback;  //  reset=0 :: control_value
     logic can_control__enable;  //  reset=0 :: control_value
   } dfc_rtl019_control_t;
-  // total width: 138 bits
+  // total width: 203 bits
 
-  // ARCH-002 Appendix B dfc_rtl019_status_t (261 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl019_status_t (326 bits, rich format)
   typedef struct packed {
+    logic [31:0] can_tx_rejected_count__count;  //  reset=0 :: saturating full or invalid TX PUSH rejection count
+    logic [31:0] can_rx_overflow_count__count;  //  reset=0 :: saturating RX overflow/drop count
+    logic can_status__rx_pop_rejected;  //  reset=0 :: sticky rejected empty-POP evidence
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [3:0] can_tx_level__level;  //  reset=0 :: readback_value
     logic [31:0] can_rx_time_hi__timestamp_hi;  //  reset=0x00000000 :: readback_value
@@ -786,10 +818,16 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl019_status_t;
-  // total width: 261 bits
+  // total width: 326 bits
 
-  // ARCH-002 Appendix B dfc_rtl020_control_t (85 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl020_control_t (215 bits, rich format)
   typedef struct packed {
+    logic [31:0] uart_tx_underflow_count__count;  //  reset=0 :: whole-counter clear
+    logic [31:0] uart_tx_rejected_count__count;  //  reset=0 :: whole-counter clear
+    logic [31:0] uart_rx_underflow_count__count;  //  reset=0 :: whole-counter clear
+    logic [31:0] uart_rx_overflow_count__count;  //  reset=0 :: whole-counter clear
+    logic uart_status__tx_rejected;  //  reset=0 :: W1C rejected full or invalid TX PUSH evidence
+    logic uart_status__rx_underflow;  //  reset=0 :: W1C rejected empty RX POP evidence
     logic [31:0] uart_error_count__count;  //  reset=0 :: clear_mask
     logic uart_tx_push__push;  //  reset=0 :: command_pulse
     logic [7:0] uart_tx_data__data;  //  reset=0 :: control_value
@@ -806,10 +844,16 @@ import dfc_constants_pkg::*;
     logic [1:0] uart_control__parity;  //  reset=0 :: control_value
     logic uart_control__enable;  //  reset=0 :: control_value
   } dfc_rtl020_control_t;
-  // total width: 85 bits
+  // total width: 215 bits
 
-  // ARCH-002 Appendix B dfc_rtl020_status_t (87 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl020_status_t (217 bits, rich format)
   typedef struct packed {
+    logic [31:0] uart_tx_underflow_count__count;  //  reset=0 :: saturating TX underflow count
+    logic [31:0] uart_tx_rejected_count__count;  //  reset=0 :: saturating full or invalid TX PUSH count
+    logic [31:0] uart_rx_underflow_count__count;  //  reset=0 :: saturating rejected empty RX POP count
+    logic [31:0] uart_rx_overflow_count__count;  //  reset=0 :: saturating RX overflow/drop count
+    logic uart_status__tx_rejected;  //  reset=0 :: sticky rejected full or invalid TX PUSH evidence
+    logic uart_status__rx_underflow;  //  reset=0 :: sticky rejected empty RX POP evidence
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [31:0] uart_error_count__count;  //  reset=0 :: readback_value
     logic [4:0] uart_tx_level__level;  //  reset=0 :: readback_value
@@ -830,10 +874,12 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl020_status_t;
-  // total width: 87 bits
+  // total width: 217 bits
 
-  // ARCH-002 Appendix B dfc_rtl021_control_t (125 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl021_control_t (135 bits, rich format)
   typedef struct packed {
+    logic [4:0] route_destination_drop_count__clear;  //  reset=0 :: one whole-counter-clear pulse per destination
+    logic [4:0] route_ingress_loss_count__clear;  //  reset=0 :: one whole-counter-clear pulse per ingress source
     logic route_entry_status__error;  //  reset=0 :: clear_mask
     logic route_validate_commit__disable_entry;  //  reset=0 :: command_pulse
     logic route_validate_commit__validate_commit;  //  reset=0 :: command_pulse
@@ -853,10 +899,12 @@ import dfc_constants_pkg::*;
     logic route_control__event_enable;  //  reset=0 :: control_value
     logic route_control__enable;  //  reset=0 :: control_value
   } dfc_rtl021_control_t;
-  // total width: 125 bits
+  // total width: 135 bits
 
-  // ARCH-002 Appendix B dfc_rtl021_status_t (176 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl021_status_t (336 bits, rich format)
   typedef struct packed {
+    logic [79:0] route_destination_drop_count__count;  //  reset=0 :: five packed 16-bit saturating counts, destination IDs 0 through 4 in ascending slices
+    logic [79:0] route_ingress_loss_count__count;  //  reset=0 :: five packed 16-bit saturating counts, source IDs 0 through 4 in ascending slices
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [15:0] route_entry_status__forwarded_count;  //  reset=0 :: readback_value
     logic route_entry_status__error;  //  reset=0 :: readback_value
@@ -878,10 +926,12 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl021_status_t;
-  // total width: 176 bits
+  // total width: 336 bits
 
-  // ARCH-002 Appendix B dfc_rtl022_control_t (300 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl022_control_t (308 bits, rich format)
   typedef struct packed {
+    logic [3:0] uli_mailbox_loss_count__clear;  //  reset=0 :: one whole-counter-clear pulse for each mailbox loss class
+    logic [3:0] uli_mailbox_status__overflow_underflow_clear;  //  reset=0 :: W1C input overflow, input underflow, output overflow, output underflow evidence
     logic [3:0] uli_io_output__output_request;  //  reset=0 :: control_value
     logic uli_out_pop__pop;  //  reset=0 :: command_pulse
     logic uli_in_push__push;  //  reset=0 :: command_pulse
@@ -901,10 +951,12 @@ import dfc_constants_pkg::*;
     logic uli_control__reset_req;  //  reset=0 :: command_pulse
     logic uli_control__enable;  //  reset=0 :: control_value
   } dfc_rtl022_control_t;
-  // total width: 300 bits
+  // total width: 308 bits
 
-  // ARCH-002 Appendix B dfc_rtl022_status_t (69 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl022_status_t (137 bits, rich format)
   typedef struct packed {
+    logic [63:0] uli_mailbox_loss_count__count;  //  reset=0 :: four packed 16-bit saturating counts in evidence-bit order
+    logic [3:0] uli_mailbox_status__overflow_underflow;  //  reset=0 :: sticky input overflow, input underflow, output overflow, output underflow evidence
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [3:0] uli_io_input__input;  //  reset=0 :: readback_value
     logic [31:0] uli_out_data__mailbox_data;  //  reset=0x00000000 :: readback_value
@@ -922,7 +974,7 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl022_status_t;
-  // total width: 69 bits
+  // total width: 137 bits
 
   // ARCH-002 Appendix B dfc_rtl023_control_t (34 bits, rich format)
   typedef struct packed {
@@ -966,8 +1018,15 @@ import dfc_constants_pkg::*;
   } dfc_rtl023_status_t;
   // total width: 75 bits
 
-  // ARCH-002 Appendix B dfc_rtl024_control_t (232 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl024_control_t (278 bits, rich format)
   typedef struct packed {
+    logic buffer_internal_error_count__clear;  //  reset=0 :: whole-counter-clear pulse
+    logic [6:0] buffer_client_error_count__clear;  //  reset=0 :: one whole-counter-clear pulse per client
+    logic buffer_status__internal_error_clear;  //  reset=0 :: W1C internal service error evidence
+    logic [6:0] buffer_status__client_error_clear;  //  reset=0 :: W1C per-client error evidence
+    logic [1:0] clock_reset_status__evidence_clear;  //  reset=0 :: W1C clock-fault and illegal-release evidence
+    logic [31:0] test_rejection_abort_count__count;  //  reset=0 :: whole-counter clear
+    logic [3:0] test_status__extended_evidence_clear;  //  reset=0 :: W1C unsafe rejection, deauthorization abort, natural-fault, injected-fault evidence
     logic arx_control__accept_parity_error;  //  reset=0 :: control_value
     logic arx_control__irq_enable;  //  reset=0 :: control_value
     logic arx_control__event_enable;  //  reset=0 :: control_value
@@ -1000,12 +1059,26 @@ import dfc_constants_pkg::*;
     logic host_control__irq_enable;  //  reset=0 :: control_value
     logic host_control__event_enable;  //  reset=0 :: control_value
     logic host_status__response_truncated;  //  reset=0 :: clear_mask
-    logic [7:0] gpio_dir__direction;  //  reset=0 :: control_value
   } dfc_rtl024_control_t;
-  // total width: 232 bits
+  // total width: 278 bits
 
-  // ARCH-002 Appendix B dfc_rtl024_status_t (272 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl024_status_t (467 bits, rich format)
   typedef struct packed {
+    logic [31:0] buffer_internal_error_count__count;  //  reset=0 :: saturating shared-buffer internal-error count
+    logic [111:0] buffer_client_error_count__count;  //  reset=0 :: seven packed 16-bit saturating client-error counts, clients 0 through 6 in ascending slices
+    logic clock_reset_status__illegal_release;  //  reset=0 :: retained illegal reset-release evidence
+    logic clock_reset_status__clock_fault_sticky;  //  reset=0 :: retained invalid/lost-clock evidence
+    logic clock_reset_status__clock_fault_active;  //  reset=0 :: current platform-reported clock fault
+    logic [31:0] test_rejection_abort_count__count;  //  reset=0 :: saturating rejected-or-aborted test-command count
+    logic [7:0] test_status__terminal_reason;  //  reset=0 :: ARCH-TEST-018 terminal result
+    logic test_status__injected_fault_observed;  //  reset=0 :: sticky accepted-injection evidence
+    logic test_status__natural_fault_observed;  //  reset=0 :: sticky natural-fault evidence during authorized test
+    logic test_status__injection_enabled;  //  reset=0 :: current qualified injection permission
+    logic test_status__loopback_active;  //  reset=0 :: current qualified loopback state
+    logic test_status__deauthorization_aborted;  //  reset=0 :: sticky deauthorization-abort evidence
+    logic test_status__unsafe_rejected;  //  reset=0 :: sticky unsafe-command rejection evidence
+    logic test_status__busy;  //  reset=0 :: current command activity
+    logic host_last_result__valid;  //  reset=0 :: terminal host-reconciliation record valid
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic buffer_status__internal_error;  //  reset=0 :: readback_value
     logic [6:0] buffer_status__client_error;  //  reset=0 :: readback_value
@@ -1018,13 +1091,13 @@ import dfc_constants_pkg::*;
     logic [31:0] host_timeout_count__count;  //  reset=0 :: readback_value
     logic [31:0] host_abort_count__count;  //  reset=0 :: readback_value
     logic [31:0] host_crc_error_count__count;  //  reset=0 :: readback_value
-    logic [31:0] host_completed_count__count;  //  reset=0 :: readback_value
-    logic [31:0] host_last_address__address;  //  reset=0 :: readback_value
-    logic [10:0] host_last_result__sequence;  //  reset=0 :: readback_value
-    logic [7:0] host_last_result__opcode;  //  reset=0 :: readback_value
-    logic [4:0] host_last_result__completed_count;  //  reset=0 :: readback_value
-    logic [2:0] host_last_result__dri_code;  //  reset=0 :: readback_value
-    logic [7:0] host_last_result__spi_status;  //  reset=0 :: readback_value
+    logic [31:0] host_completed_count__count;  //  reset=0 :: saturating count of successful terminal accepted commands
+    logic [31:0] host_last_address__address;  //  reset=0 :: terminal reconciliation starting byte address
+    logic [10:0] host_last_result__sequence;  //  reset=0 :: terminal reconciliation transaction sequence
+    logic [7:0] host_last_result__opcode;  //  reset=0 :: terminal reconciliation accepted opcode
+    logic [4:0] host_last_result__completed_count;  //  reset=0 :: terminal reconciliation completed-word count
+    logic [2:0] host_last_result__dri_code;  //  reset=0 :: terminal reconciliation endpoint result
+    logic [7:0] host_last_result__spi_status;  //  reset=0 :: terminal reconciliation SPI status
     logic host_status__response_truncated;  //  reset=0 :: readback_value
     logic host_status__aborted;  //  reset=0 :: readback_value
     logic host_status__endpoint_error;  //  reset=0 :: readback_value
@@ -1042,7 +1115,7 @@ import dfc_constants_pkg::*;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl024_status_t;
-  // total width: 272 bits
+  // total width: 467 bits
 
   // ARCH-002 Appendix B dfc_safety_response_req_t (8 bits, simple format)
   typedef struct packed {

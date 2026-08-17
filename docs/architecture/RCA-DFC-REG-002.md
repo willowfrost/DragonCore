@@ -11,6 +11,8 @@ This specification is the sole normative owner of Dragon Core host-visible regis
 
 It defines the logical 32-bit register contract consumed through the Architecture-defined SPI and Dragon Register Interface (DRI). It does not redefine SPI framing, DRI timing, module algorithms, internal packed types, source allocations, CDC/RDC, or verification methods. Those facts remain owned by their cited Architecture, SRS, or Verification Plan identifiers.
 
+This specification is the complete device programming contract from which subordinate external-software register definitions, drivers, initialization logic, diagnostic services, and recovery logic are derived. It exposes every active configuration value, required current state, retained evidence class, resource-loss counter, and host-reconciliation member defined by the SRS and Architecture. It does not define external-software APIs, tasks, threads, locking, persistence formats, retry policy, installation configuration, maintenance workflow, or aircraft application policy.
+
 Every field is referenced as `REGISTER.FIELD`. Every register has the stable contract identifier `REG-` followed by its four-digit hexadecimal address. Unimplemented addresses have no register identifier.
 
 ## 2. Normative Register Rules
@@ -29,6 +31,10 @@ Every field is referenced as `REGISTER.FIELD`. Every register has the stable con
 | REG-GEN-010 | A successful state-changing DRI write commits only with its OK response. A timeout cannot cause a late or untracked write. |
 | REG-GEN-011 | Configuration stored in RTL-001 remains volatile. Module reset preserves it unless the reset scope includes RTL-001; system or external reset restores every field reset value. |
 | REG-GEN-012 | All safety outputs remain inactive during reset, initialization, disable, global inhibit, observational mode, invalid state, and every production-test operation. No register is a direct safety-output command. |
+| REG-GEN-013 | A field described as current state reports present hardware state and is not sticky evidence. A W1C field reports retained evidence and is cleared only by an explicit one written to that field or an applicable reset. A counter is independent of both current state and evidence. |
+| REG-GEN-014 | A diagnostic clear affects only the selected W1C field or complete selected counter. It never clears an active source, unrelated evidence, an interrupt or fault latch owned by another function, an event record, queue contents, or the host-reconciliation record. |
+| REG-GEN-015 | Every active configuration value is readable from the same RW, CONST, or active-readback field that owns it. Selector-based configuration reads return the complete active value for the selected object; staged and active values remain distinguishable. |
+| REG-GEN-016 | Every finite host-serviced queue or mailbox exposes applicable current occupancy, empty/full/busy state, retained rejected-operation or loss evidence, and the resource-specific saturating counts defined in its block. Backpressure that accepts no operation and loses no item increments no loss counter. |
 
 ## 3. Field Access Classes
 
@@ -40,6 +46,7 @@ Every field is referenced as `REGISTER.FIELD`. Every register has the stable con
 | W1C | Current sticky or mask value | One requests bit clear; zero has no effect; new evidence dominates |
 | W1S | Current separately exposed set state | One sets or acknowledges the selected bit; zero has no effect |
 | COUNTER-CLR | Current 32-bit saturating counter | Word `0x00000000` has no effect; `0xFFFFFFFF` emits one whole-counter clear pulse; any other word is ACCESS_ERROR |
+| COUNTER16-CLR | Current 16-bit saturating counter packed with one other independent counter | For each halfword, `0x0000` has no effect and `0xFFFF` emits one clear pulse for that counter; every other halfword value rejects the complete 32-bit write |
 | CONST | Fixed product/build parameter | Write is ACCESS_ERROR |
 | CONST1 | Fixed one in a mixed register | Host must preserve one; writing zero rejects the entire word |
 | RSV0 | Zero | Host must write zero; writing one rejects the entire word |
@@ -48,7 +55,11 @@ Every field is referenced as `REGISTER.FIELD`. Every register has the stable con
 
 The protected-write sequence is two consecutive accepted writes to `PROTECT_KEY.KEY`: `0x52434131`, then `0x4452474E`, followed by exactly one protected write within 50,000 CORE_CLK cycles. Authorization clears on reset, successful protected write, bad key, malformed access, CRC failure, timeout, pre-acceptance abort, or unauthorized protected access. These constants provide deterministic hardware authorization and are not cryptographic secrets.
 
-The first-error validation order is alignment, decode, access class, reserved bits, field range/encoding, cross-field relation, protection, resource state/busy, then endpoint completion. Failure preserves all target state and records the applicable status. Pre-acceptance abort sets `HOST_STATUS.ABORTED` and increments `HOST_ABORT_COUNT.COUNT` but does not alter `HOST_LAST_RESULT`, `HOST_LAST_SEQUENCE`, or `HOST_LAST_ADDRESS`. Post-acceptance response truncation sets `HOST_STATUS.RESPONSE_TRUNCATED` and increments the same abort counter without rolling back a completed word or changing its terminal result.
+The first-error validation order is alignment, decode, access class, reserved bits, field range/encoding, cross-field relation, protection, resource state/busy, then endpoint completion. Failure preserves all target state and records the applicable status. Pre-acceptance abort sets `HOST_STATUS.ABORTED` and increments `HOST_ABORT_COUNT.COUNT` but allocates no sequence and does not alter `HOST_LAST_RESULT`, `HOST_LAST_SEQUENCE`, or `HOST_LAST_ADDRESS`. Post-acceptance response truncation sets `HOST_STATUS.RESPONSE_TRUNCATED` and increments the same abort counter without rolling back a completed word or changing the accepted command's terminal record.
+
+`HOST_LAST_RESULT`, `HOST_LAST_ADDRESS`, and `HOST_LAST_SEQUENCE` are the three physical words of the Architecture-defined host-reconciliation record. Their fields are replaced atomically when one accepted command reaches terminal status. A READ whose requested range intersects any of these three registers captures the complete preceding record before its first DRI execution and returns every intersected reconciliation field from that response-local snapshot. The reconciliation-reading command cannot replace the captured record until all requested reconciliation words have been captured for the response. Reads and diagnostic clears never alter the record.
+
+The canonical complete reconciliation read starts at `0x0508` with word count 10 and therefore spans through `0x052C`. The intervening diagnostic words retain their ordinary read semantics; only the three reconciliation words come from the response-local reconciliation snapshot.
 
 ## 5. Legal Encodings and Cross-Field Validation
 
@@ -75,37 +86,40 @@ The following Register-Map rules are normative for host values. Architecture ide
 | REG-ENC-017 | RTL-022 Revision A functional enable, parameters, operational output requests, and operational message generation have the sole legal value zero. Nonzero writes are rejected. Diagnostic mailbox commands remain legal subject to full/empty state. | ARCH-ULI-001 through ARCH-ULI-005; ARCH-VAL-022 |
 | REG-ENC-018 | User-route source IDs are 0-31 or 37 and destinations 0-24, subject to the exact Architecture source/destination pair matrix. Modes are 0 level, 1 rising pulse, 2 falling pulse, 3 either-edge pulse. Complete-bank conflict and exclusivity checks occur at commit. | ARCH-VAL-023; Architecture Section 13.2 |
 | REG-ENC-019 | `RESET_CONTROL` accepts zero (no action) or exactly one of SYSTEM_RESET, one MODULE_RESET bit for RTL-001 through RTL-024, or SAFETY_DOMAIN_RESET. Multiple scopes reject atomically. `HOST_LAST_RESULT.SPI_STATUS` uses SRS values 0x00-0x0A only; DRI_CODE uses Architecture values 0-6; OPCODE is 0x01 READ or 0x02 WRITE. | ARCH-RST-004 through ARCH-RST-006; ARCH-DRI-008; ARCH-SPI-002 |
+| REG-ENC-020 | `TEST_STATUS.TERMINAL_REASON` uses the complete Architecture-defined values 0x00 through 0x09; 0x0A through 0xFF are reserved. Clearing test evidence does not change the terminal reason. | ARCH-TEST-017 through ARCH-TEST-020 |
+| REG-ENC-021 | Packed 16-bit resource-counter registers apply COUNTER16-CLR independently to each halfword. One qualifying occurrence increments its selected counter at most once, saturation prevents wrap, and a new increment dominates simultaneous clear of that same counter. | ARCH-GEN-006 through ARCH-GEN-008; ARCH-DIAG-010 through ARCH-DIAG-017 |
+| REG-ENC-022 | `CLOCK_RESET_STATUS` distinguishes the current synchronized clock-fault level from retained clock-fault and illegal-reset-release evidence. It claims no detection of a condition that prevents every retaining clock from operating. | ARCH-CLK-004; ARCH-DIAG-007; CDC-CLOCK |
 
 ## 6. Address-Map Summary
 
 | Range | Block | Primary owner | Registers |
 |---|---|---|---:|
-| 0x0000-0x00FF | Identification, System Control, Protection, and Configuration Errors | RTL-001 / RTL-002 | 24 |
+| 0x0000-0x00FF | Identification, System Control, Protection, and Configuration Errors | RTL-001 / RTL-002 | 25 |
 | 0x0100-0x01FF | Interrupt Controller | RTL-003 | 8 |
-| 0x0200-0x02FF | Timestamp Engine | RTL-004 | 10 |
-| 0x0300-0x03FF | Event Logger | RTL-005 | 14 |
-| 0x0400-0x04FF | GPIO Controller | RTL-006 | 14 |
-| 0x0500-0x05FF | Host and Integration Diagnostics | RTL-024 / RTL-001 | 12 |
-| 0x0600-0x06FF | Production Test | RTL-024 / ASIC integration wrapper | 6 |
-| 0x1000-0x10FF | ARINC 429 Receive | RTL-017 / RTL-024 receive adapter | 12 |
-| 0x1100-0x11FF | ARINC 429 Transmit | RTL-018 | 10 |
-| 0x1200-0x12FF | Classical CAN | RTL-019 | 21 |
-| 0x1300-0x13FF | UART | RTL-020 | 11 |
-| 0x1400-0x14FF | Databus Routing Engine | RTL-021 | 17 |
+| 0x0200-0x02FF | Timestamp Engine | RTL-004 | 12 |
+| 0x0300-0x03FF | Event Logger | RTL-005 | 15 |
+| 0x0400-0x04FF | GPIO Controller | RTL-006 | 15 |
+| 0x0500-0x05FF | Host and Integration Diagnostics | RTL-024 / RTL-001 | 18 |
+| 0x0600-0x06FF | Production Test | RTL-024 / ASIC integration wrapper | 7 |
+| 0x1000-0x10FF | ARINC 429 Receive | RTL-017 / RTL-024 receive adapter | 13 |
+| 0x1100-0x11FF | ARINC 429 Transmit | RTL-018 | 11 |
+| 0x1200-0x12FF | Classical CAN | RTL-019 | 23 |
+| 0x1300-0x13FF | UART | RTL-020 | 15 |
+| 0x1400-0x14FF | Databus Routing Engine | RTL-021 | 24 |
 | 0x2000-0x20FF | Rotor RPM Monitor | RTL-007 | 11 |
 | 0x2100-0x21FF | Engine RPM Monitor | RTL-008 | 11 |
 | 0x2200-0x22FF | Pulse/Frequency Measurement | RTL-009 | 19 |
 | 0x2300-0x23FF | Sensor Monitor Interface | RTL-010 | 25 |
-| 0x2400-0x24FF | System Health Monitor | RTL-011 | 13 |
+| 0x2400-0x24FF | System Health Monitor | RTL-011 | 15 |
 | 0x3000-0x30FF | Watchdog Manager | RTL-012 | 8 |
 | 0x3100-0x31FF | Fault Manager | RTL-013 | 9 |
-| 0x3200-0x32FF | Interlock Engine | RTL-014 | 10 |
+| 0x3200-0x32FF | Interlock Engine | RTL-014 | 16 |
 | 0x3300-0x33FF | Lost-Link Supervisor | RTL-015 | 10 |
 | 0x3400-0x34FF | Safety Output Controller | RTL-016 | 8 |
-| 0x4000-0x40FF | Mask-Defined User Logic Island | RTL-022 | 20 |
-| 0x4100-0x41FF | User-Configurable Routing Logic | RTL-023 | 11 |
+| 0x4000-0x40FF | Mask-Defined User Logic Island | RTL-022 | 23 |
+| 0x4100-0x41FF | User-Configurable Routing Logic | RTL-023 | 12 |
 
-The address map contains **314 implemented 32-bit registers**. Every other aligned address is unimplemented and returns DECODE_ERROR; address gaps do not reserve an expansion function.
+The address map contains **353 implemented 32-bit registers**. Every other aligned address is unimplemented and returns DECODE_ERROR; address gaps do not reserve an expansion function.
 
 ## 7. Identification, System Control, Protection, and Configuration Errors
 
@@ -115,7 +129,7 @@ Product identification, operating controls, reset commands, protected-write auth
 |---|---|
 | Address range | 0x0000-0x00FF |
 | Primary owner | RTL-001 / RTL-002 |
-| Register count | 24 |
+| Register count | 25 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -144,6 +158,7 @@ Product identification, operating controls, reset commands, protected-write auth
 | `0x0054` | `EVENT_CONDITION_MASK_HI` | `REG-0054` |
 | `0x0058` | `IRQ_CONDITION_MASK_LO` | `REG-0058` |
 | `0x005C` | `IRQ_CONDITION_MASK_HI` | `REG-005C` |
+| `0x0060` | `RESET_DIAGNOSTIC` | `REG-0060` |
 
 ### DFC_DEVICE_ID (`0x0000`)
 
@@ -184,16 +199,16 @@ Product identification, operating controls, reset commands, protected-write auth
 |---|---|
 | Contract ID | `REG-0008` |
 | Access summary | CONST |
-| Register reset | 0x00030001 |
+| Register reset | 0x00030002 |
 | Owner | RTL-001 |
 | Protection | No |
-| Register behavior | Register-contract semantic version: major 3, minor 1. It identifies the programming model and contains no document-history state. |
+| Register behavior | Register-contract semantic version: major 3, minor 2. It identifies the programming model and contains no document-history state. |
 | Register-level side effect | None |
 
 | Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
 |---:|---|---|---:|---|---|---|---|---|---|
 | 31:16 | `MAJOR` | CONST | 0x0003 | Fixed reset/read value | Any register write is ACCESS_ERROR | Reads the stored or fixed field value | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001 |
-| 15:0 | `MINOR` | CONST | 0x0001 | Fixed reset/read value | Any register write is ACCESS_ERROR | Reads the stored or fixed field value | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001 |
+| 15:0 | `MINOR` | CONST | 0x0002 | Fixed reset/read value | Any register write is ACCESS_ERROR | Reads the stored or fixed field value | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001 |
 
 ### DFC_BUILD_ID (`0x000C`)
 
@@ -273,7 +288,8 @@ Product identification, operating controls, reset commands, protected-write auth
 | 7 | `TEST_DEBUG` | RO | 0 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-002, ARCH-RTL002-001, ARCH-VAL-002 |
 | 8 | `INIT_COMPLETE` | RO | 0 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-002, ARCH-RTL002-001, ARCH-VAL-002 |
 | 9 | `INIT_FAILED` | RO | 0 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-002, ARCH-RTL002-001, ARCH-VAL-002 |
-| 31:10 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-002, ARCH-RTL002-001, ARCH-VAL-002 |
+| 10 | `EFFECTIVE_OPERATIONAL_ENABLE` | RO | 0 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current registered effective permission independently of the commanded enable | None | Architecture producer priority; reset dominates | ARCH-STATE-001 through ARCH-STATE-007, ARCH-RTL002-001 |
+| 31:11 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-002, ARCH-RTL002-001, ARCH-VAL-002 |
 
 ### SUBSYS_ENABLE (`0x001C`)
 
@@ -578,6 +594,24 @@ Product identification, operating controls, reset commands, protected-write auth
 |---:|---|---|---:|---|---|---|---|---|---|
 | 31:0 | `MASK` | RW | 0x00000000 | Any defined 32-bit subset; reserved source bits zero | Validated at accepted write or staged-object commit; invalid value rejects atomically | Reads the stored or fixed field value | Updates only this stored field; staged fields do not alter active state until commit | Reset, then accepted write/commit, then ordinary progression | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001 |
 
+### RESET_DIAGNOSTIC (`0x0060`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0060` |
+| Access summary | Mixed: W1C, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-002 |
+| Protection | No |
+| Register behavior | Retained controlled-reset timeout and reset-recovery-failure evidence. `RESET_STATUS` continues to report current busy state and the terminal scope/result tuple. |
+| Register-level side effect | Bitwise evidence clear only. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 0 | `TIMEOUT` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained controlled-reset-timeout evidence | Requests clear of timeout evidence only | Reset, then new timeout, then clear | ARCH-DIAG-007, ARCH-RTL002-001 |
+| 1 | `RECOVERY_FAILURE` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained failure-to-regain-required-ready-state evidence | Requests clear of recovery-failure evidence only | Reset, then new recovery failure, then clear | ARCH-DIAG-007, ARCH-RTL002-001 |
+| 31:2 | `RSV0` | RSV0 | 0x00000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
 ## 8. Interrupt Controller
 
 Fixed-source interrupt enable, raw, pending, acknowledgement, clear, and priority-vector registers.
@@ -741,7 +775,7 @@ Always-running raw time, coherent snapshots, signed correlation staging, and ato
 |---|---|
 | Address range | 0x0200-0x02FF |
 | Primary owner | RTL-004 |
-| Register count | 10 |
+| Register count | 12 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -756,6 +790,8 @@ Always-running raw time, coherent snapshots, signed correlation staging, and ato
 | `0x021C` | `TIME_SYNC_COMMIT` | `REG-021C` |
 | `0x0220` | `TIME_SYNC_STATUS` | `REG-0220` |
 | `0x0224` | `RTL004_EVT_OVERFLOW_STATUS` | `REG-0224` |
+| `0x0228` | `TIME_ACTIVE_OFFSET_LO` | `REG-0228` |
+| `0x022C` | `TIME_ACTIVE_OFFSET_HI` | `REG-022C` |
 
 ### TIME_CONTROL (`0x0200`)
 
@@ -931,6 +967,38 @@ Always-running raw time, coherent snapshots, signed correlation staging, and ato
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-004, ARCH-RTL004-001, ARCH-VAL-004 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-004, ARCH-RTL004-001, ARCH-VAL-004 |
 
+### TIME_ACTIVE_OFFSET_LO (`0x0228`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0228` |
+| Access summary | RO |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-004 |
+| Protection | No |
+| Register behavior | Active signed host-correlation offset bits 31:0, independent of the staged offset words. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `OFFSET_LO` | RO | 0x00000000 | 0-0xFFFFFFFF as the low word of a signed 64-bit two's-complement value | Writes are ACCESS_ERROR | Reads the active committed offset low word | None | Atomic offset commit; reset dominates | ARCH-GEN-019, ARCH-TIME-001 through ARCH-TIME-006 |
+
+### TIME_ACTIVE_OFFSET_HI (`0x022C`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-022C` |
+| Access summary | RO |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-004 |
+| Protection | No |
+| Register behavior | Active signed host-correlation offset bits 63:32, independent of the staged offset words. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `OFFSET_HI` | RO | 0x00000000 | 0-0xFFFFFFFF as the high word of a signed 64-bit two's-complement value | Writes are ACCESS_ERROR | Reads the active committed offset high word | None | Atomic offset commit; reset dominates | ARCH-GEN-019, ARCH-TIME-001 through ARCH-TIME-006 |
+
 ## 10. Event Logger
 
 Nondestructive snapshot and explicit pop access to the fixed 64-record event store, including mandatory overwrite-oldest evidence.
@@ -939,7 +1007,7 @@ Nondestructive snapshot and explicit pop access to the fixed 64-record event sto
 |---|---|
 | Address range | 0x0300-0x03FF |
 | Primary owner | RTL-005 |
-| Register count | 14 |
+| Register count | 15 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -958,6 +1026,7 @@ Nondestructive snapshot and explicit pop access to the fixed 64-record event sto
 | `0x032C` | `EVT_CLEAR` | `REG-032C` |
 | `0x0330` | `EVT_DROP_SOURCE` | `REG-0330` |
 | `0x0334` | `EVT_ARB_STATUS` | `REG-0334` |
+| `0x0338` | `EVT_POP_ERROR_COUNT` | `REG-0338` |
 
 ### EVT_CONTROL (`0x0300`)
 
@@ -1203,6 +1272,22 @@ Nondestructive snapshot and explicit pop access to the fixed 64-record event sto
 | 10 | `ARB_ACTIVE` | RO | 0 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-005, ARCH-RTL005-001, ARCH-VAL-005 |
 | 31:11 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-005, ARCH-RTL005-001, ARCH-VAL-005 |
 
+### EVT_POP_ERROR_COUNT (`0x0338`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0338` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-005 |
+| Protection | No |
+| Register behavior | Saturating count of rejected empty event-store POP operations. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads the saturating rejected-empty-POP count | Clears only this counter | Reset, then rejected POP increment/saturation, then clear | ARCH-DIAG-003, ARCH-DIAG-010, ARCH-RTL005-001 |
+
 ## 11. GPIO Controller
 
 Eight-channel direction, output, qualification, observation, and event controls.
@@ -1211,7 +1296,7 @@ Eight-channel direction, output, qualification, observation, and event controls.
 |---|---|
 | Address range | 0x0400-0x04FF |
 | Primary owner | RTL-006 |
-| Register count | 14 |
+| Register count | 15 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -1230,6 +1315,7 @@ Eight-channel direction, output, qualification, observation, and event controls.
 | `0x042C` | `GPIO_QUAL_0_3` | `REG-042C` |
 | `0x0430` | `GPIO_QUAL_4_7` | `REG-0430` |
 | `0x0434` | `RTL006_EVT_OVERFLOW_STATUS` | `REG-0434` |
+| `0x0438` | `GPIO_STATUS` | `REG-0438` |
 
 ### GPIO_CONTROL (`0x0400`)
 
@@ -1256,15 +1342,15 @@ Eight-channel direction, output, qualification, observation, and event controls.
 | Contract ID | `REG-0404` |
 | Access summary | Mixed: RW, RSV0 |
 | Register reset | 0x00000000 |
-| Owner | RTL-006 / RTL-024 |
+| Owner | RTL-001 / RTL-006 |
 | Protection | Yes |
 | Register behavior | Direction: zero input/high-Z, one output. |
 | Register-level side effect | None |
 
 | Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
 |---:|---|---|---:|---|---|---|---|---|---|
-| 7:0 | `DIRECTION` | RW | 0x00 | Any defined 8-bit subset; reserved source bits zero | Validated at accepted write or staged-object commit; invalid value rejects atomically | Reads the stored or fixed field value | Updates only this stored field; staged fields do not alter active state until commit | Reset, then accepted write/commit, then ordinary progression | ARCH-MOD-006, ARCH-RTL006-001, ARCH-VAL-006, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
-| 31:8 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-006, ARCH-RTL006-001, ARCH-VAL-006, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
+| 7:0 | `DIRECTION` | RW | 0x00 | Any defined 8-bit subset; reserved source bits zero | Validated at accepted write or staged-object commit; invalid value rejects atomically | Reads the active direction value stored by RTL-001 and consumed by RTL-006 | Updates only this stored field | Reset, then accepted write, then ordinary progression | ARCH-MOD-001, ARCH-RTL001-001, ARCH-MOD-006, ARCH-MON-001, ARCH-RTL006-001, ARCH-VAL-006 |
+| 31:8 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-MOD-006, ARCH-VAL-006 |
 
 ### GPIO_OUT (`0x0408`)
 
@@ -1476,6 +1562,25 @@ Eight-channel direction, output, qualification, observation, and event controls.
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-006, ARCH-RTL006-001, ARCH-VAL-006 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-006, ARCH-RTL006-001, ARCH-VAL-006 |
 
+### GPIO_STATUS (`0x0438`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0438` |
+| Access summary | RO |
+| Register reset | 0x00000000 |
+| Owner | RTL-006 |
+| Protection | No |
+| Register behavior | Independent per-channel commanded output, effective output, active direction, and qualification-in-progress readback. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 7:0 | `COMMANDED_OUTPUT` | RO | 0x00 | 0-0xFF | Writes are ACCESS_ERROR | Reads the current pre-permit commanded output for all channels | None | Architecture producer priority; reset dominates | ARCH-MON-001, ARCH-RTL006-001 |
+| 15:8 | `EFFECTIVE_OUTPUT` | RO | 0x00 | 0-0xFF | Writes are ACCESS_ERROR | Reads current post-permit output data for all channels | None | Architecture producer priority; reset dominates | ARCH-MON-001, ARCH-RTL006-001 |
+| 23:16 | `DIRECTION` | RO | 0x00 | 0-0xFF | Writes are ACCESS_ERROR | Reads the active direction owned by `GPIO_DIR.DIRECTION` | None | Architecture producer priority; reset dominates | ARCH-MON-001, ARCH-RTL006-001 |
+| 31:24 | `QUALIFICATION_IN_PROGRESS` | RO | 0x00 | 0-0xFF | Writes are ACCESS_ERROR | Reads current qualification-in-progress state independently for each channel | None | Architecture producer priority; reset dominates | ARCH-MON-001, ARCH-RTL006-001 |
+
 ## 12. Host and Integration Diagnostics
 
 SPI/DRI result evidence, pre-acceptance abort and response-truncation evidence, whole-value diagnostic counters, and shared-buffer status.
@@ -1484,7 +1589,7 @@ SPI/DRI result evidence, pre-acceptance abort and response-truncation evidence, 
 |---|---|
 | Address range | 0x0500-0x05FF |
 | Primary owner | RTL-024 / RTL-001 |
-| Register count | 12 |
+| Register count | 18 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -1501,6 +1606,12 @@ SPI/DRI result evidence, pre-acceptance abort and response-truncation evidence, 
 | `0x0524` | `RTL024_EVT_OVERFLOW_STATUS` | `REG-0524` |
 | `0x0528` | `BUFFER_STATUS` | `REG-0528` |
 | `0x052C` | `HOST_LAST_SEQUENCE` | `REG-052C` |
+| `0x0530` | `CLOCK_RESET_STATUS` | `REG-0530` |
+| `0x0534` | `BUFFER_CLIENT_ERROR_COUNT_0_1` | `REG-0534` |
+| `0x0538` | `BUFFER_CLIENT_ERROR_COUNT_2_3` | `REG-0538` |
+| `0x053C` | `BUFFER_CLIENT_ERROR_COUNT_4_5` | `REG-053C` |
+| `0x0540` | `BUFFER_CLIENT_ERROR_COUNT_6` | `REG-0540` |
+| `0x0544` | `BUFFER_INTERNAL_ERROR_COUNT` | `REG-0544` |
 
 ### HOST_CONTROL (`0x0500`)
 
@@ -1560,7 +1671,7 @@ SPI/DRI result evidence, pre-acceptance abort and response-truncation evidence, 
 | Register reset | 0x00000000 |
 | Owner | RTL-001 / RTL-024 |
 | Protection | No |
-| Register behavior | Terminal result of the most recent accepted command. Pre-acceptance aborts do not change this register; response truncation does not replace the accepted command's terminal result. |
+| Register behavior | Status, endpoint result, completed-word count, opcode, and validity of the terminal host-reconciliation record. Pre-acceptance aborts do not change this register; response truncation does not replace the accepted command's terminal result. |
 | Register-level side effect | None |
 
 | Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
@@ -1569,7 +1680,8 @@ SPI/DRI result evidence, pre-acceptance abort and response-truncation evidence, 
 | 10:8 | `DRI_CODE` | RO | 0x0 | 0-6 defined; 7 reserved | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
 | 15:11 | `COMPLETED_COUNT` | RO | 0x00 | 0-16 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
 | 23:16 | `OPCODE` | RO | 0x00 | 0x01 READ or 0x02 WRITE | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
-| 31:24 | `RSV0` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
+| 24 | `VALID` | RO | 0 | 0 or 1 | Writes are ACCESS_ERROR | Reads one after the first accepted command reaches terminal status; cleared only by functional reset | None | Atomic terminal-record replacement; reset dominates | ARCH-SPI-019 through ARCH-SPI-022 |
+| 31:25 | `RSV0` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
 
 ### HOST_LAST_ADDRESS (`0x050C`)
 
@@ -1713,13 +1825,116 @@ SPI/DRI result evidence, pre-acceptance abort and response-truncation evidence, 
 | Register reset | 0x00000000 |
 | Owner | RTL-024 / RTL-001 |
 | Protection | No |
-| Register behavior | Eleven-bit sequence number of the most recent accepted command; increments modulo 2048. |
+| Register behavior | Eleven-bit sequence member of the terminal host-reconciliation record. Functional reset initializes the allocator and record field to zero; the first accepted command is allocated one and later accepted commands advance modulo 2048 exactly once at acceptance. |
 | Register-level side effect | None |
 
 | Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
 |---:|---|---|---:|---|---|---|---|---|---|
-| 10:0 | `SEQUENCE` | RO | 0x000 | 0-0x7FF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
+| 10:0 | `SEQUENCE` | RO | 0x000 | 0-0x7FF | Writes are ACCESS_ERROR | Reads the transaction sequence atomically associated with `HOST_LAST_RESULT` and `HOST_LAST_ADDRESS` | None | Atomic terminal-record replacement; reset dominates | ARCH-SPI-019 through ARCH-SPI-022 |
 | 31:11 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-001, ARCH-RTL001-001, ARCH-VAL-001, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
+
+### CLOCK_RESET_STATUS (`0x0530`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0530` |
+| Access summary | Mixed: RO, W1C, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-024 |
+| Protection | No |
+| Register behavior | Current platform clock-fault state and independent retained clock/reset integration evidence. |
+| Register-level side effect | Bitwise evidence clear only. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 0 | `CLOCK_FAULT_ACTIVE` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads the current synchronized platform clock-fault indication | None | Current synchronized source; reset dominates | ARCH-CLK-004, ARCH-DIAG-007, CDC-CLOCK |
+| 1 | `CLOCK_FAULT_STICKY` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained invalid- or lost-clock evidence | Clears only retained clock-fault evidence | Reset, then new evidence, then clear | ARCH-DIAG-003, ARCH-DIAG-007 |
+| 2 | `ILLEGAL_RELEASE` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained illegal reset-release evidence | Clears only illegal-release evidence | Reset, then new evidence, then clear | ARCH-DIAG-003, ARCH-DIAG-007 |
+| 31:3 | `RSV0` | RSV0 | 0x00000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### BUFFER_CLIENT_ERROR_COUNT_0_1 (`0x0534`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0534` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-024 |
+| Protection | No |
+| Register behavior | Independent saturating shared-buffer service-error counts for clients 0 RTL-017 and 1 RTL-018. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `CLIENT0_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Each halfword is validated independently; any other value rejects the word | Reads client 0 count | Clears only client 0 count | Reset, then increment/saturation, then clear | ARCH-BUFERR-001, ARCH-DIAG-006 |
+| 31:16 | `CLIENT1_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Each halfword is validated independently; any other value rejects the word | Reads client 1 count | Clears only client 1 count | Reset, then increment/saturation, then clear | ARCH-BUFERR-001, ARCH-DIAG-006 |
+
+### BUFFER_CLIENT_ERROR_COUNT_2_3 (`0x0538`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0538` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-024 |
+| Protection | No |
+| Register behavior | Independent saturating shared-buffer service-error counts for clients 2 RTL-019 and 3 RTL-020. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `CLIENT2_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Each halfword is validated independently; any other value rejects the word | Reads client 2 count | Clears only client 2 count | Reset, then increment/saturation, then clear | ARCH-BUFERR-001, ARCH-DIAG-006 |
+| 31:16 | `CLIENT3_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Each halfword is validated independently; any other value rejects the word | Reads client 3 count | Clears only client 3 count | Reset, then increment/saturation, then clear | ARCH-BUFERR-001, ARCH-DIAG-006 |
+
+### BUFFER_CLIENT_ERROR_COUNT_4_5 (`0x053C`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-053C` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-024 |
+| Protection | No |
+| Register behavior | Independent saturating shared-buffer service-error counts for clients 4 RTL-021 and 5 RTL-022. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `CLIENT4_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Each halfword is validated independently; any other value rejects the word | Reads client 4 count | Clears only client 4 count | Reset, then increment/saturation, then clear | ARCH-BUFERR-001, ARCH-DIAG-006 |
+| 31:16 | `CLIENT5_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Each halfword is validated independently; any other value rejects the word | Reads client 5 count | Clears only client 5 count | Reset, then increment/saturation, then clear | ARCH-BUFERR-001, ARCH-DIAG-006 |
+
+### BUFFER_CLIENT_ERROR_COUNT_6 (`0x0540`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0540` |
+| Access summary | Mixed: COUNTER16-CLR, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-024 |
+| Protection | No |
+| Register behavior | Saturating shared-buffer service-error count for client 6, the RTL-024 SPI client. |
+| Register-level side effect | Whole-counter clear for client 6 only. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `CLIENT6_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Lower halfword accepts 0x0000 or 0xFFFF; upper reserved halfword must be zero | Reads client 6 count | Clears only client 6 count | Reset, then increment/saturation, then clear | ARCH-BUFERR-001, ARCH-DIAG-006 |
+| 31:16 | `RSV0` | RSV0 | 0x0000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### BUFFER_INTERNAL_ERROR_COUNT (`0x0544`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0544` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-024 |
+| Protection | No |
+| Register behavior | Saturating count of centralized shared-buffer INTERNAL_ERROR responses. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads the shared-buffer internal-error count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-BUFERR-001, ARCH-DIAG-006 |
 
 ## 13. Production Test
 
@@ -1729,7 +1944,7 @@ Bounded, physically authorized production-test commands, diagnostic loopback sel
 |---|---|
 | Address range | 0x0600-0x06FF |
 | Primary owner | RTL-024 / ASIC integration wrapper |
-| Register count | 6 |
+| Register count | 7 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -1740,6 +1955,7 @@ Bounded, physically authorized production-test commands, diagnostic loopback sel
 | `0x060C` | `TEST_LOOPBACK` | `REG-060C` |
 | `0x0610` | `TEST_IRQ_INJECT` | `REG-0610` |
 | `0x0614` | `TEST_FAULT_INJECT` | `REG-0614` |
+| `0x0618` | `TEST_REJECTION_ABORT_COUNT` | `REG-0618` |
 
 ### TEST_CONTROL (`0x0600`)
 
@@ -1779,7 +1995,15 @@ Bounded, physically authorized production-test commands, diagnostic loopback sel
 | 2 | `COMMAND_COMPLETE` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
 | 3 | `COMMAND_REJECTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
 | 4 | `SAFETY_BLOCKED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
-| 31:5 | `RSV0` | RSV0 | 0x0000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
+| 5 | `BUSY` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads current test-command activity | None | Current controller state; reset dominates | ARCH-TEST-017 |
+| 6 | `UNSAFE_REJECTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained unsafe-command rejection evidence | Clears only unsafe-rejection evidence | Reset, then new evidence, then clear | ARCH-TEST-017 through ARCH-TEST-020 |
+| 7 | `DEAUTHORIZATION_ABORTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained deauthorization-abort evidence | Clears only deauthorization-abort evidence | Reset, then new evidence, then clear | ARCH-TEST-017 through ARCH-TEST-020 |
+| 8 | `LOOPBACK_ACTIVE` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads current qualified safe-loopback state | None | Current controller state; reset/deauthorization dominates | ARCH-TEST-017 |
+| 9 | `INJECTION_ENABLED` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads current qualified injection permission | None | Current controller state; reset/deauthorization dominates | ARCH-TEST-017 |
+| 10 | `NATURAL_FAULT_OBSERVED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained noninjected fault evidence observed while test authorization was active | Clears only natural-fault evidence | Reset, then new evidence, then clear | ARCH-TEST-017 through ARCH-TEST-019 |
+| 11 | `INJECTED_FAULT_OBSERVED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained accepted-injection evidence | Clears only injected-fault evidence | Reset, then new evidence, then clear | ARCH-TEST-017 through ARCH-TEST-019 |
+| 19:12 | `TERMINAL_REASON` | RO | 0x00 | 0x00-0x09 defined by ARCH-TEST-018; 0x0A-0xFF reserved | Host writes zero in a mixed-register write; nonzero rejects | Reads the most recent atomic terminal test result; evidence clear does not change it | None | Terminal result/deauthorization abort, then clear of independent evidence | ARCH-TEST-017 through ARCH-TEST-020 |
+| 31:20 | `RSV0` | RSV0 | 0x000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
 
 ### TEST_COMMAND (`0x0608`)
 
@@ -1847,6 +2071,22 @@ Bounded, physically authorized production-test commands, diagnostic loopback sel
 |---:|---|---|---:|---|---|---|---|---|---|
 | 31:0 | `SOURCE_MASK` | WO-CMD | 0x00000000 | Any subset of bits 0-16; bits 17-31 zero | Undefined encoding, unmet precondition, or nonzero reserved bit rejects with no command pulse | Reads zero | Issues one SOURCE_MASK command pulse | Reset/disable or inhibit, then accepted command, then ordinary progression | ARCH-MOD-013, ARCH-RTL013-001, ARCH-VAL-013, ARCH-MOD-024, ARCH-RTL024-001, ARCH-VAL-024 |
 
+### TEST_REJECTION_ABORT_COUNT (`0x0618`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-0618` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-024 |
+| Protection | No |
+| Register behavior | Saturating count of rejected production-test commands and deauthorization-aborted commands. Each command contributes at most one increment. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads the rejected-or-aborted command count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-TEST-019, ARCH-DIAG-017 |
+
 ## 14. ARINC 429 Receive
 
 Eight-entry receive-queue control, coherent snapshot, explicit pop, timestamps, metadata, and error evidence.
@@ -1855,7 +2095,7 @@ Eight-entry receive-queue control, coherent snapshot, explicit pop, timestamps, 
 |---|---|
 | Address range | 0x1000-0x10FF |
 | Primary owner | RTL-017 / RTL-024 receive adapter |
-| Register count | 12 |
+| Register count | 13 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -1872,6 +2112,7 @@ Eight-entry receive-queue control, coherent snapshot, explicit pop, timestamps, 
 | `0x1024` | `ARX_ERROR_COUNT` | `REG-1024` |
 | `0x1028` | `ARX_OVERFLOW_COUNT` | `REG-1028` |
 | `0x102C` | `RTL017_EVT_OVERFLOW_STATUS` | `REG-102C` |
+| `0x1030` | `ARX_REJECTED_ACCESS_COUNT` | `REG-1030` |
 
 ### ARX_CONTROL (`0x1000`)
 
@@ -1916,7 +2157,8 @@ Eight-entry receive-queue control, coherent snapshot, explicit pop, timestamps, 
 | 5 | `FRAMING_ERROR` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-017, ARCH-RTL017-001, ARCH-VAL-017 |
 | 6 | `OVERRUN` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-017, ARCH-RTL017-001, ARCH-VAL-017 |
 | 7 | `ADAPTER_ERROR` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-017, ARCH-RTL017-001, ARCH-VAL-017 |
-| 31:8 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-017, ARCH-RTL017-001, ARCH-VAL-017 |
+| 8 | `POP_REJECTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained rejected empty-POP or otherwise invalid queue-access evidence | Clears only rejected-access evidence | Reset, then new evidence, then clear | ARCH-DIAG-005, ARCH-DIAG-011, ARCH-RTL017-001 |
+| 31:9 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-017, ARCH-RTL017-001, ARCH-VAL-017 |
 
 ### ARX_QUEUE_LEVEL (`0x1008`)
 
@@ -2089,6 +2331,22 @@ Eight-entry receive-queue control, coherent snapshot, explicit pop, timestamps, 
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-017, ARCH-RTL017-001, ARCH-VAL-017 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-017, ARCH-RTL017-001, ARCH-VAL-017 |
 
+### ARX_REJECTED_ACCESS_COUNT (`0x1030`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1030` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-017 |
+| Protection | No |
+| Register behavior | Saturating count of rejected empty POP and other invalid host queue-access operations. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads the rejected queue-access count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-DIAG-011, ARCH-RTL017-001 |
+
 ## 15. ARINC 429 Transmit
 
 Eight-entry transmit-queue staging, push, parity, speed, interword-gap, and error controls.
@@ -2097,7 +2355,7 @@ Eight-entry transmit-queue staging, push, parity, speed, interword-gap, and erro
 |---|---|
 | Address range | 0x1100-0x11FF |
 | Primary owner | RTL-018 |
-| Register count | 10 |
+| Register count | 12 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -2112,6 +2370,7 @@ Eight-entry transmit-queue staging, push, parity, speed, interword-gap, and erro
 | `0x111C` | `ATX_UNDERRUN_COUNT` | `REG-111C` |
 | `0x1120` | `RTL018_EVT_OVERFLOW_STATUS` | `REG-1120` |
 | `0x1124` | `ATX_INTERWORD_GAP_BITS` | `REG-1124` |
+| `0x1128` | `ATX_REJECTED_PUSH_COUNT` | `REG-1128` |
 
 ### ATX_CONTROL (`0x1100`)
 
@@ -2295,6 +2554,22 @@ Eight-entry transmit-queue staging, push, parity, speed, interword-gap, and erro
 | 7:0 | `GAP_BITS` | RW | 0x04 | 4-255 bit times | Value and all cross-field constraints validated before atomic acceptance | Reads the stored or fixed field value | Updates only this stored field; staged fields do not alter active state until commit | Reset, then accepted write/commit, then ordinary progression | ARCH-MOD-018, ARCH-RTL018-001, ARCH-VAL-018 |
 | 31:8 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-018, ARCH-RTL018-001, ARCH-VAL-018 |
 
+### ATX_REJECTED_PUSH_COUNT (`0x1128`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1128` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-018 |
+| Protection | No |
+| Register behavior | Saturating count of full-queue or invalid transmit PUSH rejections. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads rejected transmit PUSH count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-DIAG-012, ARCH-RTL018-001 |
+
 ## 16. Classical CAN
 
 Classical CAN 2.0A/2.0B configuration, receive snapshot/pop, transmit stage/push, error confinement, and bus-off recovery.
@@ -2303,7 +2578,7 @@ Classical CAN 2.0A/2.0B configuration, receive snapshot/pop, transmit stage/push
 |---|---|
 | Address range | 0x1200-0x12FF |
 | Primary owner | RTL-019 |
-| Register count | 21 |
+| Register count | 23 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -2329,6 +2604,8 @@ Classical CAN 2.0A/2.0B configuration, receive snapshot/pop, transmit stage/push
 | `0x1248` | `CAN_TX_PUSH` | `REG-1248` |
 | `0x124C` | `RTL019_EVT_OVERFLOW_STATUS` | `REG-124C` |
 | `0x1250` | `CAN_RECOVERY` | `REG-1250` |
+| `0x1254` | `CAN_RX_OVERFLOW_COUNT` | `REG-1254` |
+| `0x1258` | `CAN_TX_REJECTED_COUNT` | `REG-1258` |
 
 ### CAN_CONTROL (`0x1200`)
 
@@ -2376,7 +2653,8 @@ Classical CAN 2.0A/2.0B configuration, receive snapshot/pop, transmit stage/push
 | 7 | `TX_REJECTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-019, ARCH-RTL019-001, ARCH-VAL-019 |
 | 8 | `PROTOCOL_ERROR` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-019, ARCH-RTL019-001, ARCH-VAL-019 |
 | 9 | `TRANSCEIVER_ERROR` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-019, ARCH-RTL019-001, ARCH-VAL-019 |
-| 31:10 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-019, ARCH-RTL019-001, ARCH-VAL-019 |
+| 10 | `RX_POP_REJECTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained rejected empty RX POP evidence | Clears only RX POP rejection evidence | Reset, then new evidence, then clear | ARCH-DIAG-005, ARCH-DIAG-013, ARCH-RTL019-001 |
+| 31:11 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-019, ARCH-RTL019-001, ARCH-VAL-019 |
 
 ### CAN_BIT_TIMING (`0x1208`)
 
@@ -2706,6 +2984,38 @@ Classical CAN 2.0A/2.0B configuration, receive snapshot/pop, transmit stage/push
 | 0 | `REQUEST` | WO-CMD | 0 | 0 or 1 | Undefined encoding, unmet precondition, or nonzero reserved bit rejects with no command pulse | Reads zero | One bounded recovery request; reads zero. | Reset/disable or inhibit, then accepted command, then ordinary progression | ARCH-MOD-019, ARCH-RTL019-001, ARCH-VAL-019 |
 | 31:1 | `RSV0` | RSV0 | 0x00000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-019, ARCH-RTL019-001, ARCH-VAL-019 |
 
+### CAN_RX_OVERFLOW_COUNT (`0x1254`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1254` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-019 |
+| Protection | No |
+| Register behavior | Saturating CAN receive overflow or dropped-frame count. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads CAN RX overflow/drop count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-DIAG-013, ARCH-RTL019-001 |
+
+### CAN_TX_REJECTED_COUNT (`0x1258`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1258` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-019 |
+| Protection | No |
+| Register behavior | Saturating full-queue or invalid CAN transmit PUSH rejection count. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads CAN TX rejection count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-DIAG-013, ARCH-RTL019-001 |
+
 ## 17. UART
 
 Eight-data-bit UART framing, baud divisor, 16-byte receive/transmit queues, explicit pop/push, and persistent error evidence.
@@ -2714,7 +3024,7 @@ Eight-data-bit UART framing, baud divisor, 16-byte receive/transmit queues, expl
 |---|---|
 | Address range | 0x1300-0x13FF |
 | Primary owner | RTL-020 |
-| Register count | 11 |
+| Register count | 15 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -2730,6 +3040,10 @@ Eight-data-bit UART framing, baud divisor, 16-byte receive/transmit queues, expl
 | `0x1320` | `UART_TX_PUSH` | `REG-1320` |
 | `0x1324` | `UART_ERROR_COUNT` | `REG-1324` |
 | `0x1328` | `RTL020_EVT_OVERFLOW_STATUS` | `REG-1328` |
+| `0x132C` | `UART_RX_OVERFLOW_COUNT` | `REG-132C` |
+| `0x1330` | `UART_RX_UNDERFLOW_COUNT` | `REG-1330` |
+| `0x1334` | `UART_TX_REJECTED_COUNT` | `REG-1334` |
+| `0x1338` | `UART_TX_UNDERFLOW_COUNT` | `REG-1338` |
 
 ### UART_CONTROL (`0x1300`)
 
@@ -2775,7 +3089,9 @@ Eight-data-bit UART framing, baud divisor, 16-byte receive/transmit queues, expl
 | 6 | `RX_OVERFLOW` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-020, ARCH-RTL020-001, ARCH-VAL-020 |
 | 7 | `TX_UNDERFLOW` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-020, ARCH-RTL020-001, ARCH-VAL-020 |
 | 8 | `BREAK_DETECTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-020, ARCH-RTL020-001, ARCH-VAL-020 |
-| 31:9 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-020, ARCH-RTL020-001, ARCH-VAL-020 |
+| 9 | `RX_UNDERFLOW` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained rejected empty RX POP evidence | Clears only RX-underflow evidence | Reset, then new evidence, then clear | ARCH-DIAG-005, ARCH-DIAG-014, ARCH-RTL020-001 |
+| 10 | `TX_REJECTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained full-queue or invalid TX PUSH evidence | Clears only TX-rejection evidence | Reset, then new evidence, then clear | ARCH-DIAG-005, ARCH-DIAG-014, ARCH-RTL020-001 |
+| 31:11 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-020, ARCH-RTL020-001, ARCH-VAL-020 |
 
 ### UART_BAUD_DIV (`0x1308`)
 
@@ -2932,6 +3248,70 @@ Eight-data-bit UART framing, baud divisor, 16-byte receive/transmit queues, expl
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-020, ARCH-RTL020-001, ARCH-VAL-020 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-020, ARCH-RTL020-001, ARCH-VAL-020 |
 
+### UART_RX_OVERFLOW_COUNT (`0x132C`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-132C` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-020 |
+| Protection | No |
+| Register behavior | Saturating receive overflow or dropped-byte count. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads UART RX overflow/drop count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-DIAG-014, ARCH-RTL020-001 |
+
+### UART_RX_UNDERFLOW_COUNT (`0x1330`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1330` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-020 |
+| Protection | No |
+| Register behavior | Saturating rejected empty RX POP count. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads UART RX underflow count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-DIAG-014, ARCH-RTL020-001 |
+
+### UART_TX_REJECTED_COUNT (`0x1334`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1334` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-020 |
+| Protection | No |
+| Register behavior | Saturating full-queue or invalid TX PUSH rejection count. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads UART TX rejection count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-DIAG-014, ARCH-RTL020-001 |
+
+### UART_TX_UNDERFLOW_COUNT (`0x1338`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1338` |
+| Access summary | COUNTER-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-020 |
+| Protection | No |
+| Register behavior | Saturating transmit underflow count. |
+| Register-level side effect | Whole-counter clear only on the all-ones command. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 31:0 | `COUNT` | COUNTER-CLR | 0x00000000 | Read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF | 0 has no effect; 0xFFFFFFFF emits one clear pulse; every other word is ACCESS_ERROR | Reads UART TX underflow count | Clears only this counter | Reset, then increment/saturation, then clear | ARCH-DIAG-014, ARCH-RTL020-001 |
+
 ## 18. Databus Routing Engine
 
 Sixteen staged route entries with atomic validation/commit, exact five-source/five-destination encodings, filtering, replication, and drop evidence.
@@ -2940,7 +3320,7 @@ Sixteen staged route entries with atomic validation/commit, exact five-source/fi
 |---|---|
 | Address range | 0x1400-0x14FF |
 | Primary owner | RTL-021 |
-| Register count | 17 |
+| Register count | 24 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -2962,6 +3342,13 @@ Sixteen staged route entries with atomic validation/commit, exact five-source/fi
 | `0x1438` | `ROUTE_ACTIVE_FILTER_MASK` | `REG-1438` |
 | `0x143C` | `ROUTE_ENTRY_STATUS` | `REG-143C` |
 | `0x1440` | `RTL021_EVT_OVERFLOW_STATUS` | `REG-1440` |
+| `0x1444` | `ROUTE_INGRESS_LOSS_COUNT_0_1` | `REG-1444` |
+| `0x1448` | `ROUTE_INGRESS_LOSS_COUNT_2_3` | `REG-1448` |
+| `0x144C` | `ROUTE_INGRESS_LOSS_COUNT_4` | `REG-144C` |
+| `0x1450` | `ROUTE_DESTINATION_DROP_COUNT_0_1` | `REG-1450` |
+| `0x1454` | `ROUTE_DESTINATION_DROP_COUNT_2_3` | `REG-1454` |
+| `0x1458` | `ROUTE_DESTINATION_DROP_COUNT_4` | `REG-1458` |
+| `0x145C` | `ROUTE_ACTIVE_CONTROL` | `REG-145C` |
 
 ### ROUTE_CONTROL (`0x1400`)
 
@@ -3260,6 +3647,126 @@ Sixteen staged route entries with atomic validation/commit, exact five-source/fi
 | 7:1 | `RSV0` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-021, ARCH-RTL021-001, ARCH-VAL-021 |
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-021, ARCH-RTL021-001, ARCH-VAL-021 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-021, ARCH-RTL021-001, ARCH-VAL-021 |
+
+### ROUTE_INGRESS_LOSS_COUNT_0_1 (`0x1444`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1444` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-021 |
+| Protection | No |
+| Register behavior | Independent saturating ingress-slot loss counts for source IDs 0 ARINC RX and 1 CAN RX. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `SOURCE0_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads source 0 loss count | Clears only source 0 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+| 31:16 | `SOURCE1_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads source 1 loss count | Clears only source 1 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+
+### ROUTE_INGRESS_LOSS_COUNT_2_3 (`0x1448`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1448` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-021 |
+| Protection | No |
+| Register behavior | Independent saturating ingress-slot loss counts for source IDs 2 UART RX and 3 host ingress. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `SOURCE2_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads source 2 loss count | Clears only source 2 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+| 31:16 | `SOURCE3_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads source 3 loss count | Clears only source 3 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+
+### ROUTE_INGRESS_LOSS_COUNT_4 (`0x144C`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-144C` |
+| Access summary | Mixed: COUNTER16-CLR, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-021 |
+| Protection | No |
+| Register behavior | Saturating ingress-slot loss count for source ID 4 ULI. |
+| Register-level side effect | Whole-counter clear for source 4 only. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `SOURCE4_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Lower halfword accepts 0x0000 or 0xFFFF; upper reserved halfword must be zero | Reads source 4 loss count | Clears only source 4 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+| 31:16 | `RSV0` | RSV0 | 0x0000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### ROUTE_DESTINATION_DROP_COUNT_0_1 (`0x1450`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1450` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-021 |
+| Protection | No |
+| Register behavior | Independent saturating dropped-copy counts for destination IDs 0 ARINC TX and 1 CAN TX. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `DEST0_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads destination 0 drop count | Clears only destination 0 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+| 31:16 | `DEST1_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads destination 1 drop count | Clears only destination 1 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+
+### ROUTE_DESTINATION_DROP_COUNT_2_3 (`0x1454`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1454` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-021 |
+| Protection | No |
+| Register behavior | Independent saturating dropped-copy counts for destination IDs 2 UART TX and 3 host egress. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `DEST2_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads destination 2 drop count | Clears only destination 2 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+| 31:16 | `DEST3_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads destination 3 drop count | Clears only destination 3 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+
+### ROUTE_DESTINATION_DROP_COUNT_4 (`0x1458`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-1458` |
+| Access summary | Mixed: COUNTER16-CLR, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-021 |
+| Protection | No |
+| Register behavior | Saturating dropped-copy count for destination ID 4 ULI. |
+| Register-level side effect | Whole-counter clear for destination 4 only. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `DEST4_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Lower halfword accepts 0x0000 or 0xFFFF; upper reserved halfword must be zero | Reads destination 4 drop count | Clears only destination 4 count | Reset, then increment/saturation, then clear | ARCH-DIAG-015, ARCH-RTL021-001 |
+| 31:16 | `RSV0` | RSV0 | 0x0000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### ROUTE_ACTIVE_CONTROL (`0x145C`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-145C` |
+| Access summary | Mixed: RO, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-021 |
+| Protection | No |
+| Register behavior | Active selected-entry enable and drop-on-full policy, independent of staged control. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 0 | `ENABLE` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads selected entry's active enable | None | Atomic route commit; reset dominates | ARCH-GEN-019, ARCH-ROUTE-002 through ARCH-ROUTE-007 |
+| 1 | `DROP_ON_FULL` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads selected entry's active drop-on-full policy | None | Atomic route commit; reset dominates | ARCH-GEN-019, ARCH-ROUTE-002 through ARCH-ROUTE-007 |
+| 31:2 | `RSV0` | RSV0 | 0x00000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
 
 ## 19. Rotor RPM Monitor
 
@@ -4540,7 +5047,7 @@ Eight synchronized health channels with qualification, polarity, active/sticky/r
 |---|---|
 | Address range | 0x2400-0x24FF |
 | Primary owner | RTL-011 |
-| Register count | 13 |
+| Register count | 15 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -4558,6 +5065,8 @@ Eight synchronized health channels with qualification, polarity, active/sticky/r
 | `0x2428` | `HEALTH_QUAL_0_3` | `REG-2428` |
 | `0x242C` | `HEALTH_QUAL_4_7` | `REG-242C` |
 | `0x2430` | `RTL011_EVT_OVERFLOW_STATUS` | `REG-2430` |
+| `0x2434` | `HEALTH_QUALIFICATION` | `REG-2434` |
+| `0x2438` | `HEALTH_STATUS` | `REG-2438` |
 
 ### HEALTH_CONTROL (`0x2400`)
 
@@ -4660,7 +5169,8 @@ Eight synchronized health channels with qualification, polarity, active/sticky/r
 |---:|---|---|---:|---|---|---|---|---|---|
 | 7:0 | `ASSERTED` | W1C | 0x00 | 0-0xFF | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-011, ARCH-RTL011-001, ARCH-VAL-011 |
 | 15:8 | `RECOVERED` | W1C | 0x00 | Any defined 8-bit subset; reserved source bits zero | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-011, ARCH-RTL011-001, ARCH-VAL-011 |
-| 31:16 | `RSV0` | RSV0 | 0x0000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-011, ARCH-RTL011-001, ARCH-VAL-011 |
+| 23:16 | `QUALIFICATION_FAILURE` | W1C | 0x00 | 0-0xFF | One requests clear; zero has no effect | Reads retained per-channel qualification-attempt failure evidence | Clears only selected qualification-failure evidence | Reset, then new failure, then clear | ARCH-MON-008, ARCH-DIAG-003, ARCH-RTL011-001 |
+| 31:24 | `RSV0` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-011, ARCH-RTL011-001, ARCH-VAL-011 |
 
 ### HEALTH_POLARITY (`0x2418`)
 
@@ -4786,6 +5296,40 @@ Eight synchronized health channels with qualification, polarity, active/sticky/r
 | 7:1 | `RSV0` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-011, ARCH-RTL011-001, ARCH-VAL-011 |
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-011, ARCH-RTL011-001, ARCH-VAL-011 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-011, ARCH-RTL011-001, ARCH-VAL-011 |
+
+### HEALTH_QUALIFICATION (`0x2434`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-2434` |
+| Access summary | Mixed: RO, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-011 |
+| Protection | No |
+| Register behavior | Independent current per-channel qualification-in-progress state. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 7:0 | `IN_PROGRESS` | RO | 0x00 | 0-0xFF | Writes are ACCESS_ERROR | Reads current qualification-in-progress state for channels 0 through 7 | None | Current qualifier state; reset dominates | ARCH-MON-008, ARCH-RTL011-001 |
+| 31:8 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### HEALTH_STATUS (`0x2438`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-2438` |
+| Access summary | Mixed: RO, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-011 |
+| Protection | No |
+| Register behavior | Current aggregate health-fault state, independent of historical per-channel evidence. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 0 | `AGGREGATE_FAULT` | RO | 0 | 0 or 1 | Writes are ACCESS_ERROR | Reads the current OR of active, fault-enabled health channels | None | Current qualified inputs and active configuration; reset dominates | ARCH-MON-008, ARCH-RTL011-001 |
+| 31:1 | `RSV0` | RSV0 | 0x00000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
 
 ## 24. Watchdog Manager
 
@@ -5151,7 +5695,7 @@ Eight atomically committed four-term expressions with fixed operators, guards, r
 |---|---|
 | Address range | 0x3200-0x32FF |
 | Primary owner | RTL-014 |
-| Register count | 10 |
+| Register count | 16 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -5166,6 +5710,12 @@ Eight atomically committed four-term expressions with fixed operators, guards, r
 | `0x321C` | `ILOCK_VALIDATE_COMMIT` | `REG-321C` |
 | `0x3220` | `ILOCK_ACTIVE_RESULT` | `REG-3220` |
 | `0x3224` | `RTL014_EVT_OVERFLOW_STATUS` | `REG-3224` |
+| `0x3228` | `ILOCK_STAGE_RESPONSE` | `REG-3228` |
+| `0x322C` | `ILOCK_ACTIVE_TERMS` | `REG-322C` |
+| `0x3230` | `ILOCK_ACTIVE_LOGIC` | `REG-3230` |
+| `0x3234` | `ILOCK_ACTIVE_GUARD` | `REG-3234` |
+| `0x3238` | `ILOCK_ACTIVE_ENABLE` | `REG-3238` |
+| `0x323C` | `ILOCK_ACTIVE_RESPONSE` | `REG-323C` |
 
 ### ILOCK_CONTROL (`0x3200`)
 
@@ -5350,6 +5900,114 @@ Eight atomically committed four-term expressions with fixed operators, guards, r
 | 7:1 | `RSV0` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
+
+### ILOCK_STAGE_RESPONSE (`0x3228`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-3228` |
+| Access summary | Mixed: RW, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-014 |
+| Protection | No |
+| Register behavior | Staged four-channel logical safety-response action mask for the selected interlock entry. |
+| Register-level side effect | Updates staged state only; no active response changes until successful `ILOCK_VALIDATE_COMMIT.COMMIT_ALL`. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 3:0 | `SAFETY_RESPONSE_MASK` | RW | 0x0 | 0-15 | Complete-bank validation occurs at COMMIT_ALL; reserved ones reject the write | Reads selected entry's staged response mask | Updates only staged response state | Reset, then accepted stage write, then commit | ARCH-SAFE-003, ARCH-SAFE-006, ARCH-VAL-014 |
+| 31:4 | `RSV0` | RSV0 | 0x0000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### ILOCK_ACTIVE_TERMS (`0x322C`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-322C` |
+| Access summary | RO |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-014 |
+| Protection | No |
+| Register behavior | Active term identifiers for the selected interlock entry, independent of staged terms. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 7:0 | `TERM0` | RO | 0x00 | 0-31 or 37 | Writes are ACCESS_ERROR | Reads active term 0 | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 15:8 | `TERM1` | RO | 0x00 | 0-31 or 37 | Writes are ACCESS_ERROR | Reads active term 1 | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 23:16 | `TERM2` | RO | 0x00 | 0-31 or 37 | Writes are ACCESS_ERROR | Reads active term 2 | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 31:24 | `TERM3` | RO | 0x00 | 0-31 or 37 | Writes are ACCESS_ERROR | Reads active term 3 | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+
+### ILOCK_ACTIVE_LOGIC (`0x3230`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-3230` |
+| Access summary | Mixed: RO, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-014 |
+| Protection | No |
+| Register behavior | Active inversion and Boolean operator for the selected interlock entry. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 3:0 | `INVERT_MASK` | RO | 0x0 | 0-15 | Host writes zero in a mixed-register write; nonzero rejects | Reads active inversion mask | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 6:4 | `OPERATOR` | RO | 0x0 | 0-3 defined; 4-7 never active | Host writes zero in a mixed-register write; nonzero rejects | Reads active operator | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 31:7 | `RSV0` | RSV0 | 0x0000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### ILOCK_ACTIVE_GUARD (`0x3234`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-3234` |
+| Access summary | Mixed: RO, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-014 |
+| Protection | No |
+| Register behavior | Active guard mask for the selected interlock entry. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 7:0 | `GUARD_MASK` | RO | 0x00 | 0-0xFF | Host writes zero in a mixed-register write; nonzero rejects | Reads active guard mask | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 31:8 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### ILOCK_ACTIVE_ENABLE (`0x3238`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-3238` |
+| Access summary | Mixed: RO, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-014 |
+| Protection | No |
+| Register behavior | Active selected-entry enable and evidence policy. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 0 | `ENABLE` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads active entry enable | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 1 | `LATCH_VIOLATION` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads active latch policy | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 2 | `EVENT_ENABLE` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads active event policy | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 3 | `IRQ_ENABLE` | RO | 0 | 0 or 1 | Host writes zero in a mixed-register write; one rejects | Reads active interrupt policy | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-006 |
+| 31:4 | `RSV0` | RSV0 | 0x0000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### ILOCK_ACTIVE_RESPONSE (`0x323C`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-323C` |
+| Access summary | Mixed: RO, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-014 |
+| Protection | No |
+| Register behavior | Active four-channel logical safety-response action mask for the selected interlock entry. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 3:0 | `SAFETY_RESPONSE_MASK` | RO | 0x0 | 0-15 | Host writes zero in a mixed-register write; nonzero rejects | Reads active response mask | None | Atomic complete-bank commit; reset dominates | ARCH-GEN-019, ARCH-SAFE-003, ARCH-SAFE-006 |
+| 31:4 | `RSV0` | RSV0 | 0x0000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
 
 ## 27. Lost-Link Supervisor
 
@@ -5579,7 +6237,7 @@ Four logical safety channels with fixed source authorization, interlock gating, 
 |---|---|
 | Contract ID | `REG-3400` |
 | Access summary | Mixed: RW, RSV0 |
-| Register reset | 0x00000000 |
+| Register reset | 0x00000008 |
 | Owner | RTL-016 |
 | Protection | Yes |
 | Register behavior | Global protected safety-output controller enable and event policy. |
@@ -5590,7 +6248,8 @@ Four logical safety channels with fixed source authorization, interlock gating, 
 | 0 | `ENABLE` | RW | 0 | 0 or 1 | Value and all cross-field constraints validated before atomic acceptance | Reads the stored or fixed field value | Updates only this stored field; staged fields do not alter active state until commit | Reset, then accepted write/commit, then ordinary progression | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
 | 1 | `EVENT_ENABLE` | RW | 0 | 0 or 1 | Value and all cross-field constraints validated before atomic acceptance | Reads the stored or fixed field value | Updates only this stored field; staged fields do not alter active state until commit | Reset, then accepted write/commit, then ordinary progression | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
 | 2 | `IRQ_ENABLE` | RW | 0 | 0 or 1 | Value and all cross-field constraints validated before atomic acceptance | Reads the stored or fixed field value | Updates only this stored field; staged fields do not alter active state until commit | Reset, then accepted write/commit, then ordinary progression | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
-| 31:3 | `RSV0` | RSV0 | 0x00000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
+| 3 | `GLOBAL_INHIBIT` | RW | 1 | 0 or 1 | Value and all cross-field constraints validated before atomic acceptance | Reads the active explicit global-inhibit configuration | Updates only the global-inhibit configuration; does not alter controller enable | Reset, then accepted write, then ordinary progression | Architecture Section 10.4, ARCH-RTL016-001 |
+| 31:4 | `RSV0` | RSV0 | 0x0000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
 
 ### SAFETY_STATUS (`0x3404`)
 
@@ -5688,7 +6347,7 @@ Four logical safety channels with fixed source authorization, interlock gating, 
 |---|---|
 | Contract ID | `REG-3418` |
 | Access summary | Mixed: RO, RSV0 |
-| Register reset | 0x000000CC |
+| Register reset | 0x00001CCC |
 | Owner | RTL-016 |
 | Protection | No |
 | Register behavior | Detailed selected channel commanded/effective/inhibit/fault/reset state. |
@@ -5704,7 +6363,12 @@ Four logical safety channels with fixed source authorization, interlock gating, 
 | 5 | `FAULT_INHIBIT` | RO | 0 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads the coherent selected/snapshot value described by the register | None | Architecture producer priority; reset dominates | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
 | 6 | `RESET_ACTIVE` | RO | 1 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads the coherent selected/snapshot value described by the register | None | Architecture producer priority; reset dominates | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
 | 7 | `TEST_INHIBIT` | RO | 1 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads the coherent selected/snapshot value described by the register | None | Architecture producer priority; reset dominates | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
-| 31:8 | `RSV0` | RSV0 | 0x000000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
+| 8 | `LATCHED_REQUEST` | RO | 0 | 0 or 1 | Writes are ACCESS_ERROR | Reads selected channel retained latched-request state | None | Safety request/latch equations; reset dominates | Architecture Section 10.4, ARCH-RTL016-001 |
+| 9 | `COMMANDED` | RO | 0 | 0 or 1 | Writes are ACCESS_ERROR | Reads selected channel requested OR latched-request state before permit gating | None | Safety command equation; reset dominates | Architecture Section 10.4, ARCH-RTL016-001 |
+| 10 | `CONTROLLER_DISABLED` | RO | 1 | 0 or 1 | Writes are ACCESS_ERROR | Reads the independent controller-disabled inhibit cause | None | Current controller enable; reset dominates | Architecture Section 10.4, ARCH-RTL016-001 |
+| 11 | `GLOBAL_INHIBIT` | RO | 1 | 0 or 1 | Writes are ACCESS_ERROR | Reads the independent explicit global-inhibit cause | None | Current `SAFETY_CONTROL.GLOBAL_INHIBIT`; reset dominates | Architecture Section 10.4, ARCH-RTL016-001 |
+| 12 | `OPERATIONAL_INHIBIT` | RO | 1 | 0 or 1 | Writes are ACCESS_ERROR | Reads the independent effective-operational-enable inhibit cause | None | Current effective operational permission; reset dominates | Architecture Section 10.4, ARCH-RTL016-001 |
+| 31:13 | `RSV0` | RSV0 | 0x00000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-016, ARCH-RTL016-001, ARCH-VAL-016 |
 
 ### RTL016_EVT_OVERFLOW_STATUS (`0x341C`)
 
@@ -5733,7 +6397,7 @@ Revision A inert functional profile with diagnostic input capture and bounded di
 |---|---|
 | Address range | 0x4000-0x40FF |
 | Primary owner | RTL-022 |
-| Register count | 20 |
+| Register count | 23 |
 | Unimplemented offsets | DECODE_ERROR; no side effect |
 
 | Offset | Register | Contract ID |
@@ -5758,6 +6422,9 @@ Revision A inert functional profile with diagnostic input capture and bounded di
 | `0x4044` | `ULI_IO_INPUT` | `REG-4044` |
 | `0x4048` | `ULI_IO_OUTPUT` | `REG-4048` |
 | `0x404C` | `RTL022_EVT_OVERFLOW_STATUS` | `REG-404C` |
+| `0x4050` | `ULI_MAILBOX_STATUS` | `REG-4050` |
+| `0x4054` | `ULI_MAILBOX_LOSS_COUNT_0_1` | `REG-4054` |
+| `0x4058` | `ULI_MAILBOX_LOSS_COUNT_2_3` | `REG-4058` |
 
 ### ULI_CONTROL (`0x4000`)
 
@@ -6101,6 +6768,60 @@ Revision A inert functional profile with diagnostic input capture and bounded di
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-022, ARCH-RTL022-001, ARCH-VAL-022 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-022, ARCH-RTL022-001, ARCH-VAL-022 |
 
+### ULI_MAILBOX_STATUS (`0x4050`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-4050` |
+| Access summary | Mixed: W1C, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-022 |
+| Protection | No |
+| Register behavior | Independent retained input-overflow, input-underflow, output-overflow, and output-underflow mailbox evidence. |
+| Register-level side effect | Bitwise evidence clear only. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 0 | `INPUT_OVERFLOW` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained input-mailbox overflow evidence | Clears only input-overflow evidence | Reset, then new evidence, then clear | ARCH-DIAG-005, ARCH-DIAG-016, ARCH-RTL022-001 |
+| 1 | `INPUT_UNDERFLOW` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained input-mailbox underflow evidence | Clears only input-underflow evidence | Reset, then new evidence, then clear | ARCH-DIAG-005, ARCH-DIAG-016, ARCH-RTL022-001 |
+| 2 | `OUTPUT_OVERFLOW` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained output-mailbox overflow evidence | Clears only output-overflow evidence | Reset, then new evidence, then clear | ARCH-DIAG-005, ARCH-DIAG-016, ARCH-RTL022-001 |
+| 3 | `OUTPUT_UNDERFLOW` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads retained output-mailbox underflow evidence | Clears only output-underflow evidence | Reset, then new evidence, then clear | ARCH-DIAG-005, ARCH-DIAG-016, ARCH-RTL022-001 |
+| 31:4 | `RSV0` | RSV0 | 0x0000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
+### ULI_MAILBOX_LOSS_COUNT_0_1 (`0x4054`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-4054` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-022 |
+| Protection | No |
+| Register behavior | Independent saturating input-mailbox overflow and underflow counts, ordered as evidence bits 0 and 1. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `INPUT_OVERFLOW_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads input-overflow count | Clears only input-overflow count | Reset, then increment/saturation, then clear | ARCH-DIAG-016, ARCH-RTL022-001 |
+| 31:16 | `INPUT_UNDERFLOW_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads input-underflow count | Clears only input-underflow count | Reset, then increment/saturation, then clear | ARCH-DIAG-016, ARCH-RTL022-001 |
+
+### ULI_MAILBOX_LOSS_COUNT_2_3 (`0x4058`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-4058` |
+| Access summary | COUNTER16-CLR |
+| Register reset | 0x00000000 |
+| Owner | RTL-022 |
+| Protection | No |
+| Register behavior | Independent saturating output-mailbox overflow and underflow counts, ordered as evidence bits 2 and 3. |
+| Register-level side effect | Independent halfword whole-counter clears. |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 15:0 | `OUTPUT_OVERFLOW_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads output-overflow count | Clears only output-overflow count | Reset, then increment/saturation, then clear | ARCH-DIAG-016, ARCH-RTL022-001 |
+| 31:16 | `OUTPUT_UNDERFLOW_COUNT` | COUNTER16-CLR | 0x0000 | Read 0-0xFFFF; write 0x0000 or 0xFFFF | Any other halfword rejects the complete word | Reads output-underflow count | Clears only output-underflow count | Reset, then increment/saturation, then clear | ARCH-DIAG-016, ARCH-RTL022-001 |
+
 ## 30. User-Configurable Routing Logic
 
 Sixteen staged signal-route entries with exact source/destination authorization, mode, conflict, and activity evidence.
@@ -6125,6 +6846,7 @@ Sixteen staged signal-route entries with exact source/destination authorization,
 | `0x4120` | `UROUTE_ACTIVE_DEST` | `REG-4120` |
 | `0x4124` | `UROUTE_ENTRY_STATUS` | `REG-4124` |
 | `0x4128` | `RTL023_EVT_OVERFLOW_STATUS` | `REG-4128` |
+| `0x412C` | `UROUTE_ACTIVE_CONTROL` | `REG-412C` |
 
 ### UROUTE_CONTROL (`0x4100`)
 
@@ -6328,6 +7050,25 @@ Sixteen staged signal-route entries with exact source/destination authorization,
 | 23:8 | `DROP_COUNT` | RO | 0x0000 | 0-0xFFFF | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads current hardware value | None | Architecture producer priority; reset dominates | ARCH-MOD-023, ARCH-RTL023-001, ARCH-VAL-023 |
 | 31:24 | `RSV1` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-023, ARCH-RTL023-001, ARCH-VAL-023 |
 
+### UROUTE_ACTIVE_CONTROL (`0x412C`)
+
+| Property | Definition |
+|---|---|
+| Contract ID | `REG-412C` |
+| Access summary | Mixed: RO, RSV0 |
+| Register reset | 0x00000000 |
+| Owner | RTL-001 / RTL-023 |
+| Protection | No |
+| Register behavior | Coherent active enable, inversion, and edge/level policy for the entry selected by `UROUTE_ENTRY_SELECT`. |
+| Register-level side effect | None |
+
+| Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
+|---:|---|---|---:|---|---|---|---|---|---|
+| 0 | `ENABLE` | RO | 0 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads the committed value for the selected entry | None | Reset, then accepted commit, then ordinary progression | ARCH-GEN-019, ARCH-RTL023-001, ARCH-VAL-023 |
+| 1 | `INVERT` | RO | 0 | 0 or 1 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads the committed value for the selected entry | None | Reset, then accepted commit, then ordinary progression | ARCH-GEN-019, ARCH-RTL023-001, ARCH-VAL-023 |
+| 3:2 | `MODE` | RO | 0x0 | 0 level; 1 rising pulse; 2 falling pulse; 3 either-edge pulse | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads the committed value for the selected entry | None | Reset, then accepted commit, then ordinary progression | ARCH-GEN-019, ARCH-RTL023-001, ARCH-VAL-023 |
+| 31:4 | `RSV0` | RSV0 | 0x0000000 | 0 only | A written one rejects the complete word | Reads zero | None | Architecture producer priority; reset dominates | ARCH-GEN-009 |
+
 ## 31. Proxy, Snapshot, Pop, Staging, and Commit Semantics
 
 | ID | Contract |
@@ -6341,6 +7082,27 @@ Sixteen staged signal-route entries with exact source/destination authorization,
 | REG-COH-007 | Event-store overflow event 0x007F has priority over producer-slot overflow event 0x007E. Pending reports coalesce; an internally generated overflow record does not recursively increment or report overflow. |
 | REG-COH-008 | Active route readback uses eight source bits and five destination bits. Upper register bits are reserved zero and never contain alternate 32-bit identifiers. |
 | REG-COH-009 | Physical shared-buffer addresses are not host-visible. Host queue/mailbox registers expose only client-owned coherent state and commands defined here. |
+| REG-COH-010 | Every staged configuration field is readable from its stage register, and every committed field is readable from the corresponding active register. A selector applies to both banks without copying either bank. A single accepted host command is serialized, so one multi-register read cannot be interleaved with a host commit or selector write. |
+
+### 31.1 Architecture Packed-Member Flattening
+
+Architecture Appendix B uses logical packed members that may exceed one physical 32-bit register or combine multiple independent clear signals. The following table is the sole mapping from those packed members to the Register-Map-owned physical fields. It defines no additional state.
+
+| Architecture packed member | Physical Register Map field or ordered field sequence |
+|---|---|
+| `reset_status__timeout` | `RESET_DIAGNOSTIC.TIMEOUT` |
+| `reset_status__recovery_failure` | `RESET_DIAGNOSTIC.RECOVERY_FAILURE` |
+| `host_last_result__sequence` | `HOST_LAST_SEQUENCE.SEQUENCE` |
+| `test_status__extended_evidence_clear` | `TEST_STATUS.UNSAFE_REJECTED`, `DEAUTHORIZATION_ABORTED`, `NATURAL_FAULT_OBSERVED`, `INJECTED_FAULT_OBSERVED` in ascending bit order |
+| `clock_reset_status__evidence_clear` | `CLOCK_RESET_STATUS.CLOCK_FAULT_STICKY`, `ILLEGAL_RELEASE` in ascending bit order |
+| `buffer_status__client_error_clear` | `BUFFER_STATUS.CLIENT_ERROR[6:0]` |
+| `buffer_status__internal_error_clear` | `BUFFER_STATUS.INTERNAL_ERROR` |
+| `buffer_client_error_count__count` and `buffer_client_error_count__clear` | `BUFFER_CLIENT_ERROR_COUNT_0_1.CLIENT0_COUNT`, `CLIENT1_COUNT`; `BUFFER_CLIENT_ERROR_COUNT_2_3.CLIENT2_COUNT`, `CLIENT3_COUNT`; `BUFFER_CLIENT_ERROR_COUNT_4_5.CLIENT4_COUNT`, `CLIENT5_COUNT`; `BUFFER_CLIENT_ERROR_COUNT_6.CLIENT6_COUNT`, in client-index order |
+| `buffer_internal_error_count__clear` | COUNTER-CLR write to `BUFFER_INTERNAL_ERROR_COUNT.COUNT` |
+| `route_ingress_loss_count__count` and `route_ingress_loss_count__clear` | `ROUTE_INGRESS_LOSS_COUNT_0_1.SOURCE0_COUNT`, `SOURCE1_COUNT`; `ROUTE_INGRESS_LOSS_COUNT_2_3.SOURCE2_COUNT`, `SOURCE3_COUNT`; `ROUTE_INGRESS_LOSS_COUNT_4.SOURCE4_COUNT`, in source-index order |
+| `route_destination_drop_count__count` and `route_destination_drop_count__clear` | `ROUTE_DESTINATION_DROP_COUNT_0_1.DEST0_COUNT`, `DEST1_COUNT`; `ROUTE_DESTINATION_DROP_COUNT_2_3.DEST2_COUNT`, `DEST3_COUNT`; `ROUTE_DESTINATION_DROP_COUNT_4.DEST4_COUNT`, in destination-index order |
+| `uli_mailbox_status__overflow_underflow` and `uli_mailbox_status__overflow_underflow_clear` | `ULI_MAILBOX_STATUS.INPUT_OVERFLOW`, `INPUT_UNDERFLOW`, `OUTPUT_OVERFLOW`, `OUTPUT_UNDERFLOW`, in evidence-bit order |
+| `uli_mailbox_loss_count__count` and `uli_mailbox_loss_count__clear` | `ULI_MAILBOX_LOSS_COUNT_0_1.INPUT_OVERFLOW_COUNT`, `INPUT_UNDERFLOW_COUNT`; `ULI_MAILBOX_LOSS_COUNT_2_3.OUTPUT_OVERFLOW_COUNT`, `OUTPUT_UNDERFLOW_COUNT`, in evidence-bit order |
 
 ## 32. Reset and Safe-State Register Contract
 
@@ -6353,13 +7115,13 @@ Timestamp raw time starts at zero and runs after qualified reset release. Operat
 | ID | Required generated artifact | Content |
 |---|---|---|
 | REG-GENART-001 | `dfc_registers_pkg.sv` | Offsets, masks, shifts, access classes, reset values, legal-value predicates, command encodings, and compile-time checks |
-| REG-GENART-002 | External-host definitions | SPI status values, register constants, typed fields, protected-write helpers, counter-clear helpers, snapshot/pop helpers, and staging/commit helpers |
+| REG-GENART-002 | External-host definitions | SPI status values, register constants, typed fields, protected-write helpers, 32-bit and packed-16-bit counter-clear helpers, atomic reconciliation-read helpers, snapshot/pop helpers, and staging/commit helpers |
 | REG-GENART-003 | Verification model | Exact reset, access, legality, side-effect, priority, and negative-access expectations for every field |
 | REG-GENART-004 | Machine-readable register source | Blocks, registers, fields, owners, access, reset, protection, legal values, validation, read behavior, write behavior, side effects, priorities, and Architecture sources |
 | REG-GENART-005 | Build manifest | BUILD_ID parameter, register-source digest, generator version, and generated-artifact digests; no document-history state |
 
-Generation shall fail for duplicate names or offsets, unaligned offsets, block overrun, overlapping or incomplete bit coverage, nonzero reserved reset, unknown access class, missing field attribute, illegal reset value, unresolved Architecture identifier, or a generated packed-structure width mismatch. The generated mapping shall specifically prove that `SAFETY_CHANNEL_CONTROL.ACTIVE_HIGH` is present in the Architecture-defined 52-bit `dfc_rtl016_control_t`. Hand-copied register constants are prohibited.
+Generation shall fail for duplicate names or offsets, unaligned offsets, block overrun, overlapping or incomplete bit coverage, nonzero reserved reset, unknown access class, missing field attribute, illegal reset value, unresolved Architecture identifier, or a generated packed-structure width mismatch. The generated mapping shall specifically prove that `SAFETY_CHANNEL_CONTROL.ACTIVE_HIGH` and `SAFETY_CONTROL.GLOBAL_INHIBIT` are present in the Architecture-defined 53-bit `dfc_rtl016_control_t`, and that `ILOCK_STAGE_RESPONSE.SAFETY_RESPONSE_MASK` has a four-bit control member in `dfc_rtl014_control_t`. Hand-copied register constants are prohibited.
 
 ## 34. Register Population
 
-This specification defines **314 registers** and **861 field rows**. The count includes each concrete `RTLxxx_EVT_OVERFLOW_STATUS` instance and every reserved field row; it does not multiply or infer undocumented fields from a template.
+This specification defines **353 registers** and **964 field rows**. The count includes each concrete `RTLxxx_EVT_OVERFLOW_STATUS` instance and every reserved field row; it does not multiply or infer undocumented fields from a template.

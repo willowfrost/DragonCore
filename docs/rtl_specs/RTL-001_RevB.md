@@ -75,9 +75,10 @@ RTL-001 implements `ARCH-DRI-001` through `ARCH-DRI-009` exactly:
   cycles of acceptance (`ARCH-DRI-009`), and commits a write side effect
   only in the same cycle it commits the corresponding OK response
   (`ARCH-REG-002`, `RTLSTD-DRI-012`).
-- Decode is the single accepted-request object per `ARCH-DRI-011`; a
+- Decode is the single accepted-request object per `ARCH-DRI-010`; a
   timed-out request produces exactly one terminal timeout result, never a
-  second response or a late untracked write (`ARCH-DRI-014`).
+  second response or a late untracked write (`ARCH-DRI-011`,
+  `ARCH-SPI-016`).
 
 ## 4. Validation order and register-contract implementation
 

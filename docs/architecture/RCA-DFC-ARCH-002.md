@@ -12,6 +12,8 @@ This specification is the sole normative owner of the internal architecture subj
 
 The product mission and scope remain owned by the Charter; responsibility boundaries remain owned by `RCA-DFC-PBIO-002`; externally observable behavior remains owned by the SRS; host-visible registers remain owned by `RCA-DFC-REG-002`; SystemVerilog rules remain owned by `RCA-DFC-RTL-STD-002`; verification remains owned by `RCA-DFC-VP-002`; and trace relationships remain owned by `RCA-DFC-RTM-002`. This specification cites those owners and does not redefine their subjects.
 
+This specification completes the device architecture needed by subordinate external-software specifications. It defines deterministic device initialization, active-configuration readback paths, host-transaction reconciliation, diagnostic retention, queue and mailbox service behavior, and recovery-visible state. It does not define external-software APIs, tasks, threads, locking, persistence formats, retry policy, installation configuration, maintenance workflow, or aircraft application policy.
+
 The terms **shall** and **shall not** identify mandatory design contracts. **May** identifies a permitted implementation choice that preserves every mandatory contract.
 
 ## 2. Architecture Contract Conventions
@@ -33,6 +35,10 @@ The terms **shall** and **shall not** identify mandatory design contracts. **May
 | ARCH-GEN-013 | A disabled optional module drives operational outputs inactive, accepts no new operational work, contributes no new ordinary event or interrupt, preserves its RTL-001 configuration, and reports not-ready without requesting degraded or faulted state. |
 | ARCH-GEN-014 | Configuration validation occurs at the accepted write for a self-contained field and at the explicit commit for a staged object. Rejection preserves the prior active object and reports the first error in the priority defined for that object. |
 | ARCH-GEN-015 | No internal protocol permits a partial record, partial message, partial shared-buffer entry, or independently changing multibit value to become valid. |
+| ARCH-GEN-016 | A field identified as current state is combinational or registered present-state information and is never substituted for sticky historical evidence. A field identified as sticky evidence remains set until its explicit authorized clear or applicable reset. |
+| ARCH-GEN-017 | A diagnostic clear acts only on the selected evidence bit or complete selected counter. It never clears an active source, an unrelated diagnostic class, an event-store record, an interrupt or fault latch owned by another function, or the host-reconciliation record. |
+| ARCH-GEN-018 | When one occurrence feeds local status, fault aggregation, interrupt state, and event generation, every path uses the same Appendix C source identity. Clearing or servicing one path does not service another path unless an explicit contract states otherwise. |
+| ARCH-GEN-019 | Every active configuration value is held in RTL-001 registered storage and is readable through its Register-Map-owned field. No active configuration, mode, route, policy, threshold, mask, or timing value depends on hidden state. |
 
 ## 3. Product Hierarchy and Module Decomposition
 
@@ -56,17 +62,17 @@ OpenFrame supplies no Dragon Core host bus, register decoder, management process
 | ARCH-MOD-003 | RTL-003 Interrupt Controller | Fixed 32-position raw, pending, acknowledged, clear, priority, and aggregate interrupt processing |
 | ARCH-MOD-004 | RTL-004 Timestamp Engine | Always-running raw microsecond time, snapshot, signed correlation offset, correlated time, and update sequence |
 | ARCH-MOD-005 | RTL-005 Event Logger | 24-producer arbitration, 64 × 128-bit register-array event store, retrieval, overwrite-oldest, and overflow reporting |
-| ARCH-MOD-006 | RTL-006 GPIO Controller | Eight synchronized/qualified bidirectional GPIO channels, edge/level conditions, events, and interrupts |
+| ARCH-MOD-006 | RTL-006 GPIO Controller | Eight synchronized/qualified bidirectional GPIO channels, direction and commanded/effective output state, edge/level conditions, events, and interrupts |
 | ARCH-MOD-007 | RTL-007 Rotor RPM Monitor | Rotor edge qualification, RPM measurement, thresholds, timeout, events, interrupts, and fault request |
 | ARCH-MOD-008 | RTL-008 Engine RPM Monitor | Engine edge qualification, RPM measurement, thresholds, timeout, events, interrupts, and fault request |
 | ARCH-MOD-009 | RTL-009 Pulse/Frequency Measurement | Two qualified pulse inputs, Q17.15 frequency measurement, thresholds, timeout, events, interrupts, and fault request |
 | ARCH-MOD-010 | RTL-010 Sensor Monitor Interface | Two signed sampled sensors, atomic updates, age/stale processing, thresholds, events, interrupts, and fault request |
-| ARCH-MOD-011 | RTL-011 System Health Monitor | Eight qualified health inputs, active/sticky/recovered state, aggregate health fault, events, and interrupts |
+| ARCH-MOD-011 | RTL-011 System Health Monitor | Eight qualified health inputs, qualification progress/failure, active/sticky/recovered state, aggregate health fault, events, and interrupts |
 | ARCH-MOD-012 | RTL-012 Watchdog Manager | Protected service-window supervision, key checking, timeout/recovery evidence, and lane-0 safety request |
 | ARCH-MOD-013 | RTL-013 Fault Manager | Fixed 17-source fault collection, classification, recoverability, primary selection, event/interrupt generation, and lane-1 safety request |
 | ARCH-MOD-014 | RTL-014 Interlock Engine | Eight atomically committed four-term expressions, guarded-action permission, violation evidence, and lane-2 safety requests |
 | ARCH-MOD-015 | RTL-015 Lost-Link Supervisor | Eight activity monitors, qualification, absence timeout, recovery, evidence, and lane-3 safety requests |
-| ARCH-MOD-016 | RTL-016 Safety Output Controller | Sole generation and gating of four logical safety outputs |
+| ARCH-MOD-016 | RTL-016 Safety Output Controller | Sole generation and independently reported requested, latched, commanded, effective, and cause-inhibited state for four logical safety outputs |
 | ARCH-MOD-017 | RTL-017 ARINC 429 Receive Interface | Predecoded word intake, receive queue state, timestamps, evidence, route-source conversion, and shared-buffer client state |
 | ARCH-MOD-018 | RTL-018 ARINC 429 Transmit Interface | Ordered transmit queue state, parity/timing/serialization, evidence, route-destination conversion, and shared-buffer client state |
 | ARCH-MOD-019 | RTL-019 Classical CAN Interface | CAN 2.0A/B state machine, error confinement, RX/TX queue state, canonical conversion, and shared-buffer client state |
@@ -74,7 +80,7 @@ OpenFrame supplies no Dragon Core host bus, register decoder, management process
 | ARCH-MOD-021 | RTL-021 Databus Routing Engine | Five ingress slots, sixteen routes, destination replication, five destination queues, arbitration, backpressure, and shared-buffer client state |
 | ARCH-MOD-022 | RTL-022 User Logic Island | Inert Revision A mask profile, diagnostic input capture, two four-word mailboxes, and shared-buffer client state |
 | ARCH-MOD-023 | RTL-023 User-Configurable Routing | Sixteen staged signal-route entries, authorization, commit, edge/level processing, conflict detection, and exact destination combination |
-| ARCH-MOD-024 | RTL-024 Dragon Core Top-Level Integration | Logical wrapper, all child instances and internal wires, SPI bridge, external adapters, shared-buffer service, pad-safe gating, reset integration, and production-test logic |
+| ARCH-MOD-024 | RTL-024 Dragon Core Top-Level Integration | Logical wrapper, all child instances and internal wires, SPI bridge and terminal reconciliation record, external adapters, shared-buffer service, clock/reset diagnostics, pad-safe gating, and production-test logic |
 
 ## 4. Operating State, Startup, Clock, and Reset
 
@@ -92,7 +98,7 @@ OpenFrame supplies no Dragon Core host bus, register decoder, management process
 | ARCH-STATE-006 | TEST_DEBUG | `3'b111` | Active only when initialization is complete, qualified test-active is true, and no reset, fault, startup, or degraded condition has priority |
 | ARCH-STATE-007 | Reserved | `3'b010`, `3'b110` | Never generated; every consumer treats either value as FAULTED for output gating and asserts illegal-state evidence |
 
-Primary-state priority is RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, TEST_DEBUG, NORMAL. `HOST_READY`, `INIT_COMPLETE`, `INIT_FAILED`, `OBSERVATIONAL_MODE`, and `EFFECTIVE_OPERATIONAL_ENABLE` are orthogonal registered qualifiers. Effective operational enable is exactly:
+Primary-state priority is RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, TEST_DEBUG, NORMAL. `HOST_READY`, `INIT_COMPLETE`, `INIT_FAILED`, `OBSERVATIONAL_MODE`, and `EFFECTIVE_OPERATIONAL_ENABLE` are orthogonal registered qualifiers. RTL-002 transports every qualifier independently in `dfc_rtl002_status_t`; RTL-001 maps each qualifier to a distinct host-visible Register-Map-owned field. Effective operational enable is exactly:
 
 `OPERATIONAL_ENABLE & INIT_COMPLETE & !INIT_FAILED & ((STATE == NORMAL) | (STATE == DEGRADED)) & !OBSERVATIONAL_MODE & !TEST_DEBUG`.
 
@@ -114,6 +120,7 @@ Primary-state priority is RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, TEST_DEBUG, 
 | ARCH-CLK-001 | CORE_CLK | `core_clk_i`, nominal 50 MHz; RTL-001 through RTL-024 core logic | Free-running; no RTL-generated functional clock; clock enables are synchronous |
 | ARCH-CLK-002 | SPI_SCLK | `spi_sclk_i`; SPI shift/framing/CRC logic only | May stop; Mode 0; request/response ownership crosses by mailbox |
 | ARCH-CLK-003 | TEST_CLK | `test_clock_i`; bounded command shift/capture wrapper only | Ignored while test authorization is inactive |
+| ARCH-CLK-004 | Clock-fault indication | `clock_fault_i` from the applicable platform wrapper | Asynchronous active-high level; wrapper asserts for invalid or lost CORE_CLK and holds through at least four valid CORE_CLK edges after recovery so RTL-024 can synchronize and retain evidence |
 | ARCH-RST-001 | `core_rst_n` | Derived inside RTL-024 from internal wrapper input `por_n_i`; all core-domain state | Asynchronous assertion, synchronized release after four valid edges |
 | ARCH-RST-002 | `spi_rst_n` | Derived from `por_n_i`; SPI-domain state | Asynchronous assertion; release only while CS_N is high and SCLK is low; one-microsecond quiet qualification precedes framing |
 | ARCH-RST-003 | `test_rst_n` | Derived from `por_n_i` and deauthorization; test-domain state | Asynchronous assertion; synchronized release in TEST_CLK after authorization; deauthorization returns TEST_DATA high impedance without waiting for TEST_CLK |
@@ -125,7 +132,7 @@ Primary-state priority is RESET_ACTIVE, FAULTED, STARTUP, DEGRADED, TEST_DEBUG, 
 
 ### 5.1 External Logical Pad Population
 
-The exact logical population is owned by SRS `DFC-INTF-0001` through `DFC-INTF-0004`. The table below is a generated, nonnormative connection view showing how that population is realized by the Architecture-owned RTL-024 external ports in Appendix A. `por_n_i` is an internal platform-wrapper input and consumes no external configurable pad position.
+The exact logical population is owned by SRS `DFC-INTF-0001` through `DFC-INTF-0004`. The table below is a generated, nonnormative connection view showing how that population is realized by the Architecture-owned RTL-024 external ports in Appendix A. `por_n_i` and `clock_fault_i` are internal platform-wrapper inputs and consume no external configurable pad position.
 
 | Contract ID | Interface | Positions | Logical direction and reset state |
 |---|---|---:|---|
@@ -210,12 +217,18 @@ The external numeric frame is owned only by SRS requirements `DFC-INTF-0012` thr
 | ARCH-SPI-016 | The executor waits at most eight CORE_CLK cycles from each DRI word acceptance through its response. On expiry it records timeout, terminates the command, and returns `0x09`. RTL-001 shall not commit a timed-out word or produce a later response for it. |
 | ARCH-SPI-017 | No more than two wait-fill bytes precede the marker. MISO output enable is low while CS_N is high, before the response phase, and immediately after reset or deauthorization. |
 | ARCH-SPI-018 | After `spi_rst_n` release, an RTL-024 CORE_CLK counter qualifies one microsecond of continuously high CS_N and low SCLK. A falling CS_N before qualification is ignored until it returns high; the first accepted frame also requires 50 ns from CS_N falling to the first SCLK rising edge. |
+| ARCH-SPI-019 | RTL-024 owns an 11-bit transaction-sequence allocator. Functional reset sets the allocator to zero. Acceptance allocates `(allocator + 1) mod 2048`, writes that value back to the allocator exactly once, and binds it to that accepted command. A pre-acceptance abort allocates no value. |
+| ARCH-SPI-020 | RTL-024 owns one working-command record and one terminal host-reconciliation record. Acceptance initializes the working record with allocated sequence, opcode, starting byte address, zero completed-word count, and no endpoint result. Each OK DRI completion increments only the working completed-word count. |
+| ARCH-SPI-021 | When an accepted command reaches terminal success or failure, RTL-024 atomically replaces the entire host-reconciliation record with that command's sequence, opcode, starting address, completed-word count, definitive SPI status, and final DRI endpoint result, then sets record-valid. Response truncation does not cancel or modify the terminal replacement. Reset clears record-valid and record contents; no diagnostic clear or read changes the record. |
+| ARCH-SPI-022 | Before executing the first DRI word of a READ whose requested address range intersects any host-reconciliation field, RTL-024 captures the complete preceding terminal record into a response-local snapshot. Every reconciliation word returned by that command comes from the snapshot. The read command may replace the terminal record only after every requested reconciliation word has been captured for the response. |
+| ARCH-SPI-023 | Host sticky evidence bits independently retain invalid opcode, invalid length, unaligned address, invalid address, access error, protected-write failure, CRC error, internal timeout, endpoint error, pre-acceptance abort, and post-acceptance response truncation. Disappearance of the condition or completion of a later successful command does not clear evidence. |
+| ARCH-SPI-024 | Saturating host counters increment as follows: CRC count on each CRC rejection; abort count on each pre-acceptance abort or post-acceptance response truncation; timeout count on each internal timeout; access-error count on each invalid opcode, invalid length, unaligned address, invalid address, access error, protected-write failure, or endpoint error; completed-command count on each terminal accepted command whose definitive SPI status is success. One occurrence increments each applicable aggregate counter at most once. |
 
 ## 7. Dragon Register Interface and Register Distribution
 
 ### 7.1 DRI Protocol
 
-DRI is a CORE_CLK-domain, single-master, ordered, non-pipelined, one-outstanding 32-bit request/response protocol.
+DRI is a CORE_CLK-domain, single-master, ordered, non-pipelined, one-outstanding 32-bit request/response protocol, per `ARCH-DRI-010`.
 
 | Contract ID | Signal | Width | Contract |
 |---|---|---:|---|
@@ -228,6 +241,8 @@ DRI is a CORE_CLK-domain, single-master, ordered, non-pipelined, one-outstanding
 | ARCH-DRI-007 | `dri_rsp_rdata` | 32 | Read data; zero for writes unless the Register Map defines returned result data |
 | ARCH-DRI-008 | `dri_rsp_code` | 3 | `000` OK, `001` DECODE_ERROR, `010` ACCESS_ERROR, `011` PROTECTED_ERROR, `100` ENDPOINT_ERROR, `101` TIMEOUT, `110` BUSY, `111` reserved |
 | ARCH-DRI-009 | Response deadline | — | RTL-001 returns a response within eight cycles of acceptance and performs a write side effect only in the same cycle that it commits an OK response |
+| ARCH-DRI-010 | Single accepted-request object | — | RTL-001 decodes and tracks at most one accepted, unresolved request at a time; a second request shall not be accepted until the first reaches terminal disposition (OK, an error code, or internal timeout) |
+| ARCH-DRI-011 | No duplicate or late response | — | Once a request reaches terminal disposition per `ARCH-DRI-010` — including an internal timeout under `ARCH-SPI-016` — RTL-001 shall not produce a second response or a later untracked write for that request |
 
 ### 7.2 RTL-001 Processing
 
@@ -286,14 +301,14 @@ New RAW dominates simultaneous CLEAR. Reserved bits 24 through 31 have RAW, LATC
 
 | Contract ID | Module(s) | Complete algorithm |
 |---|---|---|
-| ARCH-MON-001 | RTL-006 | Each GPIO input passes a two-flop synchronizer and an 8-bit millisecond stable-time counter. Qualification value zero passes the second-stage value without delay; nonzero commits a change after that many consecutive 1 ms samples. Effective OE is direction bit AND module enable AND effective operational enable AND not reset/test/observation. Rising, falling, either-edge, active-high, and active-low subconditions are independently masked; level requests remain active while the qualified level matches. |
+| ARCH-MON-001 | RTL-006 | Each GPIO input passes a two-flop synchronizer and an 8-bit millisecond stable-time counter. Qualification value zero passes the second-stage value without delay; nonzero commits a change after that many consecutive 1 ms samples. Qualification-in-progress is high exactly while the synchronized value differs from the last qualified value. Commanded output is the OR of the configured GPIO output and the authorized RTL-023 route request. Effective output data equals commanded output while output operation is permitted and otherwise zero. Effective OE is direction bit AND module enable AND effective operational enable AND not reset, test, or observation. RTL-006 independently reports raw, synchronized, qualified, commanded-output, effective-output, direction, qualification-in-progress, and retained event state. Rising, falling, either-edge, active-high, and active-low subconditions are independently masked; level requests remain active while the qualified level matches. |
 | ARCH-MON-002 | RTL-007/008/009 | A selected edge is accepted only after `MIN_EDGE_CYCLES` since the preceding accepted edge. Period mode is used after two consecutive periods at least 1,000 cycles; count mode after two consecutive periods below 1,000; return to period mode after two above 1,250. Count-mode gate is 100,000 cycles. |
 | ARCH-MON-003 | RTL-007/008 | `RPM = round_nearest((60 × 50,000,000) / (period_ticks × PPR))` in period mode and `round_nearest((edge_count × 50,000,000 × 60) / (100,000 × PPR))` in count mode. Ties round upward. A 64-bit-or-wider unsigned intermediate is used and the 16-bit result saturates. |
 | ARCH-MON-004 | RTL-009 | `FREQ_Q17_15 = round_nearest((50,000,000 << 15) / period_ticks)` or `round_nearest((edge_count × 50,000,000 << 15) / 100,000)`. Ties round upward; a 64-bit-or-wider intermediate is used and the 32-bit result saturates. |
 | ARCH-MON-005 | RTL-007/008/009 | No-edge elapsed time is a saturating microsecond counter. Reaching configured nonzero timeout clears valid and sets timeout. Low enters at value `< LOW`; exits at `>= LOW + HYST`. High enters at value `> HIGH`; exits at `<= HIGH - HYST`; unsigned arithmetic saturates at its numeric limits. A new estimate is compared in its commit cycle. |
 | ARCH-MON-006 | RTL-010 | Value, low threshold, high threshold, and hysteresis are signed 32-bit two's-complement. Valid low enters at `value < low`; exits at `value >= low + hyst`. Valid high enters at `value > high`; exits at `value <= high - hyst`; signed bound arithmetic saturates. |
 | ARCH-MON-007 | RTL-010 | Host or routed commit atomically replaces value, valid, 7-bit source, 24-bit sequence, and age=0. Host has same-cycle priority. Age increments each 1 ms tick and saturates. Nonzero MAX_AGE asserts stale when `age > MAX_AGE`; zero disables stale. Low, high, stale, and invalid are independent event/interrupt mask bits `[0]` through `[3]`. |
-| ARCH-MON-008 | RTL-011 | Each health input uses a two-flop synchronizer, polarity transform, and stable-time qualification. `active = qualified XOR !ACTIVE_HIGH`. Sticky captures active. Recovered pulses for one cycle when an active channel becomes inactive. Aggregate fault is OR of active channels with fault-enable. Qualification failure is asserted only when a configured finite qualification timer saturates without stability. |
+| ARCH-MON-008 | RTL-011 | Each health input uses a two-flop synchronizer, polarity transform, and stable-time qualification. For qualification value `Q=0`, synchronized state passes without delay and qualification-in-progress is zero. For `Q>0`, qualification-in-progress is high while synchronized state differs from qualified state; a consecutive-stability counter commits the new qualified state after `Q` consecutive 1 ms samples. A separate attempt counter starts on entry to qualification-in-progress, does not restart when the synchronized candidate toggles, and sets sticky qualification-failure if no qualified-state commit occurs within `min(255, 4 x Q)` consecutive 1 ms samples. Commit or return to the prior qualified state ends the attempt; neither clears prior failure evidence. `active = qualified XOR !ACTIVE_HIGH`. Sticky asserted captures active. Sticky recovered captures each active-to-inactive transition. Aggregate health fault is the current OR of active channels with fault-enable. RTL-011 independently reports raw, synchronized, qualified, qualification-in-progress, active, sticky asserted, sticky recovered, sticky qualification-failure, and aggregate health fault. |
 
 ## 10. Safety Architecture
 
@@ -319,21 +334,23 @@ Bits 1 through 7 and 9 through 15 are reserved. A producer shall never assert a 
 | Contract ID | Module | Contract |
 |---|---|---|
 | ARCH-SAFE-005 | RTL-012 | Accepted service key is `0xA5C35A3C`. Service before MIN_WINDOW is EARLY; after MAX_WINDOW is LATE; any other key is INVALID. An enabled counter begins at zero, increments in microseconds, times out when elapsed first equals MAX_WINDOW without valid service, and restarts at zero only on valid in-window service. Recovery requires one valid in-window service after the source condition clears. |
-| ARCH-SAFE-006 | RTL-014 | Eight expressions each use four terms, per-term inversion, one of: AND, OR, 3-of-4, `(t0&t1)\|(t2&t3)`. COMMIT_ALL validates all terms, operators, guards, response masks, and reserved bits in entry order then field order; the first error rejects the entire bank. Violation is `enabled & !expression`. Guard permission changes inactive in the same edge that violation qualifies. |
+| ARCH-SAFE-006 | RTL-014 | Eight expressions each use four terms, per-term inversion, one of: AND, OR, 3-of-4, or `(t0 AND t1) OR (t2 AND t3)`. COMMIT_ALL validates all terms, operators, guards, response masks, and reserved bits in entry order then field order; the first error rejects the entire bank. Violation is `enabled & !expression`. Guard permission changes inactive in the same edge that violation qualifies. |
 | ARCH-SAFE-007 | RTL-015 | Eight monitors select from activity IDs: 0 host accepted command, 1 ARINC RX word, 2 CAN RX frame, 3 UART RX byte, 4 GPIO any qualified transition, 5 health any qualified transition, 6 user diagnostic input transition, 7 external watchdog-service pulse. IDs 8 through 15 are reserved. Activity must persist through QUALIFY_US when nonzero. Loss asserts when the absence counter first equals TIMEOUT_US; recovery requires continuous qualified activity for RECOVERY_US. |
 | ARCH-SAFE-008 | RTL-015 | `LLINK_ACTIVITY_INJECT[0]` injects one activity pulse into the selected monitor and `[1]` injects loss evidence for that monitor. Either command is accepted only in qualified test-active state, is tagged injected, cannot suppress natural activity/loss, and uses a separate OR input to the evidence path. |
 
 ### 10.4 Logical Safety Outputs
 
-For channel `c`, `AUTHORIZED_REQ[c]` is the OR of every lane request whose response mask contains `c` and whose fixed authorization bit is set in that channel's mask. If latch policy is disabled, `REQUESTED[c]=AUTHORIZED_REQ[c]`. If enabled, a request sets a retained latch; the latch clears only on channel disable, safety-domain reset, system reset, or external reset after all requests are inactive. Re-enabling a channel begins with its latch clear.
+For channel `c`, `REQUESTED[c]` is the OR of every currently active lane request whose response mask contains `c` and whose fixed authorization bit is set in that channel's mask. `LATCHED_REQUEST[c]` is zero when latch policy is disabled. When latch policy is enabled, an active request sets the retained latch; it clears only on channel disable, safety-domain reset, system reset, or external reset after every contributing request is inactive. Re-enabling a channel begins with its latch clear.
 
-`GLOBAL_INHIBIT = !safety_control__enable`. `fault_inhibit[c]` is asserted for every channel whenever any active nonrecoverable fault source is present. `test_inhibit` is the OR of physical production-test authorization and qualified test-active.
+`COMMANDED[c] = REQUESTED[c] | LATCHED_REQUEST[c]`.
 
-`PERMIT[c] = channel_enable[c] & effective_operational_enable & !GLOBAL_INHIBIT & all_required_interlocks_satisfied & !fault_inhibit[c] & !observational_mode & !test_inhibit & !TEST_DEBUG`.
+`CHANNEL_DISABLED[c] = !channel_enable[c]`. `CONTROLLER_DISABLED = !safety_control__enable`. `GLOBAL_INHIBIT = safety_control__global_inhibit`. `OPERATIONAL_INHIBIT = !effective_operational_enable`. `OBSERVATIONAL_INHIBIT = observational_mode`. `TEST_INHIBIT` is the OR of physical production-test authorization, qualified test-active, and TEST_DEBUG. `INTERLOCK_INHIBIT[c]` is high when any interlock required by channel `c` is unsatisfied. `FAULT_INHIBIT[c]` is asserted whenever the RTL-013 channel inhibit is active. `RESET_HELD[c]` is high during external, system, safety-domain, or channel-local reset and during reset-release qualification.
 
-`ACTIVE_CMD[c] = REQUESTED[c] & PERMIT[c]`.
+`PERMIT[c] = !CHANNEL_DISABLED[c] & !CONTROLLER_DISABLED & !GLOBAL_INHIBIT & !OPERATIONAL_INHIBIT & !OBSERVATIONAL_INHIBIT & !TEST_INHIBIT & !INTERLOCK_INHIBIT[c] & !FAULT_INHIBIT[c] & !RESET_HELD[c]`.
 
-`safety_out[c] = ACTIVE_HIGH[c] ? ACTIVE_CMD[c] : !ACTIVE_CMD[c]` during permitted operation; reset and unconfigured startup use the Register Map reset polarity and inactive level. Reset, startup, INIT_FAILED, global inhibit, observation, TEST_DEBUG, any production-test authorization, channel disable, interlock inhibit, and fault inhibit dominate every request. No test indication is permitted on a safety-output pad.
+`EFFECTIVE[c] = COMMANDED[c] & PERMIT[c]`.
+
+`safety_out[c] = ACTIVE_HIGH[c] ? EFFECTIVE[c] : !EFFECTIVE[c]` after reset release; reset and unconfigured startup use the Register-Map-owned reset polarity and inactive level. RTL-016 independently reports REQUESTED, LATCHED_REQUEST, COMMANDED, EFFECTIVE, CHANNEL_DISABLED, CONTROLLER_DISABLED, GLOBAL_INHIBIT, OPERATIONAL_INHIBIT, OBSERVATIONAL_INHIBIT, TEST_INHIBIT, INTERLOCK_INHIBIT, FAULT_INHIBIT, and RESET_HELD for the selected channel. Aggregate inhibited state is the OR of the nine inhibit causes and never substitutes for a cause. No test indication is permitted on a safety-output pad.
 
 ## 11. Databus Message and Routing Architecture
 
@@ -425,8 +442,9 @@ The seven clients are numbered 0 RTL-017, 1 RTL-018, 2 RTL-019, 3 RTL-020, 4 RTL
 | ARCH-BUF-015 | Legal READ and WRITE requests complete with OK within eight CORE_CLK cycles of acceptance. Codes are `00` OK, `01` RANGE_ERROR, `10` PROTOCOL_ERROR, `11` INTERNAL_ERROR. |
 | ARCH-BUF-016 | The service derives the absolute address as client segment base plus client-relative word offset and rejects any offset outside the client's assigned ranges. No client supplies an unrestricted absolute address. |
 | ARCH-BUF-017 | A WRITE updates one 32-bit word atomically. An entry owner shall write every word before advancing its local tail/valid state. A reader may issue entry reads only after observing owner-local valid state. |
-| ARCH-BUF-018 | Queue pointers, occupancy, valid state, entry sequencing, backpressure, overflow, underflow, and drop evidence remain in the client module. Physical memory contents are not cleared by reset and are never exposed until client valid state authorizes them. |
-| ARCH-BUF-019 | Module reset invalidates only that client's queue/mailbox state and cancels its outstanding request. System reset invalidates all clients and resets arbitration. A canceled response is discarded and cannot change client state. |
+| ARCH-BUF-018 | Queue pointers, occupancy, valid state, entry sequencing, backpressure, overflow, underflow, rejected-access, drop evidence, and resource loss counters remain in the client module. Physical memory contents are not cleared by reset and are never exposed until client valid state authorizes them. |
+| ARCH-BUF-019 | Module reset invalidates only that client's queue/mailbox state, clears its local evidence and counters, and cancels its outstanding request. System reset invalidates all clients and resets arbitration. A canceled response is discarded and cannot change client state. |
+| ARCH-BUFERR-001 | A non-OK buffer response sets sticky error evidence for the requesting client and increments its client-error count. RANGE_ERROR and PROTOCOL_ERROR do not increment the service internal-error count; INTERNAL_ERROR increments both the client and service internal-error counts. |
 | ARCH-BUF-020 | Revision A uses no architectural ECC or parity. FPGA BRAM, ASIC SRAM, or inferred storage may implement the service only through a wrapper preserving this contract. |
 
 ### 12.3 Entry Word Layouts
@@ -476,7 +494,6 @@ Destinations 1–12 are exclusive: a commit containing more than one enabled ent
 | ARCH-TEST-004 | Opcodes are `0x01` CAPTURE, `0x02` SHIFT, and `0x03` SAFE_LOOPBACK. Others are rejected. CAPTURE argument must be zero. SHIFT argument bits 8:0 are length-minus-one (`0–255` means 1–256 bits) and bits 23:9 zero. SAFE_LOOPBACK argument bits 2:0 select, bit 3 enable, and bits 23:4 zero. |
 | ARCH-TEST-005 | Busy, malformed, reserved, unauthorized, or deauthorized commands terminate without a functional side effect, set rejection evidence, and leave every safety output inactive. |
 | ARCH-TEST-006 | CAPTURE atomically samples the vector in Section 14.2 into a TEST_CLK shift register through the CDC-TEST-002 snapshot handshake. SHIFT outputs bit 0 first and shifts exactly the requested count. TEST_DATA is high impedance at all other times. |
-
 ### 14.2 Diagnostic Capture Vector
 
 | Contract ID | Bits | Captured value |
@@ -492,7 +509,16 @@ Destinations 1–12 are exclusive: a commit containing more than one enabled ent
 | ARCH-TEST-015 | 247:240 | Qualified external-input summary: SPI CS, ARINC RX, CAN RX, UART RX, rotor, engine, any pulse, any health |
 | ARCH-TEST-016 | 255:248 | Test status: physical authorization, active, busy, complete, rejected, safety-blocked, loopback-enabled, reserved zero |
 
-### 14.3 Eight Safe Loopback Selections
+### 14.3 Production-Test Diagnostic State
+
+| Contract ID | Diagnostic contract |
+|---|---|
+| ARCH-TEST-017 | RTL-024 reports physical authorization, qualified active, busy, terminal-complete, terminal-rejected, terminal reason, unsafe-command rejection, safety blocking, deauthorization abort, loopback active, injection enabled, natural-fault observed, and injected-fault observed as independent state or sticky evidence. |
+| ARCH-TEST-018 | Terminal reason values are `0x00` none, `0x01` complete, `0x02` invalid opcode, `0x03` invalid argument or reserved bit, `0x04` unauthorized, `0x05` busy, `0x06` unsafe command, `0x07` deauthorization abort, `0x08` CDC or internal timeout, and `0x09` safety blocked; `0x0A` through `0xFF` are reserved. |
+| ARCH-TEST-019 | Every rejected or deauthorization-aborted command increments one saturating test-rejection-or-abort counter. Natural-fault-observed is set only by a noninjected source occurrence while test authorization is active; injected-fault-observed is set only by an accepted injection path. One cannot clear or suppress the other. |
+| ARCH-TEST-020 | A terminal command or deauthorization abort atomically replaces terminal reason. It remains readable until the next terminal test result or reset. Clearing completion, rejection, abort, unsafe, or safety-block evidence does not change terminal reason. |
+
+### 14.4 Eight Safe Loopback Selections
 
 SAFE_LOOPBACK affects only the TEST_DATA shifted observation bit and never drives a functional pad.
 
@@ -507,7 +533,36 @@ SAFE_LOOPBACK affects only the TEST_DATA shifted observation bit and never drive
 | 6 | XOR reduction of synchronized rotor, engine, pulse, and health inputs |
 | 7 | XOR reduction of synchronized user inputs |
 
-## 15. Technology Boundaries and Generated Definitions
+## 15. Diagnostic and Host-Recovery Architecture
+
+### 15.1 Evidence Classes and Clear Independence
+
+| Contract ID | Diagnostic contract |
+|---|---|
+| ARCH-DIAG-001 | Every module's `ready`, `fault`, busy, active, empty, full, occupancy, valid, and qualification-in-progress members are current state. Every member named error, overflow, underflow, rejected, aborted, truncated, timeout, violation, failure, recovered, event, or sticky is retained evidence unless its table row explicitly identifies current state. |
+| ARCH-DIAG-002 | RTL-001 presents current module state and retained module evidence without read side effects. A read may capture a coherent snapshot but never acknowledges, pops, clears, or advances the observed resource. |
+| ARCH-DIAG-003 | W1C clears only the selected retained bit. Whole-counter clear follows ARCH-GEN-007. New evidence or a counter increment dominates a simultaneous clear of the same item. |
+| ARCH-DIAG-004 | Each module event-pending slot owns its 16-bit saturating `event_drop_count`. The module index identifies the lost source. RTL-005 separately owns its 32-bit event-store-overflow count and the per-source loss indication defined by ARCH-EVT-001 through ARCH-EVT-008. |
+| ARCH-DIAG-005 | Queue and mailbox status reports applicable current empty, full, occupancy, and busy state. An empty POP sets underflow or rejected-access evidence; a full PUSH sets overflow or rejected-access evidence; a dropped ingress or destination copy sets drop evidence. Each affected host-visible resource owns a saturating loss counter identified in its Appendix B status structure. |
+| ARCH-DIAG-006 | RTL-024 owns independent service-error evidence and a 16-bit saturating count indexed for each of the seven shared-buffer clients, plus independent shared-buffer-internal-error evidence and a 32-bit saturating internal-error count. Client modules continue to own queue/mailbox loss evidence and counts. A rejected range or protocol request increments only the requesting-client service count; a service internal error increments both that client count and the internal-error count. |
+| ARCH-DIAG-007 | RTL-024 synchronizes `clock_fault_i` and retains platform-clock-fault and illegal reset-release evidence. RTL-002 independently retains controlled-reset timeout, reset rejection, and reset-recovery-failure evidence. Conditions that destroy power or prevent every retaining clock from operating are reportable only after the platform supplies retained source evidence, as allocated by PBIO; no same-clock circuit claims to detect its own permanent clock loss. |
+| ARCH-DIAG-008 | Host transport diagnostics obey ARCH-SPI-023 and ARCH-SPI-024. Production-test diagnostics obey ARCH-TEST-017 through ARCH-TEST-019. No common summary bit or count replaces any independently required class. |
+| ARCH-DIAG-009 | After host communication returns, software can read present operating state, every active configuration value, all retained diagnostic evidence and counters, event-store contents, queue/mailbox state, and the terminal host-reconciliation record without first modifying device state. |
+
+### 15.2 Resource Loss-Counter Allocation
+
+| Contract ID | Resource owner | Separately identified saturating counts |
+|---|---|---|
+| ARCH-DIAG-010 | RTL-005 | Event-store overwrite; each producer's pending-slot loss by producer index; empty POP rejection |
+| ARCH-DIAG-011 | RTL-017 | ARINC RX overflow/drop; empty POP or rejected access; shared-buffer client error |
+| ARCH-DIAG-012 | RTL-018 | ARINC TX full/rejected push; underrun; shared-buffer client error |
+| ARCH-DIAG-013 | RTL-019 | CAN RX overflow/drop; CAN TX full/rejected push; protocol loss; shared-buffer client error |
+| ARCH-DIAG-014 | RTL-020 | UART RX overflow/drop; UART TX underflow or rejected access; shared-buffer client error |
+| ARCH-DIAG-015 | RTL-021 | Five ingress-slot losses by source; five destination-queue drops by destination; shared-buffer client error |
+| ARCH-DIAG-016 | RTL-022 | Input- and output-mailbox overflow and underflow separately; shared-buffer client error |
+| ARCH-DIAG-017 | RTL-024 | SPI command/response client error; each of seven shared-buffer client errors by client index; shared-buffer internal error; production-test rejection or abort |
+
+## 16. Technology Boundaries and Generated Definitions
 
 | Contract ID | Technology contract |
 |---|---|
@@ -537,16 +592,16 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | dri_rsp_ready_i | input | logic / 1 | RTL-024.dri_rsp_ready_o | RTL-001.dri_rsp_ready_i | CORE_CLK / core_rst_n | response acceptance / 0 | same-domain |
 | dri_rsp_rdata_o | output | logic / 32 | RTL-001.dri_rsp_rdata_o | RTL-024.dri_rsp_rdata_i | CORE_CLK / core_rst_n | stable until accepted / 0 | same-domain |
 | dri_rsp_code_o | output | logic / 3 | RTL-001.dri_rsp_code_o | RTL-024.dri_rsp_code_i | CORE_CLK / core_rst_n | stable until accepted; response within 8 cycles / 000 | same-domain |
-| rtl002_control_o | output | dfc_rtl002_control_t / 57 | RTL-001.rtl002_control_o | RTL-002.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl002_status_i | input | dfc_rtl002_status_t / 109 | RTL-002.status_o | RTL-001.rtl002_status_i; RTL-002.module_ready_i[1]; RTL-002.module_fault_i[1] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl002_control_o | output | dfc_rtl002_control_t / 59 | RTL-001.rtl002_control_o | RTL-002.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl002_status_i | input | dfc_rtl002_status_t / 112 | RTL-002.status_o | RTL-001.rtl002_status_i; RTL-002.module_ready_i[1]; RTL-002.module_fault_i[1] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl003_control_o | output | dfc_rtl003_control_t / 128 | RTL-001.rtl003_control_o | RTL-003.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl003_status_i | input | dfc_rtl003_status_t / 153 | RTL-003.status_o | RTL-001.rtl003_status_i; RTL-002.module_ready_i[2]; RTL-002.module_fault_i[2] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl004_control_o | output | dfc_rtl004_control_t / 70 | RTL-001.rtl004_control_o | RTL-004.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl004_status_i | input | dfc_rtl004_status_t / 105 | RTL-004.status_o | RTL-001.rtl004_status_i; RTL-002.module_ready_i[3]; RTL-002.module_fault_i[3] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl005_control_o | output | dfc_rtl005_control_t / 96 | RTL-001.rtl005_control_o | RTL-005.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl005_status_i | input | dfc_rtl005_status_t / 236 | RTL-005.status_o | RTL-001.rtl005_status_i; RTL-002.module_ready_i[4]; RTL-002.module_fault_i[4] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl006_control_o | output | dfc_rtl006_control_t / 114 | RTL-001.rtl006_control_o | RTL-006.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl006_status_i | input | dfc_rtl006_status_t / 51 | RTL-006.status_o | RTL-001.rtl006_status_i; RTL-002.module_ready_i[5]; RTL-002.module_fault_i[5] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl005_control_o | output | dfc_rtl005_control_t / 128 | RTL-001.rtl005_control_o | RTL-005.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl005_status_i | input | dfc_rtl005_status_t / 268 | RTL-005.status_o | RTL-001.rtl005_status_i; RTL-002.module_ready_i[4]; RTL-002.module_fault_i[4] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl006_control_o | output | dfc_rtl006_control_t / 122 | RTL-001.rtl006_control_o | RTL-006.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl006_status_i | input | dfc_rtl006_status_t / 83 | RTL-006.status_o | RTL-001.rtl006_status_i; RTL-002.module_ready_i[5]; RTL-002.module_fault_i[5] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl007_control_o | output | dfc_rtl007_control_t / 135 | RTL-001.rtl007_control_o | RTL-007.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl007_status_i | input | dfc_rtl007_status_t / 73 | RTL-007.status_o | RTL-001.rtl007_status_i; RTL-002.module_ready_i[6]; RTL-002.module_fault_i[6] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl008_control_o | output | dfc_rtl008_control_t / 135 | RTL-001.rtl008_control_o | RTL-008.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
@@ -555,8 +610,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl009_status_i | input | dfc_rtl009_status_t / 159 | RTL-009.status_o | RTL-001.rtl009_status_i; RTL-002.module_ready_i[8]; RTL-002.module_fault_i[8] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl010_control_o | output | dfc_rtl010_control_t / 345 | RTL-001.rtl010_control_o | RTL-010.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl010_status_i | input | dfc_rtl010_status_t / 225 | RTL-010.status_o | RTL-001.rtl010_status_i; RTL-002.module_ready_i[9]; RTL-002.module_fault_i[9] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl011_control_o | output | dfc_rtl011_control_t / 113 | RTL-001.rtl011_control_o | RTL-011.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl011_status_i | input | dfc_rtl011_status_t / 67 | RTL-011.status_o | RTL-001.rtl011_status_i; RTL-002.module_ready_i[10]; RTL-002.module_fault_i[10] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl011_control_o | output | dfc_rtl011_control_t / 121 | RTL-001.rtl011_control_o | RTL-011.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl011_status_i | input | dfc_rtl011_status_t / 84 | RTL-011.status_o | RTL-001.rtl011_status_i; RTL-002.module_ready_i[10]; RTL-002.module_fault_i[10] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl012_control_o | output | dfc_rtl012_control_t / 110 | RTL-001.rtl012_control_o | RTL-012.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl012_status_i | input | dfc_rtl012_status_t / 58 | RTL-012.status_o | RTL-001.rtl012_status_i; RTL-002.module_ready_i[11]; RTL-002.module_fault_i[11] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl013_control_o | output | dfc_rtl013_control_t / 112 | RTL-001.rtl013_control_o | RTL-013.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
@@ -565,24 +620,24 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl014_status_i | input | dfc_rtl014_status_t / 53 | RTL-014.status_o | RTL-001.rtl014_status_i; RTL-002.module_ready_i[13]; RTL-002.module_fault_i[13] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl015_control_o | output | dfc_rtl015_control_t / 128 | RTL-001.rtl015_control_o | RTL-015.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl015_status_i | input | dfc_rtl015_status_t / 75 | RTL-015.status_o | RTL-001.rtl015_status_i; RTL-002.module_ready_i[14]; RTL-002.module_fault_i[14] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl016_control_o | output | dfc_rtl016_control_t / 52 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl016_status_i | input | dfc_rtl016_status_t / 47 | RTL-016.status_o | RTL-001.rtl016_status_i; RTL-002.module_ready_i[15]; RTL-002.module_fault_i[15] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl017_control_o | output | dfc_rtl017_control_t / 70 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl017_status_i | input | dfc_rtl017_status_t / 223 | RTL-017.status_o | RTL-001.rtl017_status_i; RTL-002.module_ready_i[16]; RTL-002.module_fault_i[16] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl018_control_o | output | dfc_rtl018_control_t / 130 | RTL-001.rtl018_control_o | RTL-018.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl018_status_i | input | dfc_rtl018_status_t / 95 | RTL-018.status_o | RTL-001.rtl018_status_i; RTL-002.module_ready_i[17]; RTL-002.module_fault_i[17] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl019_control_o | output | dfc_rtl019_control_t / 138 | RTL-001.rtl019_control_o | RTL-019.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl019_status_i | input | dfc_rtl019_status_t / 261 | RTL-019.status_o | RTL-001.rtl019_status_i; RTL-002.module_ready_i[18]; RTL-002.module_fault_i[18] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl020_control_o | output | dfc_rtl020_control_t / 85 | RTL-001.rtl020_control_o | RTL-020.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl020_status_i | input | dfc_rtl020_status_t / 87 | RTL-020.status_o | RTL-001.rtl020_status_i; RTL-002.module_ready_i[19]; RTL-002.module_fault_i[19] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl021_control_o | output | dfc_rtl021_control_t / 125 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl021_status_i | input | dfc_rtl021_status_t / 176 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl022_control_o | output | dfc_rtl022_control_t / 300 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl022_status_i | input | dfc_rtl022_status_t / 69 | RTL-022.status_o | RTL-001.rtl022_status_i; RTL-002.module_ready_i[21]; RTL-002.module_fault_i[21] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl016_control_o | output | dfc_rtl016_control_t / 53 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl016_status_i | input | dfc_rtl016_status_t / 52 | RTL-016.status_o | RTL-001.rtl016_status_i; RTL-002.module_ready_i[15]; RTL-002.module_fault_i[15] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl017_control_o | output | dfc_rtl017_control_t / 103 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl017_status_i | input | dfc_rtl017_status_t / 256 | RTL-017.status_o | RTL-001.rtl017_status_i; RTL-002.module_ready_i[16]; RTL-002.module_fault_i[16] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl018_control_o | output | dfc_rtl018_control_t / 162 | RTL-001.rtl018_control_o | RTL-018.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl018_status_i | input | dfc_rtl018_status_t / 127 | RTL-018.status_o | RTL-001.rtl018_status_i; RTL-002.module_ready_i[17]; RTL-002.module_fault_i[17] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl019_control_o | output | dfc_rtl019_control_t / 203 | RTL-001.rtl019_control_o | RTL-019.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl019_status_i | input | dfc_rtl019_status_t / 326 | RTL-019.status_o | RTL-001.rtl019_status_i; RTL-002.module_ready_i[18]; RTL-002.module_fault_i[18] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl020_control_o | output | dfc_rtl020_control_t / 215 | RTL-001.rtl020_control_o | RTL-020.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl020_status_i | input | dfc_rtl020_status_t / 217 | RTL-020.status_o | RTL-001.rtl020_status_i; RTL-002.module_ready_i[19]; RTL-002.module_fault_i[19] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl021_control_o | output | dfc_rtl021_control_t / 135 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl021_status_i | input | dfc_rtl021_status_t / 336 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl022_control_o | output | dfc_rtl022_control_t / 308 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl022_status_i | input | dfc_rtl022_status_t / 137 | RTL-022.status_o | RTL-001.rtl022_status_i; RTL-002.module_ready_i[21]; RTL-002.module_fault_i[21] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl023_control_o | output | dfc_rtl023_control_t / 34 | RTL-001.rtl023_control_o | RTL-023.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl023_status_i | input | dfc_rtl023_status_t / 75 | RTL-023.status_o | RTL-001.rtl023_status_i; RTL-002.module_ready_i[22]; RTL-002.module_fault_i[22] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl024_control_o | output | dfc_rtl024_control_t / 232 | RTL-001.rtl024_control_o | RTL-024.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl024_status_i | input | dfc_rtl024_status_t / 272 | RTL-024.status_o | RTL-001.rtl024_status_i; RTL-002.module_ready_i[23]; RTL-002.module_fault_i[23] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl024_control_o | output | dfc_rtl024_control_t / 278 | RTL-001.rtl024_control_o | RTL-024.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl024_status_i | input | dfc_rtl024_status_t / 467 | RTL-024.status_o | RTL-001.rtl024_status_i; RTL-002.module_ready_i[23]; RTL-002.module_fault_i[23] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | irq_req_o | output | logic / 1 | RTL-001.irq_req_o | RTL-003.irq_source_i[21] | CORE_CLK / core_rst_n | level; active until source condition/clear semantics permit / 0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-001.timestamp_i | CORE_CLK / core_rst_n | registered time sample / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-001.evt_valid_o | RTL-005.evt_valid_i[0] | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -607,8 +662,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-002.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-002.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[1] | RTL-002.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl002_control_t / 57 | RTL-001.rtl002_control_o | RTL-002.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl002_status_t / 109 | RTL-002.status_o | RTL-001.rtl002_status_i; RTL-002.module_ready_i[1]; RTL-002.module_fault_i[1] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl002_control_t / 59 | RTL-001.rtl002_control_o | RTL-002.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl002_status_t / 112 | RTL-002.status_o | RTL-001.rtl002_status_i; RTL-002.module_ready_i[1]; RTL-002.module_fault_i[1] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-002.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-002.evt_valid_o | RTL-005.evt_valid_i[1] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[1] | RTL-002.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -676,8 +731,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-005.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-005.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[4] | RTL-005.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl005_control_t / 96 | RTL-001.rtl005_control_o | RTL-005.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl005_status_t / 236 | RTL-005.status_o | RTL-001.rtl005_status_i; RTL-002.module_ready_i[4]; RTL-002.module_fault_i[4] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl005_control_t / 128 | RTL-001.rtl005_control_o | RTL-005.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl005_status_t / 268 | RTL-005.status_o | RTL-001.rtl005_status_i; RTL-002.module_ready_i[4]; RTL-002.module_fault_i[4] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-005.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-005.evt_valid_o | RTL-005.evt_valid_i[4] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[4] | RTL-005.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -700,8 +755,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-006.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-006.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[5] | RTL-006.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl006_control_t / 114 | RTL-001.rtl006_control_o | RTL-006.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl006_status_t / 51 | RTL-006.status_o | RTL-001.rtl006_status_i; RTL-002.module_ready_i[5]; RTL-002.module_fault_i[5] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl006_control_t / 122 | RTL-001.rtl006_control_o | RTL-006.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl006_status_t / 83 | RTL-006.status_o | RTL-001.rtl006_status_i; RTL-002.module_ready_i[5]; RTL-002.module_fault_i[5] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-006.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-006.evt_valid_o | RTL-005.evt_valid_i[5] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[5] | RTL-006.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -812,8 +867,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-011.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-011.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[10] | RTL-011.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl011_control_t / 113 | RTL-001.rtl011_control_o | RTL-011.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl011_status_t / 67 | RTL-011.status_o | RTL-001.rtl011_status_i; RTL-002.module_ready_i[10]; RTL-002.module_fault_i[10] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl011_control_t / 121 | RTL-001.rtl011_control_o | RTL-011.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl011_status_t / 84 | RTL-011.status_o | RTL-001.rtl011_status_i; RTL-002.module_ready_i[10]; RTL-002.module_fault_i[10] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-011.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-011.evt_valid_o | RTL-005.evt_valid_i[10] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[10] | RTL-011.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -926,8 +981,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-016.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-016.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[15] | RTL-016.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl016_control_t / 52 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl016_status_t / 47 | RTL-016.status_o | RTL-001.rtl016_status_i; RTL-002.module_ready_i[15]; RTL-002.module_fault_i[15] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl016_control_t / 53 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl016_status_t / 52 | RTL-016.status_o | RTL-001.rtl016_status_i; RTL-002.module_ready_i[15]; RTL-002.module_fault_i[15] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-016.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-016.evt_valid_o | RTL-005.evt_valid_i[15] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[15] | RTL-016.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -953,8 +1008,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-017.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-017.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[16] | RTL-017.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl017_control_t / 70 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl017_status_t / 223 | RTL-017.status_o | RTL-001.rtl017_status_i; RTL-002.module_ready_i[16]; RTL-002.module_fault_i[16] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl017_control_t / 103 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl017_status_t / 256 | RTL-017.status_o | RTL-001.rtl017_status_i; RTL-002.module_ready_i[16]; RTL-002.module_fault_i[16] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-017.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-017.evt_valid_o | RTL-005.evt_valid_i[16] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[16] | RTL-017.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -991,8 +1046,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-018.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-018.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[17] | RTL-018.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl018_control_t / 130 | RTL-001.rtl018_control_o | RTL-018.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl018_status_t / 95 | RTL-018.status_o | RTL-001.rtl018_status_i; RTL-002.module_ready_i[17]; RTL-002.module_fault_i[17] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl018_control_t / 162 | RTL-001.rtl018_control_o | RTL-018.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl018_status_t / 127 | RTL-018.status_o | RTL-001.rtl018_status_i; RTL-002.module_ready_i[17]; RTL-002.module_fault_i[17] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-018.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-018.evt_valid_o | RTL-005.evt_valid_i[17] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[17] | RTL-018.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -1024,8 +1079,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-019.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-019.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[18] | RTL-019.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl019_control_t / 138 | RTL-001.rtl019_control_o | RTL-019.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl019_status_t / 261 | RTL-019.status_o | RTL-001.rtl019_status_i; RTL-002.module_ready_i[18]; RTL-002.module_fault_i[18] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl019_control_t / 203 | RTL-001.rtl019_control_o | RTL-019.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl019_status_t / 326 | RTL-019.status_o | RTL-001.rtl019_status_i; RTL-002.module_ready_i[18]; RTL-002.module_fault_i[18] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-019.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-019.evt_valid_o | RTL-005.evt_valid_i[18] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[18] | RTL-019.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -1062,8 +1117,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-020.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-020.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[19] | RTL-020.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl020_control_t / 85 | RTL-001.rtl020_control_o | RTL-020.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl020_status_t / 87 | RTL-020.status_o | RTL-001.rtl020_status_i; RTL-002.module_ready_i[19]; RTL-002.module_fault_i[19] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl020_control_t / 215 | RTL-001.rtl020_control_o | RTL-020.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl020_status_t / 217 | RTL-020.status_o | RTL-001.rtl020_status_i; RTL-002.module_ready_i[19]; RTL-002.module_fault_i[19] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-020.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-020.evt_valid_o | RTL-005.evt_valid_i[19] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[19] | RTL-020.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -1099,8 +1154,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-021.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-021.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[20] | RTL-021.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl021_control_t / 125 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl021_status_t / 176 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl021_control_t / 135 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl021_status_t / 336 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-021.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-021.evt_valid_o | RTL-005.evt_valid_i[20] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[20] | RTL-021.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -1134,8 +1189,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-022.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-022.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[21] | RTL-022.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl022_control_t / 300 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl022_status_t / 69 | RTL-022.status_o | RTL-001.rtl022_status_i; RTL-002.module_ready_i[21]; RTL-002.module_fault_i[21] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl022_control_t / 308 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl022_status_t / 137 | RTL-022.status_o | RTL-001.rtl022_status_i; RTL-002.module_ready_i[21]; RTL-002.module_fault_i[21] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-022.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-022.evt_valid_o | RTL-005.evt_valid_i[21] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[21] | RTL-022.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -1191,13 +1246,14 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | event_condition_enable_i | input | logic / 64 | RTL-001.event_condition_enable_o[22] | RTL-023 event gate | CORE_CLK / core_rst_n | registered mask; allocation in Appendix F.3 / 0 | same-domain |
 | irq_condition_enable_i | input | logic / 64 | RTL-001.irq_condition_enable_o[22] | RTL-023 interrupt gate | CORE_CLK / core_rst_n | registered mask; allocation in Appendix F.3 / 0 | same-domain |
 
-### RTL-024 - Dragon Core Top-Level Integration (33 external logical ports)
+### RTL-024 - Dragon Core Top-Level Integration (34 logical and platform ports)
 
 RTL-024 has only wrapper/platform-facing ports. All RTL-001 through RTL-023 connections, generated core clock/reset nets, DRI, control/status, event, interrupt, fault, safety-request, canonical-message, and shared-buffer interfaces are internal nets owned by RTL-024 and are enumerated by ARCH-CONN-001 through ARCH-CONN-012.
 
 | **Port** | **Dir** | **Type / width** | **External producer/consumer** | **Clock / reset** | **Safe/idle contract** | **CDC/RDC** |
 |---|---|---|---|---|---|---|
 | core_clk_i | input | logic / 1 | Platform clock source | Clock root / `por_n_i` | Nominal 50 MHz continuous | clock root |
+| clock_fault_i | input | logic / 1 | Platform clock monitor | Asynchronous / `por_n_i` | Low when valid; asserted and held through four recovered CORE_CLK edges after invalid or lost clock | CDC-CLOCK |
 | por_n_i | input | logic / 1 | Platform-wrapper POR | Asynchronous | Asserted low; internal wrapper input, not a pad | RDC-001; RDC-002; RDC-TEST-001 |
 | spi_sclk_i | input | logic / 1 | External SPI master | SPI_SCLK / `spi_rst_n` | Mode 0, low idle | CDC-001; CDC-002 |
 | spi_cs_n_i | input | logic / 1 | External SPI master | SPI_SCLK / `spi_rst_n` | High inactive | CDC-001; RDC-002 |
@@ -1287,7 +1343,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 18:3 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
 
-### dfc_rtl002_control_t — 57 bits
+### dfc_rtl002_control_t — 59 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1302,8 +1358,10 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 54 | reset_status__complete | 1 | unsigned | 0 | clear_mask |
 | 55 | reset_status__rejected | 1 | unsigned | 0 | clear_mask |
 | 56 | reset_control__safety_domain_reset | 1 | unsigned | 0 | command_pulse |
+| 57 | reset_status__timeout | 1 | unsigned | 0 | W1C controlled-reset timeout evidence |
+| 58 | reset_status__recovery_failure | 1 | unsigned | 0 | W1C failure to regain required ready state |
 
-### dfc_rtl002_status_t — 109 bits
+### dfc_rtl002_status_t — 112 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1328,6 +1386,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 87:64 | reset_status__last_scope | 24 | unsigned | 0 | readback_value |
 | 92:88 | reset_status__last_result | 5 | unsigned | 0 | readback_value |
 | 108:93 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 109 | sys_status__effective_operational_enable | 1 | unsigned | 0 | independent current-state readback; never inferred from commanded enable |
+| 110 | reset_status__timeout | 1 | unsigned | 0 | sticky controlled-reset timeout evidence |
+| 111 | reset_status__recovery_failure | 1 | unsigned | 0 | sticky failure to regain required ready state |
 
 ### dfc_rtl003_control_t — 128 bits
 
@@ -1384,7 +1445,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 88 | time_sync_status__active_valid | 1 | unsigned | 0 | readback_value |
 | 104:89 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### dfc_rtl005_control_t — 96 bits
+### dfc_rtl005_control_t — 128 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1399,8 +1460,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 62 | evt_pop__pop | 1 | unsigned | 0 | command_pulse |
 | 63 | evt_clear__clear_all | 1 | unsigned | 0 | command_pulse |
 | 95:64 | evt_drop_source__source_drop | 32 | unsigned | 0 | clear_mask |
+| 127:96 | evt_pop_error_count__count | 32 | unsigned | 0 | whole-counter clear for rejected empty POP operations |
 
-### dfc_rtl005_status_t — 236 bits
+### dfc_rtl005_status_t — 268 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1427,8 +1489,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 218:214 | evt_arb_status__next_source | 5 | unsigned | 0 | readback_value |
 | 219 | evt_arb_status__arb_active | 1 | unsigned | 0 | readback_value |
 | 235:220 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 267:236 | evt_pop_error_count__count | 32 | unsigned | 0 | saturating count of rejected empty POP operations |
 
-### dfc_rtl006_control_t — 114 bits
+### dfc_rtl006_control_t — 122 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1448,8 +1511,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 97:90 | gpio_qual_4_7__ch5_ms | 8 | unsigned | 0 | control_value |
 | 105:98 | gpio_qual_4_7__ch6_ms | 8 | unsigned | 0 | control_value |
 | 113:106 | gpio_qual_4_7__ch7_ms | 8 | unsigned | 0 | control_value |
+| 121:114 | gpio_dir__direction | 8 | unsigned | 0 | RTL-006-owned direction configuration; one means output |
 
-### dfc_rtl006_status_t — 51 bits
+### dfc_rtl006_status_t — 83 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1461,6 +1525,10 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 26:19 | gpio_qual_in__qual_input | 8 | unsigned | 0 | readback_value |
 | 34:27 | gpio_event_status__event | 8 | unsigned | 0 | readback_value |
 | 50:35 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 58:51 | gpio_status__commanded_output | 8 | unsigned | 0 | current pre-permit commanded output |
+| 66:59 | gpio_status__effective_output | 8 | unsigned | 0 | current post-permit output data |
+| 74:67 | gpio_status__direction | 8 | unsigned | 0 | active per-channel direction readback |
+| 82:75 | gpio_status__qualification_in_progress | 8 | unsigned | 0 | current per-channel qualification-in-progress state |
 
 ### `dfc_rtl007_control_t` — 135 bits
 
@@ -1649,7 +1717,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 208:185 | sensor1_meta__sequence | 24 | unsigned | 0 | readback_value |
 | 224:209 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### dfc_rtl011_control_t — 113 bits
+### dfc_rtl011_control_t — 121 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1668,8 +1736,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 96:89 | health_qual_4_7__ch5_ms | 8 | unsigned | 0 | control_value |
 | 104:97 | health_qual_4_7__ch6_ms | 8 | unsigned | 0 | control_value |
 | 112:105 | health_qual_4_7__ch7_ms | 8 | unsigned | 0 | control_value |
+| 120:113 | health_sticky__qualification_failure | 8 | unsigned | 0 | W1C mask for sticky per-channel qualification failure |
 
-### dfc_rtl011_status_t — 67 bits
+### dfc_rtl011_status_t — 84 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1683,6 +1752,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 42:35 | health_sticky__asserted | 8 | unsigned | 0 | readback_value |
 | 50:43 | health_sticky__recovered | 8 | unsigned | 0 | readback_value |
 | 66:51 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 74:67 | health_qualification__in_progress | 8 | unsigned | 0 | current per-channel qualification-in-progress state |
+| 82:75 | health_sticky__qualification_failure | 8 | unsigned | 0 | sticky per-channel qualification-failure evidence |
+| 83 | health_status__aggregate_fault | 1 | unsigned | 0 | current OR of active fault-enabled health channels |
 
 ### dfc_rtl012_control_t — 110 bits
 
@@ -1836,7 +1908,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 58:27 | llink_elapsed_us__elapsed_us | 32 | unsigned | 0x00000000 | readback_value |
 | 74:59 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### `dfc_rtl016_control_t` — 52 bits
+### `dfc_rtl016_control_t` — 53 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1850,8 +1922,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 11 | safety_channel_control__active_high | 1 | unsigned | 1 | control_value |
 | 43:12 | safety_response_mask__response_source_mask | 32 | unsigned | 0 | control_value |
 | 51:44 | safety_interlock_mask__required_interlocks | 8 | unsigned | 0 | control_value |
+| 52 | safety_control__global_inhibit | 1 | unsigned | 1 | explicit global inhibit; independent of controller enable |
 
-### dfc_rtl016_status_t — 47 bits
+### dfc_rtl016_status_t — 52 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1863,7 +1936,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 14:11 | safety_status__inhibited | 4 | unsigned | 0 | readback_value |
 | 18:15 | safety_status__faulted | 4 | unsigned | 0 | readback_value |
 | 22:19 | safety_status__event | 4 | unsigned | 0 | readback_value |
-| 23 | safety_channel_status__command_request | 1 | unsigned | 0 | readback_value |
+| 23 | safety_channel_status__command_request | 1 | unsigned | 0 | current requested state before latch policy |
 | 24 | safety_channel_status__effective_output | 1 | unsigned | 0 | readback_value |
 | 25 | safety_channel_status__disabled | 1 | unsigned | 1 | readback_value |
 | 26 | safety_channel_status__observational_inhibit | 1 | unsigned | 1 | readback_value |
@@ -1872,8 +1945,13 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 29 | safety_channel_status__reset_active | 1 | unsigned | 1 | readback_value |
 | 30 | safety_channel_status__test_inhibit | 1 | unsigned | 1 | readback_value |
 | 46:31 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 47 | safety_channel_status__latched_request | 1 | unsigned | 0 | retained request state for selected channel |
+| 48 | safety_channel_status__commanded | 1 | unsigned | 0 | current requested OR latched-request state |
+| 49 | safety_channel_status__controller_disabled | 1 | unsigned | 1 | current controller-disabled cause |
+| 50 | safety_channel_status__global_inhibit | 1 | unsigned | 1 | current explicit global-inhibit cause |
+| 51 | safety_channel_status__operational_inhibit | 1 | unsigned | 1 | current effective-operational-enable inhibit cause |
 
-### dfc_rtl017_control_t — 70 bits
+### dfc_rtl017_control_t — 103 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1885,8 +1963,10 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 5 | arx_pop__pop | 1 | unsigned | 0 | command_pulse |
 | 37:6 | arx_error_count__count | 32 | unsigned | 0 | clear_mask |
 | 69:38 | arx_overflow_count__count | 32 | unsigned | 0 | clear_mask |
+| 70 | arx_status__pop_rejected | 1 | unsigned | 0 | W1C rejected empty-POP evidence |
+| 102:71 | arx_rejected_access_count__count | 32 | unsigned | 0 | whole-counter clear for rejected queue access |
 
-### dfc_rtl017_status_t — 223 bits
+### dfc_rtl017_status_t — 256 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1914,8 +1994,10 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 174:143 | arx_error_count__count | 32 | unsigned | 0 | readback_value |
 | 206:175 | arx_overflow_count__count | 32 | unsigned | 0 | readback_value |
 | 222:207 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 223 | arx_status__pop_rejected | 1 | unsigned | 0 | sticky rejected empty-POP evidence |
+| 255:224 | arx_rejected_access_count__count | 32 | unsigned | 0 | saturating count of rejected queue accesses |
 
-### `dfc_rtl018_control_t` — 130 bits
+### `dfc_rtl018_control_t` — 162 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1936,8 +2018,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 89:58 | atx_error_count__count | 32 | unsigned | 0 | clear_mask |
 | 121:90 | atx_underrun_count__count | 32 | unsigned | 0 | clear_mask |
 | 129:122 | atx_interword_gap_bits__gap_bits | 8 | unsigned | 4 | control_value |
+| 161:130 | atx_rejected_push_count__count | 32 | unsigned | 0 | whole-counter clear for full or invalid PUSH rejection |
 
-### dfc_rtl018_status_t — 95 bits
+### dfc_rtl018_status_t — 127 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1956,8 +2039,9 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 46:15 | atx_error_count__count | 32 | unsigned | 0 | readback_value |
 | 78:47 | atx_underrun_count__count | 32 | unsigned | 0 | readback_value |
 | 94:79 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 126:95 | atx_rejected_push_count__count | 32 | unsigned | 0 | saturating count of full or invalid PUSH rejection |
 
-### `dfc_rtl019_control_t` — 138 bits
+### `dfc_rtl019_control_t` — 203 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1985,8 +2069,11 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 135 | can_tx_push__push | 1 | unsigned | 0 | command_pulse |
 | 136 | can_control__automatic_bus_off_recovery | 1 | unsigned | 0 | control_value |
 | 137 | can_recovery__request | 1 | unsigned | 0 | command_pulse |
+| 138 | can_status__rx_pop_rejected | 1 | unsigned | 0 | W1C rejected empty-POP evidence |
+| 170:139 | can_rx_overflow_count__count | 32 | unsigned | 0 | whole-counter clear |
+| 202:171 | can_tx_rejected_count__count | 32 | unsigned | 0 | whole-counter clear |
 
-### dfc_rtl019_status_t — 261 bits
+### dfc_rtl019_status_t — 326 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2020,8 +2107,11 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 240:209 | can_rx_time_hi__timestamp_hi | 32 | unsigned | 0x00000000 | readback_value |
 | 244:241 | can_tx_level__level | 4 | unsigned | 0 | readback_value |
 | 260:245 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 261 | can_status__rx_pop_rejected | 1 | unsigned | 0 | sticky rejected empty-POP evidence |
+| 293:262 | can_rx_overflow_count__count | 32 | unsigned | 0 | saturating RX overflow/drop count |
+| 325:294 | can_tx_rejected_count__count | 32 | unsigned | 0 | saturating full or invalid TX PUSH rejection count |
 
-### dfc_rtl020_control_t — 85 bits
+### dfc_rtl020_control_t — 215 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2040,8 +2130,14 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 51:44 | uart_tx_data__data | 8 | unsigned | 0 | control_value |
 | 52 | uart_tx_push__push | 1 | unsigned | 0 | command_pulse |
 | 84:53 | uart_error_count__count | 32 | unsigned | 0 | clear_mask |
+| 85 | uart_status__rx_underflow | 1 | unsigned | 0 | W1C rejected empty RX POP evidence |
+| 86 | uart_status__tx_rejected | 1 | unsigned | 0 | W1C rejected full or invalid TX PUSH evidence |
+| 118:87 | uart_rx_overflow_count__count | 32 | unsigned | 0 | whole-counter clear |
+| 150:119 | uart_rx_underflow_count__count | 32 | unsigned | 0 | whole-counter clear |
+| 182:151 | uart_tx_rejected_count__count | 32 | unsigned | 0 | whole-counter clear |
+| 214:183 | uart_tx_underflow_count__count | 32 | unsigned | 0 | whole-counter clear |
 
-### dfc_rtl020_status_t — 87 bits
+### dfc_rtl020_status_t — 217 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2064,8 +2160,14 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 38:34 | uart_tx_level__level | 5 | unsigned | 0 | readback_value |
 | 70:39 | uart_error_count__count | 32 | unsigned | 0 | readback_value |
 | 86:71 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 87 | uart_status__rx_underflow | 1 | unsigned | 0 | sticky rejected empty RX POP evidence |
+| 88 | uart_status__tx_rejected | 1 | unsigned | 0 | sticky rejected full or invalid TX PUSH evidence |
+| 120:89 | uart_rx_overflow_count__count | 32 | unsigned | 0 | saturating RX overflow/drop count |
+| 152:121 | uart_rx_underflow_count__count | 32 | unsigned | 0 | saturating rejected empty RX POP count |
+| 184:153 | uart_tx_rejected_count__count | 32 | unsigned | 0 | saturating full or invalid TX PUSH count |
+| 216:185 | uart_tx_underflow_count__count | 32 | unsigned | 0 | saturating TX underflow count |
 
-### dfc_rtl021_control_t — 125 bits
+### dfc_rtl021_control_t — 135 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2087,8 +2189,10 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 122 | route_validate_commit__validate_commit | 1 | unsigned | 0 | command_pulse |
 | 123 | route_validate_commit__disable_entry | 1 | unsigned | 0 | command_pulse |
 | 124 | route_entry_status__error | 1 | unsigned | 0 | clear_mask |
+| 129:125 | route_ingress_loss_count__clear | 5 | unsigned | 0 | one whole-counter-clear pulse per ingress source |
+| 134:130 | route_destination_drop_count__clear | 5 | unsigned | 0 | one whole-counter-clear pulse per destination |
 
-### `dfc_rtl021_status_t` — 176 bits
+### `dfc_rtl021_status_t` — 336 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2112,8 +2216,10 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 143 | route_entry_status__error | 1 | unsigned | 0 | readback_value |
 | 159:144 | route_entry_status__forwarded_count | 16 | unsigned | 0 | readback_value |
 | 175:160 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 255:176 | route_ingress_loss_count__count | 80 | unsigned | 0 | five packed 16-bit saturating counts, source IDs 0 through 4 in ascending slices |
+| 335:256 | route_destination_drop_count__count | 80 | unsigned | 0 | five packed 16-bit saturating counts, destination IDs 0 through 4 in ascending slices |
 
-### dfc_rtl022_control_t — 300 bits
+### dfc_rtl022_control_t — 308 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2135,8 +2241,10 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 294 | uli_in_push__push | 1 | unsigned | 0 | command_pulse |
 | 295 | uli_out_pop__pop | 1 | unsigned | 0 | command_pulse |
 | 299:296 | uli_io_output__output_request | 4 | unsigned | 0 | control_value |
+| 303:300 | uli_mailbox_status__overflow_underflow_clear | 4 | unsigned | 0 | W1C input overflow, input underflow, output overflow, output underflow evidence |
+| 307:304 | uli_mailbox_loss_count__clear | 4 | unsigned | 0 | one whole-counter-clear pulse for each mailbox loss class |
 
-### dfc_rtl022_status_t — 69 bits
+### dfc_rtl022_status_t — 137 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2156,6 +2264,8 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 48:17 | uli_out_data__mailbox_data | 32 | unsigned | 0x00000000 | readback_value |
 | 52:49 | uli_io_input__input | 4 | unsigned | 0 | readback_value |
 | 68:53 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 72:69 | uli_mailbox_status__overflow_underflow | 4 | unsigned | 0 | sticky input overflow, input underflow, output overflow, output underflow evidence |
+| 136:73 | uli_mailbox_loss_count__count | 64 | unsigned | 0 | four packed 16-bit saturating counts in evidence-bit order |
 
 ### dfc_rtl023_control_t — 34 bits
 
@@ -2199,45 +2309,51 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 58:43 | uroute_entry_status__activity_count | 16 | unsigned | 0 | readback_value |
 | 74:59 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### dfc_rtl024_control_t — 232 bits
+### dfc_rtl024_control_t — 278 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
-| 7:0 | gpio_dir__direction | 8 | unsigned | 0 | control_value |
-| 8 | host_status__response_truncated | 1 | unsigned | 0 | clear_mask |
-| 9 | host_control__event_enable | 1 | unsigned | 0 | control_value |
-| 10 | host_control__irq_enable | 1 | unsigned | 0 | control_value |
-| 11 | host_status__invalid_opcode | 1 | unsigned | 0 | clear_mask |
-| 12 | host_status__invalid_length | 1 | unsigned | 0 | clear_mask |
-| 13 | host_status__unaligned | 1 | unsigned | 0 | clear_mask |
-| 14 | host_status__invalid_address | 1 | unsigned | 0 | clear_mask |
-| 15 | host_status__access_error | 1 | unsigned | 0 | clear_mask |
-| 16 | host_status__protected_error | 1 | unsigned | 0 | clear_mask |
-| 17 | host_status__crc_error | 1 | unsigned | 0 | clear_mask |
-| 18 | host_status__timeout | 1 | unsigned | 0 | clear_mask |
-| 19 | host_status__endpoint_error | 1 | unsigned | 0 | clear_mask |
-| 20 | host_status__aborted | 1 | unsigned | 0 | clear_mask |
-| 52:21 | host_completed_count__count | 32 | unsigned | 0 | clear_mask |
-| 84:53 | host_crc_error_count__count | 32 | unsigned | 0 | clear_mask |
-| 116:85 | host_abort_count__count | 32 | unsigned | 0 | clear_mask |
-| 148:117 | host_timeout_count__count | 32 | unsigned | 0 | clear_mask |
-| 180:149 | host_access_error_count__count | 32 | unsigned | 0 | clear_mask |
-| 181 | test_control__enable | 1 | unsigned | 0 | control_value |
-| 182 | test_control__loopback_enable | 1 | unsigned | 0 | control_value |
-| 183 | test_control__injection_enable | 1 | unsigned | 0 | control_value |
-| 184 | test_status__command_complete | 1 | unsigned | 0 | clear_mask |
-| 185 | test_status__command_rejected | 1 | unsigned | 0 | clear_mask |
-| 186 | test_status__safety_blocked | 1 | unsigned | 0 | clear_mask |
-| 194:187 | test_command__command | 8 | unsigned | 0 | command_pulse |
-| 218:195 | test_command__argument | 24 | unsigned | 0 | command_pulse |
-| 226:219 | test_loopback__loopback_select | 8 | unsigned | 0 | control_value |
-| 227 | arx_control__enable | 1 | unsigned | 0 | control_value |
-| 228 | arx_control__high_speed | 1 | unsigned | 0 | control_value |
-| 229 | arx_control__event_enable | 1 | unsigned | 0 | control_value |
-| 230 | arx_control__irq_enable | 1 | unsigned | 0 | control_value |
-| 231 | arx_control__accept_parity_error | 1 | unsigned | 0 | control_value |
+| 0 | host_status__response_truncated | 1 | unsigned | 0 | clear_mask |
+| 1 | host_control__event_enable | 1 | unsigned | 0 | control_value |
+| 2 | host_control__irq_enable | 1 | unsigned | 0 | control_value |
+| 3 | host_status__invalid_opcode | 1 | unsigned | 0 | clear_mask |
+| 4 | host_status__invalid_length | 1 | unsigned | 0 | clear_mask |
+| 5 | host_status__unaligned | 1 | unsigned | 0 | clear_mask |
+| 6 | host_status__invalid_address | 1 | unsigned | 0 | clear_mask |
+| 7 | host_status__access_error | 1 | unsigned | 0 | clear_mask |
+| 8 | host_status__protected_error | 1 | unsigned | 0 | clear_mask |
+| 9 | host_status__crc_error | 1 | unsigned | 0 | clear_mask |
+| 10 | host_status__timeout | 1 | unsigned | 0 | clear_mask |
+| 11 | host_status__endpoint_error | 1 | unsigned | 0 | clear_mask |
+| 12 | host_status__aborted | 1 | unsigned | 0 | clear_mask |
+| 44:13 | host_completed_count__count | 32 | unsigned | 0 | clear_mask |
+| 76:45 | host_crc_error_count__count | 32 | unsigned | 0 | clear_mask |
+| 108:77 | host_abort_count__count | 32 | unsigned | 0 | clear_mask |
+| 140:109 | host_timeout_count__count | 32 | unsigned | 0 | clear_mask |
+| 172:141 | host_access_error_count__count | 32 | unsigned | 0 | clear_mask |
+| 173 | test_control__enable | 1 | unsigned | 0 | control_value |
+| 174 | test_control__loopback_enable | 1 | unsigned | 0 | control_value |
+| 175 | test_control__injection_enable | 1 | unsigned | 0 | control_value |
+| 176 | test_status__command_complete | 1 | unsigned | 0 | clear_mask |
+| 177 | test_status__command_rejected | 1 | unsigned | 0 | clear_mask |
+| 178 | test_status__safety_blocked | 1 | unsigned | 0 | clear_mask |
+| 186:179 | test_command__command | 8 | unsigned | 0 | command_pulse |
+| 210:187 | test_command__argument | 24 | unsigned | 0 | command_pulse |
+| 218:211 | test_loopback__loopback_select | 8 | unsigned | 0 | control_value |
+| 219 | arx_control__enable | 1 | unsigned | 0 | control_value |
+| 220 | arx_control__high_speed | 1 | unsigned | 0 | control_value |
+| 221 | arx_control__event_enable | 1 | unsigned | 0 | control_value |
+| 222 | arx_control__irq_enable | 1 | unsigned | 0 | control_value |
+| 223 | arx_control__accept_parity_error | 1 | unsigned | 0 | control_value |
+| 227:224 | test_status__extended_evidence_clear | 4 | unsigned | 0 | W1C unsafe rejection, deauthorization abort, natural-fault, injected-fault evidence |
+| 259:228 | test_rejection_abort_count__count | 32 | unsigned | 0 | whole-counter clear |
+| 261:260 | clock_reset_status__evidence_clear | 2 | unsigned | 0 | W1C clock-fault and illegal-release evidence |
+| 268:262 | buffer_status__client_error_clear | 7 | unsigned | 0 | W1C per-client error evidence |
+| 269 | buffer_status__internal_error_clear | 1 | unsigned | 0 | W1C internal service error evidence |
+| 276:270 | buffer_client_error_count__clear | 7 | unsigned | 0 | one whole-counter-clear pulse per client |
+| 277 | buffer_internal_error_count__clear | 1 | unsigned | 0 | whole-counter-clear pulse |
 
-### `dfc_rtl024_status_t` — 272 bits
+### `dfc_rtl024_status_t` — 467 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2257,13 +2373,13 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 13 | host_status__endpoint_error | 1 | unsigned | 0 | readback_value |
 | 14 | host_status__aborted | 1 | unsigned | 0 | readback_value |
 | 15 | host_status__response_truncated | 1 | unsigned | 0 | readback_value |
-| 23:16 | host_last_result__spi_status | 8 | unsigned | 0 | readback_value |
-| 26:24 | host_last_result__dri_code | 3 | unsigned | 0 | readback_value |
-| 31:27 | host_last_result__completed_count | 5 | unsigned | 0 | readback_value |
-| 39:32 | host_last_result__opcode | 8 | unsigned | 0 | readback_value |
-| 50:40 | host_last_result__sequence | 11 | unsigned | 0 | readback_value |
-| 82:51 | host_last_address__address | 32 | unsigned | 0 | readback_value |
-| 114:83 | host_completed_count__count | 32 | unsigned | 0 | readback_value |
+| 23:16 | host_last_result__spi_status | 8 | unsigned | 0 | terminal reconciliation SPI status |
+| 26:24 | host_last_result__dri_code | 3 | unsigned | 0 | terminal reconciliation endpoint result |
+| 31:27 | host_last_result__completed_count | 5 | unsigned | 0 | terminal reconciliation completed-word count |
+| 39:32 | host_last_result__opcode | 8 | unsigned | 0 | terminal reconciliation accepted opcode |
+| 50:40 | host_last_result__sequence | 11 | unsigned | 0 | terminal reconciliation transaction sequence |
+| 82:51 | host_last_address__address | 32 | unsigned | 0 | terminal reconciliation starting byte address |
+| 114:83 | host_completed_count__count | 32 | unsigned | 0 | saturating count of successful terminal accepted commands |
 | 146:115 | host_crc_error_count__count | 32 | unsigned | 0 | readback_value |
 | 178:147 | host_abort_count__count | 32 | unsigned | 0 | readback_value |
 | 210:179 | host_timeout_count__count | 32 | unsigned | 0 | readback_value |
@@ -2276,6 +2392,21 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 254:248 | buffer_status__client_error | 7 | unsigned | 0 | readback_value |
 | 255 | buffer_status__internal_error | 1 | unsigned | 0 | readback_value |
 | 271:256 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 272 | host_last_result__valid | 1 | unsigned | 0 | terminal host-reconciliation record valid |
+| 273 | test_status__busy | 1 | unsigned | 0 | current command activity |
+| 274 | test_status__unsafe_rejected | 1 | unsigned | 0 | sticky unsafe-command rejection evidence |
+| 275 | test_status__deauthorization_aborted | 1 | unsigned | 0 | sticky deauthorization-abort evidence |
+| 276 | test_status__loopback_active | 1 | unsigned | 0 | current qualified loopback state |
+| 277 | test_status__injection_enabled | 1 | unsigned | 0 | current qualified injection permission |
+| 278 | test_status__natural_fault_observed | 1 | unsigned | 0 | sticky natural-fault evidence during authorized test |
+| 279 | test_status__injected_fault_observed | 1 | unsigned | 0 | sticky accepted-injection evidence |
+| 287:280 | test_status__terminal_reason | 8 | unsigned | 0 | ARCH-TEST-018 terminal result |
+| 319:288 | test_rejection_abort_count__count | 32 | unsigned | 0 | saturating rejected-or-aborted test-command count |
+| 320 | clock_reset_status__clock_fault_active | 1 | unsigned | 0 | current platform-reported clock fault |
+| 321 | clock_reset_status__clock_fault_sticky | 1 | unsigned | 0 | retained invalid/lost-clock evidence |
+| 322 | clock_reset_status__illegal_release | 1 | unsigned | 0 | retained illegal reset-release evidence |
+| 434:323 | buffer_client_error_count__count | 112 | unsigned | 0 | seven packed 16-bit saturating client-error counts, clients 0 through 6 in ascending slices |
+| 466:435 | buffer_internal_error_count__count | 32 | unsigned | 0 | saturating shared-buffer internal-error count |
 
 ### dfc_safety_response_req_t — 8 bits
 
@@ -2454,10 +2585,10 @@ Every listed ID is legal only for the producer(s) identified in C.5. Event IDs n
 | `0x0001` | Operating-state transition | 0 entry, 1 exit, 2 degraded acknowledge | prior and new three-bit states packed in bits 2:0 and 6:4 |
 | `0x0002` | Configuration transaction | 0 accepted, 1 rejected, 2 protected failure | low sixteen bits of register word offset |
 | `0x0003` | Register endpoint/protection error | 0 decode, 1 access, 2 protection, 3 endpoint, 4 timeout | DRI code and first-error code |
-| `0x0004` | Controlled reset | 0 requested, 1 complete, 2 rejected, 3 timeout | reset-scope bit index and result |
-| `0x0005` | SPI host transaction | 0 accepted, 1 complete, 2 rejected, 3 timeout, 4 pre-acceptance abort, 5 response truncation, 6 CRC error | status and completed count |
-| `0x0006` | Clock/reset integration | 0 release, 1 illegal release attempt, 2 clock fault, 3 recovery | integration status |
-| `0x0007` | Production test | 0 authorized, 1 deauthorized, 2 complete, 3 rejected, 4 aborted, 5 safety blocked | opcode and result |
+| `0x0004` | Controlled reset | 0 requested, 1 complete, 2 rejected, 3 timeout, 4 recovery failure | reset-scope bit index and result |
+| `0x0005` | SPI host transaction | 0 accepted, 1 complete, 2 rejected, 3 timeout, 4 pre-acceptance abort, 5 response truncation, 6 CRC error, 7 access/protection failure, 8 endpoint failure | reconciliation sequence, status, and completed count |
+| `0x0006` | Clock/reset integration | 0 release, 1 illegal release attempt, 2 clock fault, 3 clock recovery | integration status and source |
+| `0x0007` | Production test | 0 authorized, 1 deauthorized, 2 complete, 3 rejected, 4 aborted, 5 safety blocked, 6 unsafe rejected, 7 natural fault observed, 8 injected fault observed | opcode and ARCH-TEST-018 result |
 | `0x0008` | Interrupt controller | 0 reserved-source attempt, 1 illegal injection, 2 vector-state error | source and result |
 | `0x0009` | Timestamp | 0 correlation commit, 1 arithmetic error, 2 snapshot complete | update sequence or error detail |
 | `0x000A` | Event logger operation | 0 not-empty transition, 1 pop error, 2 clear complete | level and operation result |
@@ -2533,6 +2664,7 @@ Every listed ID is legal only for the producer(s) identified in C.5. Event IDs n
 | --- | --- | --- | --- | --- | --- | --- |
 | CDC-001 | RTL-024 SPI shift engine / SPI_SCLK | RTL-024 core executor / CORE_CLK | validated SPI request payload and ownership | stable multi-bit request mailbox plus synchronized ownership toggle and acknowledgement | spi_rst_n/core_rst_n return mailbox empty; aborted ownership cannot create DRI activity; payload remains stable from ownership transfer until core acknowledgement; toggle and payload reconverge only after two-flop toggle synchronization | asynchronous clock groups; mailbox stability and synchronizer exceptions reviewed |
 | CDC-002 | RTL-024 core response / CORE_CLK | RTL-024 SPI response shifter / SPI_SCLK | SPI status, completed count, read payload, response CRC input | stable multi-bit response mailbox plus synchronized ownership toggle and acknowledgement | either reset flushes ownership; no stale response is shifted after a new transaction; response stable until SPI acknowledgement; synchronized toggle gates capture | asynchronous clock groups; mailbox stability and synchronizer exceptions reviewed |
+| CDC-CLOCK | Platform clock monitor / asynchronous or monitor reference | RTL-024 clock diagnostic / CORE_CLK | active-high clock-fault level held across recovered clock edges | two-stage synchronizer followed by sticky capture; platform holds assertion through at least four valid CORE_CLK edges after recovery | POR clears synchronized and sticky state; current level and sticky evidence remain independently visible | false path to first synchronizer stage; source-hold and synchronizer placement review |
 | RDC-001 | OpenFrame POR / asynchronous | core_rst_n / CORE_CLK modules | functional reset release | asynchronous assertion, per-domain synchronized release after at least four valid CORE_CLK edges | primary reset; all CORE_CLK modules observe the same qualified release epoch | recovery/removal and reset-tree analysis |
 | RDC-002 | Platform POR / asynchronous | SPI shift domain / SPI_SCLK may stop | SPI reset release | asynchronous assertion and idle-window release; no SPI_SCLK-clocked release dependency; one-microsecond CS-high/SCLK-low qualification in CORE_CLK | mailbox ownership returns empty; any overlapping CS interval is nonframing | recovery/removal; idle-window and ARCH-SPI-018 proof |
 | CDC-ARINC | external arinc_rx_i / asynchronous | RTL-024 ARINC adapter / CORE_CLK | asynchronous digital input | multi-sample timing-recovery synchronizer | ignored until synchronized reset release and qualification complete; independent bits unless protocol/qualifier explicitly reassembles data | false path to first synchronizer stage; synchronizer placement/MTBF review |
@@ -2559,29 +2691,29 @@ No synchronized control may qualify an independently changing unsynchronized bus
 | Contract ID | Module | Reset and priority-specific derivation contract |
 |---|---|---|
 | ARCH-RTL001-001 | RTL-001 | First-error order is alignment, decode, access, reserved, range, protection, busy, endpoint. Reset cancels DRI and proxy commands before any side effect. Accepted DRI commit dominates ordinary status sampling; reset dominates commit. |
-| ARCH-RTL002-001 | RTL-002 | State transition priority is Section 4.1. Controlled reset busy rejects another request. Terminal result dominates result-clear. Ready is host-path initialized AND state logic initialized; fault is illegal state OR reset timeout OR mandatory startup/loss fault. |
+| ARCH-RTL002-001 | RTL-002 | State transition priority is Section 4.1. Controlled reset busy rejects another request. Terminal result and newly detected timeout or recovery failure dominate result/evidence clear. Ready is host-path initialized AND state logic initialized; fault is illegal state OR reset timeout OR mandatory startup/loss fault. |
 | ARCH-RTL003-001 | RTL-003 | RAW/LATCH/PENDING/ACKED equations are Section 8.1. Reset clears all state. New raw dominates clear; clear dominates acknowledgement for an inactive source. Ready is high after vector initialization; fault is reserved/internal illegal-state evidence. |
 | ARCH-RTL004-001 | RTL-004 | Divider, snapshot, correlation, and priority are ARCH-TIME-001 through ARCH-TIME-006. Ready is high after release; fault is illegal command or correlation arithmetic/control error. |
 | ARCH-RTL005-001 | RTL-005 | Arbitration, store, snapshot/pop/clear, and overflow priority are ARCH-EVT-001 through ARCH-EVT-008. Ready is high after pointers and pending slots clear; fault is retained internal-storage/control error or configured event-overflow fault condition. |
-| ARCH-RTL006-001 | RTL-006 | Synchronization, qualification, output gating, and event equations are ARCH-MON-001. Reset and disable force OE zero before evaluating routes or output data. Ready requires legal channel configuration; fault is illegal configuration or unrecoverable qualification logic error. |
+| ARCH-RTL006-001 | RTL-006 | Synchronization, qualification, direction ownership, commanded/effective output reporting, output gating, and event equations are ARCH-MON-001. Reset and disable force OE zero before evaluating routes or output data. Ready requires legal channel configuration; fault is illegal configuration or unrecoverable qualification logic error. |
 | ARCH-RTL007-001 | RTL-007 | Edge, measurement, rounding, saturation, timeout, and threshold rules are ARCH-MON-002 through ARCH-MON-005. Reset clears history/valid. A newly committed measurement precedes threshold event evaluation. |
 | ARCH-RTL008-001 | RTL-008 | Same as RTL-007 with the engine range and configuration. Separate state prevents rotor/engine coupling. |
 | ARCH-RTL009-001 | RTL-009 | Each channel independently applies ARCH-MON-002, ARCH-MON-004, and ARCH-MON-005. Same-cycle accepted edges update both channel states independently. |
 | ARCH-RTL010-001 | RTL-010 | Signed comparison, hysteresis, stale, and update arbitration are ARCH-MON-006 and ARCH-MON-007. Host commit precedes routed commit, then age tick, threshold evaluation, and evidence clear. |
-| ARCH-RTL011-001 | RTL-011 | Qualification and active/sticky/recovery equations are ARCH-MON-008. New active dominates clear; recovery is one cycle and does not clear sticky. Aggregate fault is a registered OR of enabled active channels. |
+| ARCH-RTL011-001 | RTL-011 | Qualification, qualification-attempt failure, and active/sticky/recovery equations are ARCH-MON-008. New active or qualification failure dominates clear; recovery is captured as sticky evidence and does not clear asserted evidence. Aggregate fault is a registered OR of enabled active channels. |
 | ARCH-RTL012-001 | RTL-012 | Service-window and key behavior is ARCH-SAFE-005. Reset/disable clears timer and request. Timeout detection precedes same-cycle late service; exactly-on-boundary service is legal at MIN and legal through MAX-1. |
 | ARCH-RTL013-001 | RTL-013 | Fault allocation, recoverability, primary selection, and clear rules are Section 10.1 and C.6. New active dominates clear; lowest bit selects primary; active source identity is retained in event data. |
 | ARCH-RTL014-001 | RTL-014 | Commit and evaluation are ARCH-SAFE-006. Reset clears active expressions to disabled. COMMIT validates then atomically replaces all eight entries before the next evaluation; violation on the new bank may assert on that next edge. |
 | ARCH-RTL015-001 | RTL-015 | Activity mapping, timers, recovery, and injection are ARCH-SAFE-007 and ARCH-SAFE-008. Natural loss has priority over injected evidence; clear never suppresses an active loss. |
-| ARCH-RTL016-001 | RTL-016 | Authorization, polarity, latching, inhibit, and output equations are Section 10.4. Reset/test/inhibit dominate request. Multiple authorized requests OR; one source cannot cancel another. |
-| ARCH-RTL017-001 | RTL-017 | Accepted adapter word is written completely to ARCH-BUF-003 before RX tail/valid advances. Full queue rejects and counts overrun. POP reads the oldest complete entry before advancing head. Route-source transfer and host POP independently reference the same head and only one removal may commit per cycle. |
-| ARCH-RTL018-001 | RTL-018 | Host or route request is validated then written completely to ARCH-BUF-004 before TX tail advances. Host push has priority over route input only when both target the last free slot; the losing route remains backpressured. TX removes only after complete serialization or explicit rejected result. |
-| ARCH-RTL019-001 | RTL-019 | RX and TX queues use ARCH-BUF-005/006. Protocol state writes complete frames before valid. Host TX push has priority over route input for the last slot. Bus-off forces recessive output and blocks dequeue until recovery. Natural protocol error dominates host error clear. |
-| ARCH-RTL020-001 | RTL-020 | RX/TX bytes use ARCH-BUF-007/008. A received byte plus flags becomes valid atomically after stop-bit evaluation. Host TX push has priority over route input for the last slot. Disable completes the current transmitted character then idles high; reset aborts immediately. |
-| ARCH-RTL021-001 | RTL-021 | Ingress, filter, replication, arbitration, and backpressure follow ARCH-ROUTE-001 through ARCH-ROUTE-008 using ARCH-BUF-009/010. Commit replaces all sixteen entries atomically; an in-flight record completes under the configuration epoch captured at ingress acceptance. |
-| ARCH-RTL022-001 | RTL-022 | Revision A equations are ARCH-ULI-001 through ARCH-ULI-005 using ARCH-BUF-011. Every operational output is constant inactive. Diagnostic mailbox push/pop obey full/empty rules and complete-entry visibility. |
+| ARCH-RTL016-001 | RTL-016 | Authorization, requested/latched/commanded/effective state, polarity, cause-specific inhibit, and output equations are Section 10.4. Reset/test/inhibit dominate request. Multiple authorized requests OR; one source cannot cancel another. |
+| ARCH-RTL017-001 | RTL-017 | Accepted adapter word is written completely to ARCH-BUF-003 before RX tail/valid advances. Full queue rejects and increments overflow count. POP reads the oldest complete entry before advancing head; POP on empty sets rejected-access evidence and count. Route-source transfer and host POP independently reference the same head and only one removal may commit per cycle. |
+| ARCH-RTL018-001 | RTL-018 | Host or route request is validated then written completely to ARCH-BUF-004 before TX tail advances. A full or invalid host PUSH sets rejection evidence and count. Host push has priority over route input only when both target the last free slot; the losing route remains backpressured and is not counted as lost. TX removes only after complete serialization or explicit rejected result; an attempted dequeue while empty sets underrun evidence and count. |
+| ARCH-RTL019-001 | RTL-019 | RX and TX queues use ARCH-BUF-005/006. Protocol state writes complete frames before valid. RX overflow/drop and empty POP are independently evidenced and counted. Full or invalid TX PUSH is evidenced and counted. Host TX push has priority over route input for the last slot; a backpressured route is not counted as lost. Bus-off forces recessive output and blocks dequeue until recovery. Natural protocol error dominates host error clear. |
+| ARCH-RTL020-001 | RTL-020 | RX/TX bytes use ARCH-BUF-007/008. A received byte plus flags becomes valid atomically after stop-bit evaluation. RX overflow/drop, empty RX POP, full or invalid TX PUSH, and TX underflow are independently evidenced and counted. Host TX push has priority over route input for the last slot; a backpressured route is not counted as lost. Disable completes the current transmitted character then idles high; reset aborts immediately. |
+| ARCH-RTL021-001 | RTL-021 | Ingress, filter, replication, arbitration, and backpressure follow ARCH-ROUTE-001 through ARCH-ROUTE-008 using ARCH-BUF-009/010. Each source ingress and destination queue owns its indexed 16-bit saturating loss count. Commit replaces all sixteen entries atomically; an in-flight record completes under the configuration epoch captured at ingress acceptance. |
+| ARCH-RTL022-001 | RTL-022 | Revision A equations are ARCH-ULI-001 through ARCH-ULI-005 using ARCH-BUF-011. Every operational output is constant inactive. Diagnostic mailbox push/pop obey full/empty rules and complete-entry visibility; input and output overflow and underflow are independently evidenced and counted. |
 | ARCH-RTL023-001 | RTL-023 | Authorization, exclusivity, wired-OR, mode, disable, and command priority are Section 13.2. Edge history updates while enabled even when effective outputs are gated, preventing a stale edge on re-enable. |
-| ARCH-RTL024-001 | RTL-024 | Instantiates RTL-001 through RTL-023, connects Appendix A interfaces, implements Sections 5–7, 12, and 14, and owns all pad-safe gates. Ready requires reset, host mailboxes, DRI, shared buffer, and test controller initialized. Fault is host timeout/internal error OR shared-buffer internal error OR reset/clock/test integration error. |
+| ARCH-RTL024-001 | RTL-024 | Instantiates RTL-001 through RTL-023, connects Appendix A interfaces, implements Sections 5–7, 12, 14, and 15, and owns all pad-safe gates. Ready requires reset, host mailboxes, DRI, shared buffer, reconciliation state, clock diagnostics, and test controller initialized. Fault is host timeout/internal error OR shared-buffer internal error OR reset/clock/test integration error. |
 
 ## F.2 Common queue simultaneity
 
@@ -2591,7 +2723,7 @@ No synchronized control may qualify an independently changing unsynchronized bus
 | 1 through depth minus 1 | Accept; level +1 | Accept; level -1 | Pop old head, append new tail, level unchanged |
 | Full | Reject and set overflow | Accept; level -1 | Pop old head, append new tail, level unchanged |
 
-The event-store overwrite exception is governed only by ARCH-EVT-005 through ARCH-EVT-007. Every other queue uses this table. A new overflow or underflow indication dominates its simultaneous clear.
+The event-store overwrite exception is governed only by ARCH-EVT-005 through ARCH-EVT-007. Every other queue uses this table. A rejected empty pop increments that resource's underflow or rejected-access counter; a rejected full push increments its overflow or rejected-access counter. A simultaneous push/pop accepted in the table increments no loss counter. New evidence or count increment dominates simultaneous clear.
 
 ## F.3 Event and interrupt subcondition masks
 
@@ -2606,7 +2738,7 @@ For per-channel master enables, the corresponding channel master replaces `MODUL
 | RTL | Condition-mask bit allocation; same allocation for event and interrupt unless stated |
 |---|---|
 | RTL-001 | 0 decode error; 1 access error; 2 protected error; 3 endpoint error; 4 timeout; 5 configuration rejection; 6 event-slot overflow |
-| RTL-002 | 0 state entry; 1 state exit; 2 reset complete; 3 reset rejected; 4 reset timeout; 5 startup failure; 6 event-slot overflow |
+| RTL-002 | 0 state entry; 1 state exit; 2 reset complete; 3 reset rejected; 4 reset timeout; 5 startup failure; 6 event-slot overflow; 7 reset-recovery failure |
 | RTL-003 | 0 illegal reserved-source activity; 1 event-slot overflow; other bits reserved; no self-interrupt is generated |
 | RTL-004 | 0 correlation commit; 1 correlation arithmetic error; 2 snapshot complete; 3 event-slot overflow; no ordinary interrupt is generated |
 | RTL-005 | 0 not-empty transition; 1 store overflow; 2 producer drop; 3 pop error; 4 clear complete; 5 event-slot overflow |
@@ -2628,7 +2760,7 @@ For per-channel master enables, the corresponding channel master replaces `MODUL
 | RTL-021 | 0 commit; 1 reject; 2 forward; 3 drop; 4 filter mismatch; 5 unauthorized; 6 shared-buffer error; 7 event-slot overflow |
 | RTL-022 | All operational bits reserved because Revision A is inert; bit 0 parameter rejection, bit 1 diagnostic mailbox activity, bit 2 reset complete, bit 3 shared-buffer error, bit 4 event-slot overflow are diagnostic-event-only and never assert IRQ |
 | RTL-023 | 0 commit; 1 reject; 2 routed activity; 3 conflict; 4 forbidden destination; 5 event-slot overflow |
-| RTL-024 | 0 host accepted; 1 host complete; 2 host rejected; 3 host timeout; 4 pre-acceptance abort; 5 response truncation; 6 CRC error; 8 clock/reset release; 9 clock/reset fault; 16 test authorization; 17 deauthorization; 18 test complete; 19 test rejected; 20 test abort; 21 safety blocked; 22 shared-buffer error; 23 event-slot overflow |
+| RTL-024 | 0 host accepted; 1 host complete; 2 host rejected; 3 host timeout; 4 pre-acceptance abort; 5 response truncation; 6 CRC error; 7 host access/protection/endpoint error; 8 clock/reset release; 9 clock fault; 10 illegal reset release; 16 test authorization; 17 deauthorization; 18 test complete; 19 test rejected; 20 test abort; 21 safety blocked; 22 shared-buffer error; 23 event-slot overflow; 24 unsafe test rejection; 25 natural fault observed; 26 injected fault observed |
 
 ## F.4 Configuration validation and first-error order
 

@@ -272,7 +272,8 @@ module dfc_rtl024_spi_bridge (
                 count_m1_q      <= rx_byte[3:0];
                 data_word_idx_q <= 4'd0;
                 data_byte_idx_q <= 2'd0;
-                fstate_q <= is_write_q ? F_DATA : F_CRC;
+                if (is_write_q) fstate_q <= F_DATA;
+                else            fstate_q <= F_CRC;
                 if (!is_write_q) byte_idx_q <= 4'd0;  // reset for F_CRC's
                                                         // reuse of byte_idx_q
                                                         // as its own counter
@@ -331,6 +332,33 @@ module dfc_rtl024_spi_bridge (
   logic        exec_write_q;
   logic [31:0] exec_addr_q;
 
+  // TIMING FIX (found via real place-and-route critical path analysis,
+  // not simulation): the direct write `rdata_words_q[word_idx_q] <=
+  // dri_rsp_rdata_i` combined a combinationally-derived read value
+  // (dri_rsp_rdata_i traces back through RTL-001's full register-bank
+  // read mux, since dfc_rtl001.sv drives it via a plain `assign`, not a
+  // flop) with a variable-array-index write (word_idx_q selects 1 of 16
+  // slots, synthesizing a 16-way write-enable demux) IN THE SAME CYCLE.
+  // Measured critical path: 20.16 ns (required: 20.00 ns @ 50 MHz),
+  // ~17 ns of which was routing delay from the demux structure's pieces
+  // landing spread across the die -- a routing-spread problem, the same
+  // underlying principle as the earlier CRC timing bug (too much work
+  // committed in one cycle) but manifesting as placement/routing spread
+  // rather than logic depth this time. Deliberately NOT relying on a
+  // luckier placement seed to "fix" this: as more modules are added in
+  // future revisions, placement pressure only increases, and a path this
+  // marginal would likely resurface. Fixed structurally instead: the
+  // array write is deferred by exactly one CORE_CLK cycle via these
+  // staging registers, so nothing ever combines a combinationally-
+  // derived value with a variable-index array write in a single cycle
+  // again. Adds one cycle of latency per read word (max 16 cycles for a
+  // full 16-word read) -- negligible against DFC-INTF-0013's 100kHz-
+  // 10MHz SPI rate, where even the fastest legal bit period is ~50x
+  // longer than one CORE_CLK cycle.
+  logic [31:0] capture_data_q;
+  logic [3:0]  capture_idx_q;
+  logic        capture_pending_q;
+
   always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
     if (!core_rst_n_i) begin
       xstate_q          <= X_IDLE;
@@ -345,7 +373,20 @@ module dfc_rtl024_spi_bridge (
       dri_req_wdata_o   <= 32'd0;
       dri_req_wstrb_o   <= 4'b0000;
       dri_rsp_ready_o   <= 1'b0;
+      capture_data_q    <= 32'd0;
+      capture_idx_q     <= 4'd0;
+      capture_pending_q <= 1'b0;
     end else begin
+      // Deferred array write: exactly one cycle behind capture, fully
+      // decoupled from xstate_q's own progression (the executor may
+      // already have moved on to the next word's X_ISSUE by the time
+      // this fires -- harmless, since this writes the PREVIOUS word's
+      // slot, independent of whatever the next word is doing).
+      if (capture_pending_q) begin
+        rdata_words_q[capture_idx_q] <= capture_data_q;
+        capture_pending_q            <= 1'b0;
+      end
+
       unique case (xstate_q)
         X_IDLE: begin
           dri_req_valid_o <= 1'b0;
@@ -386,7 +427,11 @@ module dfc_rtl024_spi_bridge (
             dri_rsp_ready_o <= 1'b0;
             unique case (dri_rsp_code_i)
               3'b000: begin  // OK
-                if (!exec_write_q) rdata_words_q[word_idx_q] <= dri_rsp_rdata_i;
+                if (!exec_write_q) begin
+                  capture_data_q    <= dri_rsp_rdata_i;
+                  capture_idx_q     <= word_idx_q;
+                  capture_pending_q <= 1'b1;
+                end
                 completed_count_q <= completed_count_q + 4'd1;
                 if (word_idx_q == count_m1_q) begin
                   final_status_q <= STAT_OK;
@@ -418,12 +463,36 @@ module dfc_rtl024_spi_bridge (
   // ==========================================================================
   // Response builder + SCLK-domain shift-out (CORE_CLK domain construction,
   // shifted out on synchronized SCLK falling edges per SPI Mode 0).
+  //
+  // TIMING FIX (found via real ECP5 place-and-route, not simulation --
+  // Icarus checks logical correctness only, never gate/routing delay):
+  // the original version of this builder computed the ENTIRE response
+  // (up to 70 bytes) plus its full CRC-16 (up to ~576 sequential shift/
+  // xor rounds) as ONE combinational block within a single clock edge.
+  // Real place-and-route measured this design closing timing at only
+  // 9.75 MHz against the required 50 MHz -- confirmed via nextpnr-ecp5's
+  // critical path report, which traced straight through this block's
+  // rsp_bytes_q chain. Icarus simulation could not have caught this: it
+  // has no gate-delay/routing model at all, only logical/functional
+  // correctness, which this block always had.
+  //
+  // Fix: spread the work across multiple CORE_CLK cycles -- one 4-byte
+  // word (plus its CRC-16 folding, 4 short rounds instead of dozens) per
+  // cycle, ~18 cycles worst case for a full 16-word response. This is
+  // comfortably inside DFC-INTF-0024's 0-2 whole-byte (16 SCLK bit
+  // period) wait-fill allowance at any legal SCLK rate (100 kHz-10 MHz,
+  // DFC-INTF-0013): 18 CORE_CLK cycles = 360ns, vs. a 1600ns budget at
+  // the fastest legal 10 MHz SCLK, and far more margin at typical rates.
+  // Building no longer needs to be gated to a specific sclk_fall edge
+  // (the earlier race-condition fix's gating) -- the multi-cycle delay
+  // itself naturally separates command-tail bits from the first real
+  // response bit, so the existing shift-out logic's own
+  // `rsp_ready_q && sclk_fall` gate is sufficient on its own.
   // ==========================================================================
   logic        rsp_ready_q;    // response object complete and stable
   // Max response: marker+status+count+rsv(4) + 16 words*4 bytes(64) + crc(2)
   // = 70 bytes for the largest legal transaction (DFC-INTF-0019: up to 16
-  // words). The prior [0:21] sizing was a real bug -- it only covered a
-  // 4-word response and would silently corrupt/truncate anything larger.
+  // words).
   logic [7:0]  rsp_bytes_q [0:71];
   logic [6:0]  rsp_len_q;
 
@@ -432,60 +501,125 @@ module dfc_rtl024_spi_bridge (
   logic [7:0] out_shift_q;
   logic       rsp_building_q;
 
+  typedef enum logic [1:0] { B_IDLE, B_WORD, B_FINISH } build_state_e;
+  build_state_e bstate_q;
+  logic [3:0]  build_word_idx_q;
+  logic [6:0]  build_n_q;
+  logic [15:0] build_crc_q;
+  logic        build_done_q;
+  // Free-running byte-boundary tracker, driven only by real sclk_fall
+  // events, independent of the command-side bit_cnt_q (reusing that
+  // counter for a second purpose is exactly the class of bug already
+  // found once this session -- byte_idx_q's reuse across F_ADDR/F_CRC).
+  // A single-edge build_done_q->rsp_ready_q handshake proved fragile
+  // (confirmed by simulation: it introduced a partial-bit, not just
+  // partial-byte, misalignment) -- waiting for a genuine byte boundary
+  // removes bit-level phase ambiguity entirely rather than hoping one
+  // specific edge lines up.
+  logic [2:0]  frame_bit_cnt_q;
+
   always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
     if (!core_rst_n_i) begin
-      rsp_ready_q     <= 1'b0;
-      rsp_len_q       <= 7'd0;
-      shift_out_idx_q <= 7'd0;
-      out_bit_cnt_q   <= 3'd0;
-      out_shift_q     <= 8'd0;
-      rsp_building_q  <= 1'b0;
+      rsp_ready_q      <= 1'b0;
+      rsp_len_q        <= 7'd0;
+      shift_out_idx_q  <= 7'd0;
+      out_bit_cnt_q    <= 3'd0;
+      out_shift_q      <= 8'd0;
+      rsp_building_q   <= 1'b0;
+      bstate_q         <= B_IDLE;
+      build_word_idx_q <= 4'd0;
+      build_n_q        <= 7'd0;
+      build_crc_q      <= 16'hFFFF;
+      build_done_q     <= 1'b0;
+      frame_bit_cnt_q  <= 3'd0;
     end else begin
-      if (xstate_q == X_DONE && !rsp_ready_q && !rsp_building_q && sclk_fall) begin
-        logic [15:0] crc;
-        logic [6:0]  n;
-        logic        include_word;
-        rsp_bytes_q[0] = RSP_MARKER;
-        rsp_bytes_q[1] = final_status_q;
-        rsp_bytes_q[2] = {4'd0, completed_count_q};
-        rsp_bytes_q[3] = 8'h00;  // reserved
-        n = 7'd4;
-        // Fixed-bound loop (0..15, a compile-time constant) with a runtime
-        // conditional per iteration -- synthesizable, unlike a loop whose
-        // bound is itself a register (the prior version's real bug: Yosys/
-        // most synthesis tools cannot unroll a variable-trip-count loop).
-        for (int w = 0; w < 16; w++) begin
+      unique case (bstate_q)
+        B_IDLE: begin
+          if (xstate_q == X_DONE && !rsp_ready_q && !rsp_building_q) begin
+            logic [15:0] c0, c1, c2, c3;
+            rsp_building_q <= 1'b1;
+            rsp_bytes_q[0] <= RSP_MARKER;
+            rsp_bytes_q[1] <= final_status_q;
+            rsp_bytes_q[2] <= {4'd0, completed_count_q};
+            rsp_bytes_q[3] <= 8'h00;  // reserved
+            // 4 short CRC rounds (header bytes) -- not the ~576-round chain
+            // this block used to build in one shot.
+            c0 = crc16_update(16'hFFFF, RSP_MARKER);
+            c1 = crc16_update(c0, final_status_q);
+            c2 = crc16_update(c1, {4'd0, completed_count_q});
+            c3 = crc16_update(c2, 8'h00);
+            build_crc_q      <= c3;
+            build_n_q        <= 7'd4;
+            build_word_idx_q <= 4'd0;
+            bstate_q         <= B_WORD;
+          end
+        end
+        B_WORD: begin
+          logic include_word;
           if (!exec_write_q && final_status_q == STAT_OK)
-            include_word = (w[3:0] <= count_m1_q);
+            include_word = (build_word_idx_q <= count_m1_q);
           else if (!exec_write_q)
-            include_word = (w[3:0] < completed_count_q);  // DFC-INTF-0025 partial read
+            include_word = (build_word_idx_q < completed_count_q);  // DFC-INTF-0025
           else
             include_word = 1'b0;  // WRITE response never carries read data
           if (include_word) begin
-            rsp_bytes_q[n]     = rdata_words_q[w][31:24];
-            rsp_bytes_q[n+7'd1] = rdata_words_q[w][23:16];
-            rsp_bytes_q[n+7'd2] = rdata_words_q[w][15:8];
-            rsp_bytes_q[n+7'd3] = rdata_words_q[w][7:0];
-            n = n + 7'd4;
+            logic [15:0] c0, c1, c2, c3;
+            rsp_bytes_q[build_n_q]      <= rdata_words_q[build_word_idx_q][31:24];
+            rsp_bytes_q[build_n_q+7'd1] <= rdata_words_q[build_word_idx_q][23:16];
+            rsp_bytes_q[build_n_q+7'd2] <= rdata_words_q[build_word_idx_q][15:8];
+            rsp_bytes_q[build_n_q+7'd3] <= rdata_words_q[build_word_idx_q][7:0];
+            // 4 short CRC rounds (this word's bytes) per cycle -- same
+            // bounded-depth discipline as the header above.
+            c0 = crc16_update(build_crc_q, rdata_words_q[build_word_idx_q][31:24]);
+            c1 = crc16_update(c0, rdata_words_q[build_word_idx_q][23:16]);
+            c2 = crc16_update(c1, rdata_words_q[build_word_idx_q][15:8]);
+            c3 = crc16_update(c2, rdata_words_q[build_word_idx_q][7:0]);
+            build_crc_q <= c3;
+            build_n_q   <= build_n_q + 7'd4;
           end
+          if (build_word_idx_q == 4'd15) bstate_q <= B_FINISH;
+          else build_word_idx_q <= build_word_idx_q + 4'd1;
         end
-        crc = 16'hFFFF;
-        // Fixed-bound loop (0..71, the full array) gated by comparing
-        // against the runtime length n -- same synthesizable pattern.
-        for (int b = 0; b < 72; b++)
-          if (b < n) crc = crc16_update(crc, rsp_bytes_q[b]);
-        rsp_bytes_q[n]      = crc[15:8];
-        rsp_bytes_q[n+7'd1] = crc[7:0];
-        rsp_len_q      <= n + 7'd2;
-        rsp_ready_q    <= 1'b1;
-        rsp_building_q <= 1'b1;
+        B_FINISH: begin
+          rsp_bytes_q[build_n_q]      <= build_crc_q[15:8];
+          rsp_bytes_q[build_n_q+7'd1] <= build_crc_q[7:0];
+          rsp_len_q   <= build_n_q + 7'd2;
+          build_done_q <= 1'b1;  // internal build complete; do NOT expose
+                                   // on spi_miso_o yet -- see build_done_q
+                                   // handling below, which waits for a
+                                   // real sclk_fall before presenting bit 0
+          bstate_q    <= B_IDLE;
+        end
+        default: bstate_q <= B_IDLE;
+      endcase
+
+      // Free-running byte-boundary tracker: increments on every real
+      // sclk_fall while CS_N is active, resets at frame start. Purely
+      // observational -- never repurposed for anything else.
+      if (!cs_active) frame_bit_cnt_q <= 3'd0;
+      else if (sclk_fall) frame_bit_cnt_q <= frame_bit_cnt_q + 3'd1;
+
+      // Present bit 0 only at a genuine byte boundary after building
+      // completes -- i.e. on the sclk_fall that completes the CURRENT
+      // byte (frame_bit_cnt_q == 7), so the very next bit starts fresh.
+      // NOT the instant build_done_q flips, and not just "the next
+      // sclk_fall" either (both were tried and both left a real, sim-
+      // confirmed misalignment) -- only a genuine byte boundary is
+      // guaranteed alignment-safe regardless of exactly which core_clk
+      // cycle building happened to finish on.
+      if (build_done_q && !rsp_ready_q && sclk_fall && frame_bit_cnt_q == 3'd7) begin
+        rsp_ready_q     <= 1'b1;
+        build_done_q    <= 1'b0;
         shift_out_idx_q <= 7'd0;
         out_bit_cnt_q   <= 3'd0;
         out_shift_q     <= rsp_bytes_q[0];
       end
+
       if (!cs_active) begin
         rsp_ready_q    <= 1'b0;
         rsp_building_q <= 1'b0;
+        build_done_q   <= 1'b0;
+        bstate_q       <= B_IDLE;
       end else if (rsp_ready_q && sclk_fall) begin
         if (out_bit_cnt_q == 3'd7) begin
           out_bit_cnt_q <= 3'd0;

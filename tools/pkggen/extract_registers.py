@@ -47,11 +47,17 @@ VERIFICATION (fail-loud; nothing written on any failure):
 import re, sys, json
 from collections import Counter
 
-EXPECTED_REGS = 314
+EXPECTED_REGS = 353
 
 # -002 §3 Field Access Classes (the complete legal vocabulary).
+# UPDATED: COUNTER16-CLR added -- confirmed real, deliberate baseline content
+# (REG-ENC-021, ARCH-GEN-006 through 008), not a parsing artifact. Packs two
+# independent 16-bit saturating counters into one 32-bit register (vs. the
+# original COUNTER-CLR's single full-32-bit counter) -- added for per-client/
+# per-source/per-destination diagnostic counters that would otherwise need
+# one register each. Register count correspondingly grew from 314 to 353.
 ACCESS_CLASSES = {"RW", "RO", "WO-CMD", "W1C", "W1S", "COUNTER-CLR",
-                  "CONST", "CONST1", "RSV0"}
+                  "COUNTER16-CLR", "CONST", "CONST1", "RSV0"}
 
 HDR = re.compile(r'^###\s+([A-Z][A-Za-z0-9_]+)\s+\(`?0x([0-9A-Fa-f]+)`?\)\s*$')
 BITSPEC = re.compile(r'^(\d+)(?::(\d+))?$')          # "0" or "31:24"
@@ -130,7 +136,7 @@ def derive_readback(name, field_access, owner):
         return "zero", "mechanical"
     if "RW" in named:
         return "internal_reg", "mechanical"
-    if named and named <= {"RO", "W1C", "W1S", "COUNTER-CLR"}:
+    if named and named <= {"RO", "W1C", "W1S", "COUNTER-CLR", "COUNTER16-CLR"}:
         if non_rtl001:
             return "external", "mechanical"
         return "UNRESOLVED_AMBIGUOUS", ("FLAG: sole-RTL-001 RO-class register not in "
@@ -141,7 +147,7 @@ def derive_readback(name, field_access, owner):
 
 
 def parse(path):
-    lines = open(path).read().split("\n")
+    lines = open(path, encoding="utf-8").read().split("\n")
     regs, errors = [], []
     i = 0
     while i < len(lines):
@@ -268,7 +274,7 @@ def emit(regs, out_path):
         "structs": structs,
         "registers": meta,
     }
-    json.dump(spec, open(out_path, "w"), indent=2)
+    json.dump(spec, open(out_path, "w", encoding="utf-8"), indent=2)
     return params, structs, meta, nonnumeric_reset
 
 

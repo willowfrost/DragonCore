@@ -1,5 +1,5 @@
 # Register-map manifest -- RTL-001 (reggen.py v2)
-# 314 registers total: 132 internal_reg, 7 const, 29 zero, 142 external, 2 internal_w1c, 2 internal_capture
+# 353 registers total: 133 internal_reg, 7 const, 29 zero, 180 external, 2 internal_w1c, 2 internal_capture
 # 8 register(s) with qualified (non-bare) protection -- see NOTE below and file header.
 
 0x0000  DFC_DEVICE_ID                readback=const              owner=RTL-001         access=CONST                protection=No
@@ -26,6 +26,7 @@
 0x0054  EVENT_CONDITION_MASK_HI      readback=internal_reg       owner=RTL-001         access=RW                   protection=No
 0x0058  IRQ_CONDITION_MASK_LO        readback=internal_reg       owner=RTL-001         access=RW                   protection=No
 0x005C  IRQ_CONDITION_MASK_HI        readback=internal_reg       owner=RTL-001         access=RW                   protection=No
+0x0060  RESET_DIAGNOSTIC             readback=external           owner=RTL-002         access=Mixed: W1C, RSV0     protection=No
 0x0100  IRQ_ENABLE                   readback=internal_reg       owner=RTL-003         access=RW                   protection=No
 0x0104  IRQ_RAW_STATUS               readback=external           owner=RTL-003         access=RO                   protection=No
 0x0108  IRQ_PENDING                  readback=external           owner=RTL-003         access=RO                   protection=No
@@ -44,6 +45,8 @@
 0x021C  TIME_SYNC_COMMIT             readback=zero               owner=RTL-001 / RTL-004 access=Mixed: WO-CMD, RSV0  protection=Yes
 0x0220  TIME_SYNC_STATUS             readback=external           owner=RTL-004         access=Mixed: RO, RSV0      protection=No
 0x0224  RTL004_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-004         access=Mixed: W1C, RSV0, RO protection=No
+0x0228  TIME_ACTIVE_OFFSET_LO        readback=external           owner=RTL-001 / RTL-004 access=RO                   protection=No
+0x022C  TIME_ACTIVE_OFFSET_HI        readback=external           owner=RTL-001 / RTL-004 access=RO                   protection=No
 0x0300  EVT_CONTROL                  readback=internal_reg       owner=RTL-005         access=Mixed: RW, CONST1, RSV0 protection=No
 0x0304  EVT_STATUS                   readback=external           owner=RTL-005         access=Mixed: RO, W1C, RSV0 protection=No
 0x0308  EVT_COUNT                    readback=external           owner=RTL-005         access=Mixed: RO, RSV0      protection=No
@@ -58,6 +61,7 @@
 0x032C  EVT_CLEAR                    readback=zero               owner=RTL-005         access=Mixed: WO-CMD, RSV0  protection=Yes
 0x0330  EVT_DROP_SOURCE              readback=external           owner=RTL-005         access=W1C                  protection=No
 0x0334  EVT_ARB_STATUS               readback=external           owner=RTL-005         access=Mixed: RO, RSV0      protection=No
+0x0338  EVT_POP_ERROR_COUNT          readback=external           owner=RTL-005         access=COUNTER-CLR          protection=No
 0x0400  GPIO_CONTROL                 readback=internal_reg       owner=RTL-006         access=Mixed: RW, RSV0      protection=No
 0x0404  GPIO_DIR                     readback=internal_reg       owner=RTL-006 / RTL-024 access=Mixed: RW, RSV0      protection=Yes
 0x0408  GPIO_OUT                     readback=internal_reg       owner=RTL-006         access=Mixed: RW, RSV0      protection=No
@@ -72,6 +76,7 @@
 0x042C  GPIO_QUAL_0_3                readback=internal_reg       owner=RTL-006         access=RW                   protection=No
 0x0430  GPIO_QUAL_4_7                readback=internal_reg       owner=RTL-006         access=RW                   protection=No
 0x0434  RTL006_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-006         access=Mixed: W1C, RSV0, RO protection=No
+0x0438  GPIO_STATUS                  readback=external           owner=RTL-006         access=RO                   protection=No
 0x0500  HOST_CONTROL                 readback=internal_reg       owner=RTL-001 / RTL-024 access=Mixed: CONST1, RW, RSV0 protection=No
 0x0504  HOST_STATUS                  readback=external           owner=RTL-001 / RTL-024 access=Mixed: RO, W1C, RSV0 protection=No
 0x0508  HOST_LAST_RESULT             readback=external           owner=RTL-001 / RTL-024 access=Mixed: RO, RSV0      protection=No
@@ -84,12 +89,19 @@
 0x0524  RTL024_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-024         access=Mixed: W1C, RSV0, RO protection=No
 0x0528  BUFFER_STATUS                readback=external           owner=RTL-024         access=Mixed: W1C, RSV0     protection=No
 0x052C  HOST_LAST_SEQUENCE           readback=external           owner=RTL-024 / RTL-001 access=Mixed: RO, RSV0      protection=No
+0x0530  CLOCK_RESET_STATUS           readback=external           owner=RTL-024         access=Mixed: RO, W1C, RSV0 protection=No
+0x0534  BUFFER_CLIENT_ERROR_COUNT_0_1 readback=external           owner=RTL-024         access=COUNTER16-CLR        protection=No
+0x0538  BUFFER_CLIENT_ERROR_COUNT_2_3 readback=external           owner=RTL-024         access=COUNTER16-CLR        protection=No
+0x053C  BUFFER_CLIENT_ERROR_COUNT_4_5 readback=external           owner=RTL-024         access=COUNTER16-CLR        protection=No
+0x0540  BUFFER_CLIENT_ERROR_COUNT_6  readback=external           owner=RTL-024         access=Mixed: COUNTER16-CLR, RSV0 protection=No
+0x0544  BUFFER_INTERNAL_ERROR_COUNT  readback=external           owner=RTL-024         access=COUNTER-CLR          protection=No
 0x0600  TEST_CONTROL                 readback=internal_reg       owner=RTL-024 / ASIC wrapper access=Mixed: RW, RSV0      protection=Yes
 0x0604  TEST_STATUS                  readback=external           owner=RTL-024 / ASIC wrapper access=Mixed: RO, W1C, RSV0 protection=No
 0x0608  TEST_COMMAND                 readback=zero               owner=RTL-024 / ASIC wrapper access=WO-CMD               protection=Yes
 0x060C  TEST_LOOPBACK                readback=internal_reg       owner=RTL-024         access=Mixed: RW, RSV0      protection=Yes
 0x0610  TEST_IRQ_INJECT              readback=zero               owner=RTL-024 / RTL-003 access=WO-CMD               protection=Yes
 0x0614  TEST_FAULT_INJECT            readback=zero               owner=RTL-024 / RTL-013 access=WO-CMD               protection=Yes
+0x0618  TEST_REJECTION_ABORT_COUNT   readback=external           owner=RTL-024         access=COUNTER-CLR          protection=No
 0x1000  ARX_CONTROL                  readback=internal_reg       owner=RTL-017 / RTL-024 access=Mixed: RW, RSV0      protection=Yes for speed while enabled
 0x1004  ARX_STATUS                   readback=external           owner=RTL-017         access=Mixed: RO, W1C, RSV0 protection=No
 0x1008  ARX_QUEUE_LEVEL              readback=external           owner=RTL-017         access=Mixed: RO, RSV0      protection=No
@@ -102,6 +114,7 @@
 0x1024  ARX_ERROR_COUNT              readback=external           owner=RTL-017         access=COUNTER-CLR          protection=No
 0x1028  ARX_OVERFLOW_COUNT           readback=external           owner=RTL-017         access=COUNTER-CLR          protection=No
 0x102C  RTL017_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-017         access=Mixed: W1C, RSV0, RO protection=No
+0x1030  ARX_REJECTED_ACCESS_COUNT    readback=external           owner=RTL-017         access=COUNTER-CLR          protection=No
 0x1100  ATX_CONTROL                  readback=internal_reg       owner=RTL-018         access=Mixed: RW, RSV0      protection=Yes for speed while enabled
 0x1104  ATX_STATUS                   readback=external           owner=RTL-018         access=Mixed: RO, W1C, RSV0 protection=No
 0x1108  ATX_QUEUE_LEVEL              readback=external           owner=RTL-018         access=Mixed: RO, RSV0      protection=No
@@ -112,6 +125,7 @@
 0x111C  ATX_UNDERRUN_COUNT           readback=external           owner=RTL-018         access=COUNTER-CLR          protection=No
 0x1120  RTL018_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-018         access=Mixed: W1C, RSV0, RO protection=No
 0x1124  ATX_INTERWORD_GAP_BITS       readback=internal_reg       owner=RTL-018         access=Mixed: RW, RSV0      protection=Yes while enabled
+0x1128  ATX_REJECTED_PUSH_COUNT      readback=external           owner=RTL-018         access=COUNTER-CLR          protection=No
 0x1200  CAN_CONTROL                  readback=internal_reg       owner=RTL-019         access=Mixed: RW, RSV0      protection=Yes for mode changes
 0x1204  CAN_STATUS                   readback=external           owner=RTL-019         access=Mixed: RO, W1C, RSV0 protection=No
 0x1208  CAN_BIT_TIMING               readback=internal_reg       owner=RTL-019         access=Mixed: RW, RSV0      protection=Yes
@@ -133,6 +147,8 @@
 0x1248  CAN_TX_PUSH                  readback=zero               owner=RTL-019         access=Mixed: WO-CMD, RSV0  protection=No
 0x124C  RTL019_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-019         access=Mixed: W1C, RSV0, RO protection=No
 0x1250  CAN_RECOVERY                 readback=zero               owner=RTL-019         access=Mixed: WO-CMD, RSV0  protection=Yes
+0x1254  CAN_RX_OVERFLOW_COUNT        readback=external           owner=RTL-019         access=COUNTER-CLR          protection=No
+0x1258  CAN_TX_REJECTED_COUNT        readback=external           owner=RTL-019         access=COUNTER-CLR          protection=No
 0x1300  UART_CONTROL                 readback=internal_reg       owner=RTL-020         access=Mixed: RW, RSV0      protection=Yes for format while enabled
 0x1304  UART_STATUS                  readback=external           owner=RTL-020         access=Mixed: RO, W1C, RSV0 protection=No
 0x1308  UART_BAUD_DIV                readback=internal_reg       owner=RTL-020         access=RW                   protection=Yes
@@ -144,6 +160,10 @@
 0x1320  UART_TX_PUSH                 readback=zero               owner=RTL-020         access=Mixed: WO-CMD, RSV0  protection=No
 0x1324  UART_ERROR_COUNT             readback=external           owner=RTL-020         access=COUNTER-CLR          protection=No
 0x1328  RTL020_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-020         access=Mixed: W1C, RSV0, RO protection=No
+0x132C  UART_RX_OVERFLOW_COUNT       readback=external           owner=RTL-020         access=COUNTER-CLR          protection=No
+0x1330  UART_RX_UNDERFLOW_COUNT      readback=external           owner=RTL-020         access=COUNTER-CLR          protection=No
+0x1334  UART_TX_REJECTED_COUNT       readback=external           owner=RTL-020         access=COUNTER-CLR          protection=No
+0x1338  UART_TX_UNDERFLOW_COUNT      readback=external           owner=RTL-020         access=COUNTER-CLR          protection=No
 0x1400  ROUTE_CONTROL                readback=internal_reg       owner=RTL-021         access=Mixed: RW, RSV0      protection=Yes
 0x1404  ROUTE_STATUS                 readback=external           owner=RTL-021         access=Mixed: RO, W1C, RSV0 protection=No
 0x1408  ROUTE_ENTRY_SELECT           readback=internal_reg       owner=RTL-001 / RTL-021 access=Mixed: RW, RSV0      protection=No
@@ -161,6 +181,13 @@
 0x1438  ROUTE_ACTIVE_FILTER_MASK     readback=external           owner=RTL-021         access=RO                   protection=No
 0x143C  ROUTE_ENTRY_STATUS           readback=external           owner=RTL-021         access=Mixed: RO, W1C, RSV0 protection=No
 0x1440  RTL021_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-021         access=Mixed: W1C, RSV0, RO protection=No
+0x1444  ROUTE_INGRESS_LOSS_COUNT_0_1 readback=external           owner=RTL-021         access=COUNTER16-CLR        protection=No
+0x1448  ROUTE_INGRESS_LOSS_COUNT_2_3 readback=external           owner=RTL-021         access=COUNTER16-CLR        protection=No
+0x144C  ROUTE_INGRESS_LOSS_COUNT_4   readback=external           owner=RTL-021         access=Mixed: COUNTER16-CLR, RSV0 protection=No
+0x1450  ROUTE_DESTINATION_DROP_COUNT_0_1 readback=external           owner=RTL-021         access=COUNTER16-CLR        protection=No
+0x1454  ROUTE_DESTINATION_DROP_COUNT_2_3 readback=external           owner=RTL-021         access=COUNTER16-CLR        protection=No
+0x1458  ROUTE_DESTINATION_DROP_COUNT_4 readback=external           owner=RTL-021         access=Mixed: COUNTER16-CLR, RSV0 protection=No
+0x145C  ROUTE_ACTIVE_CONTROL         readback=external           owner=RTL-001 / RTL-021 access=Mixed: RO, RSV0      protection=No
 0x2000  ROTOR_CONTROL                readback=internal_reg       owner=RTL-007         access=Mixed: RW, RSV0      protection=No
 0x2004  ROTOR_STATUS                 readback=external           owner=RTL-007         access=Mixed: RO, W1C, RSV0 protection=No
 0x2008  ROTOR_RPM                    readback=external           owner=RTL-007         access=Mixed: RO, RSV0      protection=No
@@ -240,6 +267,8 @@
 0x2428  HEALTH_QUAL_0_3              readback=internal_reg       owner=RTL-011         access=RW                   protection=No
 0x242C  HEALTH_QUAL_4_7              readback=internal_reg       owner=RTL-011         access=RW                   protection=No
 0x2430  RTL011_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-011         access=Mixed: W1C, RSV0, RO protection=No
+0x2434  HEALTH_QUALIFICATION         readback=external           owner=RTL-011         access=Mixed: RO, RSV0      protection=No
+0x2438  HEALTH_STATUS                readback=external           owner=RTL-011         access=Mixed: RO, RSV0      protection=No
 0x3000  WDOG_CONTROL                 readback=internal_reg       owner=RTL-012         access=Mixed: RW, RSV0      protection=Yes
 0x3004  WDOG_WINDOW_OPEN_US          readback=internal_reg       owner=RTL-012         access=RW                   protection=No
 0x3008  WDOG_TIMEOUT_US              readback=internal_reg       owner=RTL-012         access=RW                   protection=No
@@ -267,6 +296,12 @@
 0x321C  ILOCK_VALIDATE_COMMIT        readback=zero               owner=RTL-001 / RTL-014 access=Mixed: WO-CMD, RSV0  protection=Yes
 0x3220  ILOCK_ACTIVE_RESULT          readback=external           owner=RTL-014         access=Mixed: RO, RSV0      protection=No
 0x3224  RTL014_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-014         access=Mixed: W1C, RSV0, RO protection=No
+0x3228  ILOCK_STAGE_RESPONSE         readback=internal_reg       owner=RTL-001 / RTL-014 access=Mixed: RW, RSV0      protection=No
+0x322C  ILOCK_ACTIVE_TERMS           readback=external           owner=RTL-001 / RTL-014 access=RO                   protection=No
+0x3230  ILOCK_ACTIVE_LOGIC           readback=external           owner=RTL-001 / RTL-014 access=Mixed: RO, RSV0      protection=No
+0x3234  ILOCK_ACTIVE_GUARD           readback=external           owner=RTL-001 / RTL-014 access=Mixed: RO, RSV0      protection=No
+0x3238  ILOCK_ACTIVE_ENABLE          readback=external           owner=RTL-001 / RTL-014 access=Mixed: RO, RSV0      protection=No
+0x323C  ILOCK_ACTIVE_RESPONSE        readback=external           owner=RTL-001 / RTL-014 access=Mixed: RO, RSV0      protection=No
 0x3300  LLINK_CONTROL                readback=internal_reg       owner=RTL-015         access=Mixed: RW, RSV0      protection=Yes
 0x3304  LLINK_STATUS                 readback=external           owner=RTL-015         access=Mixed: RO, W1C, RSV0 protection=No
 0x3308  LLINK_MONITOR_SELECT         readback=internal_reg       owner=RTL-001 / RTL-015 access=Mixed: RW, RSV0      protection=No
@@ -305,6 +340,9 @@
 0x4044  ULI_IO_INPUT                 readback=external           owner=RTL-022         access=Mixed: RO, RSV0      protection=No
 0x4048  ULI_IO_OUTPUT                readback=internal_reg       owner=RTL-022         access=Mixed: RW, RSV0      protection=No
 0x404C  RTL022_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-022         access=Mixed: W1C, RSV0, RO protection=No
+0x4050  ULI_MAILBOX_STATUS           readback=external           owner=RTL-022         access=Mixed: W1C, RSV0     protection=No
+0x4054  ULI_MAILBOX_LOSS_COUNT_0_1   readback=external           owner=RTL-022         access=COUNTER16-CLR        protection=No
+0x4058  ULI_MAILBOX_LOSS_COUNT_2_3   readback=external           owner=RTL-022         access=COUNTER16-CLR        protection=No
 0x4100  UROUTE_CONTROL               readback=internal_reg       owner=RTL-023         access=Mixed: RW, RSV0      protection=Yes
 0x4104  UROUTE_STATUS                readback=external           owner=RTL-023         access=Mixed: RO, W1C, RSV0 protection=No
 0x4108  UROUTE_ENTRY_SELECT          readback=internal_reg       owner=RTL-001 / RTL-023 access=Mixed: RW, RSV0      protection=No
@@ -316,6 +354,7 @@
 0x4120  UROUTE_ACTIVE_DEST           readback=external           owner=RTL-023         access=Mixed: RO, RSV0      protection=No
 0x4124  UROUTE_ENTRY_STATUS          readback=external           owner=RTL-023         access=Mixed: RO, W1C, RSV0 protection=No
 0x4128  RTL023_EVT_OVERFLOW_STATUS   readback=external           owner=RTL-023         access=Mixed: W1C, RSV0, RO protection=No
+0x412C  UROUTE_ACTIVE_CONTROL        readback=external           owner=RTL-001 / RTL-023 access=Mixed: RO, RSV0      protection=No
 
 # QUALIFIED PROTECTION (treated as fully protected -- conservative, not exact):
 #   SYS_CONTROL: "Yes for bits 0-3"

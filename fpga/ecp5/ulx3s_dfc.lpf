@@ -1,0 +1,52 @@
+BLOCK RESETPATHS;
+BLOCK ASYNCPATHS;
+
+# ulx3s_dfc.lpf -- Dragon Core skeleton HIL bring-up constraints.
+#
+# Every LOCATE/IOBUF line below is transcribed exactly from the real board
+# constraint file (emard/ulx3s, doc/constraints/ulx3s_v20.lpf, v2.x.x/v3.0.x),
+# fetched directly rather than recalled from memory -- restricted to only
+# the pins this specific design (ulx3s_dfc_top.sv) actually uses.
+
+# ---- 25 MHz onboard oscillator (real board file, "usb"/"gpdi" sheet) ----
+LOCATE COMP "clk_25mhz" SITE "G2";
+IOBUF PORT "clk_25mhz" PULLMODE=NONE IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk_25mhz" 25 MHZ;
+
+# JTAG/SPI flash voltage config (real board file, verbatim)
+SYSCONFIG CONFIG_IOVOLTAGE=3.3 COMPRESS_CONFIG=ON MCCLK_FREQ=62 SLAVE_SPI_PORT=DISABLE MASTER_SPI_PORT=ENABLE SLAVE_PARALLEL_PORT=DISABLE;
+
+# ---- SPI host interface: J1 header, individual (non-vector) gp0-gp4 ----
+# (real board file's "GPIO repeated as individual signals" section)
+# gp0=SCLK(in) gp1=CS_N(in) gp2=MOSI(in) gp3=MISO(tristate) gp4=host_irq_n(out)
+LOCATE COMP "gp0" SITE "B11";
+LOCATE COMP "gp1" SITE "A10";
+LOCATE COMP "gp2" SITE "A9";
+LOCATE COMP "gp3" SITE "B9";
+LOCATE COMP "gp4" SITE "A7";
+IOBUF PORT "gp0" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp1" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp2" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp3" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp4" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
+# ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
+# led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
+# led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints
+# since they are real physical output pins.
+LOCATE COMP "led[7]" SITE "H3";
+LOCATE COMP "led[6]" SITE "E1";
+LOCATE COMP "led[5]" SITE "E2";
+LOCATE COMP "led[4]" SITE "D1";
+LOCATE COMP "led[3]" SITE "D2";
+LOCATE COMP "led[2]" SITE "C1";
+LOCATE COMP "led[1]" SITE "C2";
+LOCATE COMP "led[0]" SITE "B2";
+IOBUF PORT "led[0]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[1]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[2]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[3]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[4]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[5]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[6]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[7]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;

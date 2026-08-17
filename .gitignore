@@ -54,6 +54,19 @@ output/netlists/*
 output/reports/*
 !output/**/.gitkeep
 
+# build_ecp5.ps1 / build_ecp5.sh's disposable working directory --
+# wiped and recreated fresh at the start of every build run, never a
+# deliverable, never worth tracking.
+output/_scratch/
+
+# regenerate.ps1's own hash-marker directory -- confirmed real, appeared
+# on disk the first time regenerate.ps1 actually ran. Purely disposable
+# staleness-check state (one hash per source document, compared against
+# on each run to decide whether to regenerate); never a deliverable, and
+# deleting it just forces a full regeneration on the next run rather than
+# breaking anything.
+tools/.srchash/
+
 # ---- Waveform dumps wherever they land ----
 *.vcd
 *.fst

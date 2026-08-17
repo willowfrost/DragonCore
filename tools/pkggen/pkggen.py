@@ -172,8 +172,15 @@ def main():
 
     out = [HEADER_TMPL.format(pkg=pkg, source=source)]
     out.append(f"package {sv_ident(pkg)};\n")
-    if import_lines:
-        out.append(import_lines)
+    # RTLSTD-LANG-008 prohibits wildcard package imports in functional RTL.
+    # Confirmed via real Yosys synthesis (both the apt-packaged 0.33 and a
+    # current 0.68 build) that `import <pkg>::*;` fails to parse in either
+    # a package or module body -- not a version-specific bug, a persistent
+    # frontend limitation. No package this generator has produced actually
+    # needs a cross-package import (checked directly against every "imports"
+    # entry in the source JSON before removing this), so pkggen.py never
+    # emits an import statement at all; a package needing another's symbols
+    # must reference them fully-qualified (pkgname::SYMBOL) at the use site.
     out.append("\n".join(body))
     out.append(f"\nendpackage : {sv_ident(pkg)}\n")
 
