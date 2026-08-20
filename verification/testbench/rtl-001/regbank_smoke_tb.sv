@@ -50,18 +50,21 @@ module regbank_smoke_tb;
   logic write_illegal_o;
   logic protected_o;
 
-  logic [31:0] sys_status_status_i;
-  logic [31:0] subsys_ready_status_i;
-  logic [31:0] subsys_fault_status_i;
-  logic [31:0] reset_status_status_i;
   logic [31:0] protect_status_status_i;
+  // Replaced by the aggregated real RTL-002 bus (see dfc_rtl001.sv/
+  // dfc_config_regbank_regs.sv) -- sys_status_status_i, subsys_ready_
+  // status_i, subsys_fault_status_i, and reset_status_status_i no longer
+  // exist as individual ports.
+  logic [dfc_types_pkg::DFC_RTL002_STATUS_WIDTH-1:0]  rtl002_status_i;
+  logic [dfc_types_pkg::DFC_RTL002_CONTROL_WIDTH-1:0] rtl002_control_o;
   logic [31:0] rtl002_evt_overflow_status_status_i;
-  logic [31:0] irq_raw_status_status_i;
-  logic [31:0] irq_pending_status_i;
-  logic [31:0] irq_acked_status_i;
-  logic [31:0] irq_clear_status_i;
-  logic [31:0] irq_vector_status_i;
-  logic [31:0] rtl003_evt_overflow_status_status_i;
+  // Replaced by the aggregated real RTL-003 bus this session (same
+  // treatment as RTL-002 above) -- irq_raw_status_status_i, irq_pending_
+  // status_i, irq_acked_status_i, irq_clear_status_i, irq_vector_status_i,
+  // and rtl003_evt_overflow_status_status_i no longer exist as individual
+  // ports.
+  logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status_i;
+  logic [dfc_types_pkg::DFC_RTL003_CONTROL_WIDTH-1:0] rtl003_control_o;
   logic [31:0] time_status_status_i;
   logic [31:0] time_raw_lo_status_i;
   logic [31:0] time_raw_hi_status_i;
@@ -215,7 +218,9 @@ module regbank_smoke_tb;
     end
   endtask
 
-  rtl001_regbank_regs dut (
+  // Module renamed to match its filename this session -- see
+  // dfc_rtl001.sv's own instantiation comment for the full account.
+  dfc_config_regbank_regs dut (
     .clk_i(clk_i),
     .rst_ni(rst_ni),
     .addr_i(addr_i),
@@ -225,18 +230,12 @@ module regbank_smoke_tb;
     .decode_hit_o(decode_hit_o),
     .write_illegal_o(write_illegal_o),
     .protected_o(protected_o),
-    .sys_status_status_i(sys_status_status_i),
-    .subsys_ready_status_i(subsys_ready_status_i),
-    .subsys_fault_status_i(subsys_fault_status_i),
-    .reset_status_status_i(reset_status_status_i),
+    .rtl002_status_i(rtl002_status_i),
+    .rtl002_control_o(rtl002_control_o),
     .protect_status_status_i(protect_status_status_i),
     .rtl002_evt_overflow_status_status_i(rtl002_evt_overflow_status_status_i),
-    .irq_raw_status_status_i(irq_raw_status_status_i),
-    .irq_pending_status_i(irq_pending_status_i),
-    .irq_acked_status_i(irq_acked_status_i),
-    .irq_clear_status_i(irq_clear_status_i),
-    .irq_vector_status_i(irq_vector_status_i),
-    .rtl003_evt_overflow_status_status_i(rtl003_evt_overflow_status_status_i),
+    .rtl003_status_i(rtl003_status_i),
+    .rtl003_control_o(rtl003_control_o),
     .time_status_status_i(time_status_status_i),
     .time_raw_lo_status_i(time_raw_lo_status_i),
     .time_raw_hi_status_i(time_raw_hi_status_i),
@@ -374,17 +373,9 @@ module regbank_smoke_tb;
   always #10 clk_i = ~clk_i;
 
   initial begin
-    subsys_ready_status_i = 32'h0;
-    subsys_fault_status_i = 32'h0;
-    reset_status_status_i = 32'h0;
     protect_status_status_i = 32'h0;
     rtl002_evt_overflow_status_status_i = 32'h0;
-    irq_raw_status_status_i = 32'h0;
-    irq_pending_status_i = 32'h0;
-    irq_acked_status_i = 32'h0;
-    irq_clear_status_i = 32'h0;
-    irq_vector_status_i = 32'h0;
-    rtl003_evt_overflow_status_status_i = 32'h0;
+    rtl003_status_i = '0;
     time_status_status_i = 32'h0;
     time_raw_lo_status_i = 32'h0;
     time_raw_hi_status_i = 32'h0;
@@ -514,7 +505,8 @@ module regbank_smoke_tb;
     uroute_active_source_status_i = 32'h0;
     uroute_active_dest_status_i = 32'h0;
     uroute_entry_status_status_i = 32'h0;
-    rtl023_evt_overflow_status_status_i = 32'h0;    sys_status_status_i = 32'hA5A5_0018;
+    rtl023_evt_overflow_status_status_i = 32'h0;
+    rtl002_status_i = '0;
     addr_i = '0;
     wdata_i = '0;
     write_en_i = 1'b0;
@@ -538,13 +530,22 @@ module regbank_smoke_tb;
     check_bit("unmapped address decode_hit low", decode_hit_o, 1'b0);
 
     // ---- Check 3: external field mirrors status_i combinationally ----
-    addr_i = DFC_ADDR_SYS_STATUS;
+    // Redirected from SYS_STATUS to IRQ_RAW_STATUS (RTL-002 integration),
+    // then redirected again to TIME_STATUS this session: IRQ_RAW_STATUS's
+    // own status_i is no longer an individual port either (it's now
+    // aggregated into rtl003_status_i, real cross-module wiring covered by
+    // rtl003_integration_tb.sv instead). TIME_STATUS is untouched by that
+    // change (RTL-004 does not exist yet) and still uses the original
+    // generic per-register status_i mechanism this check is actually meant
+    // to exercise.
+    time_status_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_TIME_STATUS;
     #1;
-    check("SYS_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("SYS_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    sys_status_status_i = 32'h0000_0041;
+    check("TIME_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("TIME_STATUS write_illegal (external)", write_illegal_o, 1'b1);
+    time_status_status_i = 32'h0000_0041;
     #1;
-    check("SYS_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("TIME_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

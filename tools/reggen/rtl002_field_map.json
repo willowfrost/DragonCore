@@ -1,0 +1,93 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md SS7's real per-field bit tables (not auto-extracted -- extract_registers.py does not currently preserve per-field bit ranges project-wide; this is real, targeted, disclosed scope for RTL-002's cross-module registers specifically, cited by contract ID below). Extending extract_registers.py to capture this generically for all 353 registers, so this file becomes unnecessary, is real future work -- log it in OPEN_ISSUES.md rather than silently accept this as permanent.",
+  "consumer_module": "RTL-002",
+  "control_struct": "dfc_rtl002_control_t",
+  "status_struct": "dfc_rtl002_status_t",
+  "control_registers": [
+    {
+      "register": "SYS_CONTROL", "contract_id": "REG-0014",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "sys_control__operational_enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "sys_control__observational_mode"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "sys_control__global_irq_enable"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "sys_control__global_event_enable"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "WO-CMD", "struct_field": "sys_control__degraded_ack"}
+      ]
+    },
+    {
+      "register": "SUBSYS_ENABLE", "contract_id": "REG-001C",
+      "fields": [
+        {"reg_hi": 23, "reg_lo": 0, "class": "RW", "struct_field": "subsys_enable__enable"}
+      ]
+    },
+    {
+      "register": "RESET_CONTROL", "contract_id": "REG-0028",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "reset_control__system_reset"},
+        {"reg_hi": 24, "reg_lo": 1, "class": "WO-CMD", "struct_field": "reset_control__module_reset"},
+        {"reg_hi": 25, "reg_lo": 25, "class": "WO-CMD", "struct_field": "reset_control__safety_domain_reset"}
+      ]
+    },
+    {
+      "register": "RESET_STATUS", "contract_id": "REG-002C",
+      "fields": [
+        {"reg_hi": 1, "reg_lo": 1, "class": "W1C", "struct_field": "reset_status__complete"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "reset_status__rejected"}
+      ]
+    },
+    {
+      "register": "RESET_DIAGNOSTIC", "contract_id": "REG-0060",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "reset_status__timeout"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "W1C", "struct_field": "reset_status__recovery_failure"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "SYS_STATUS", "contract_id": "REG-0018",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "sys_status__reset_active"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "sys_status__startup"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "sys_status__host_ready"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "sys_status__normal"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "sys_status__degraded"},
+        {"reg_hi": 5, "reg_lo": 5, "struct_field": "sys_status__faulted"},
+        {"reg_hi": 6, "reg_lo": 6, "struct_field": "sys_status__observational"},
+        {"reg_hi": 7, "reg_lo": 7, "struct_field": "sys_status__test_debug"},
+        {"reg_hi": 8, "reg_lo": 8, "struct_field": "sys_status__init_complete"},
+        {"reg_hi": 9, "reg_lo": 9, "struct_field": "sys_status__init_failed"},
+        {"reg_hi": 10, "reg_lo": 10, "struct_field": "sys_status__effective_operational_enable"}
+      ]
+    },
+    {
+      "register": "SUBSYS_READY", "contract_id": "REG-0020",
+      "fields": [
+        {"reg_hi": 23, "reg_lo": 0, "struct_field": "subsys_ready__ready"}
+      ]
+    },
+    {
+      "register": "SUBSYS_FAULT", "contract_id": "REG-0024",
+      "fields": [
+        {"reg_hi": 23, "reg_lo": 0, "struct_field": "subsys_fault__fault"}
+      ]
+    },
+    {
+      "register": "RESET_STATUS", "contract_id": "REG-002C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "reset_status__busy"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "reset_status__complete"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "reset_status__rejected"},
+        {"reg_hi": 26, "reg_lo": 3, "struct_field": "reset_status__last_scope"},
+        {"reg_hi": 31, "reg_lo": 27, "struct_field": "reset_status__last_result"}
+      ]
+    },
+    {
+      "register": "RESET_DIAGNOSTIC", "contract_id": "REG-0060",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "reset_status__timeout"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "reset_status__recovery_failure"}
+      ]
+    }
+  ]
+}

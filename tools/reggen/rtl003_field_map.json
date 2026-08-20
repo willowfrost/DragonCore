@@ -1,0 +1,72 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md SS8's real per-field bit tables (0x0100-0x011C, plus 0x0610 TEST_IRQ_INJECT), cited by contract ID below -- same disclosed scope/rationale as rtl002_field_map.json's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide).",
+  "consumer_module": "RTL-003",
+  "control_struct": "dfc_rtl003_control_t",
+  "status_struct": "dfc_rtl003_status_t",
+  "control_registers": [
+    {
+      "register": "IRQ_ENABLE", "contract_id": "REG-0100",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "irq_enable__enable"}
+      ]
+    },
+    {
+      "register": "IRQ_ACK", "contract_id": "REG-010C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "WO-CMD", "struct_field": "irq_ack__ack_set"}
+      ]
+    },
+    {
+      "register": "IRQ_CLEAR", "contract_id": "REG-0114",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "W1C", "struct_field": "irq_clear__clear"}
+      ]
+    },
+    {
+      "register": "TEST_IRQ_INJECT", "contract_id": "REG-0610",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "WO-CMD", "struct_field": "test_irq_inject__source_mask"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "IRQ_RAW_STATUS", "contract_id": "REG-0104",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "irq_raw_status__raw_status"}
+      ]
+    },
+    {
+      "register": "IRQ_PENDING", "contract_id": "REG-0108",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "irq_pending__pending"}
+      ]
+    },
+    {
+      "register": "IRQ_ACKED", "contract_id": "REG-0110",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "irq_acked__acked"}
+      ]
+    },
+    {
+      "register": "IRQ_CLEAR", "contract_id": "REG-0114",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "irq_clear__clear"}
+      ]
+    },
+    {
+      "register": "IRQ_VECTOR", "contract_id": "REG-0118",
+      "fields": [
+        {"reg_hi": 4, "reg_lo": 0, "struct_field": "irq_vector__source"},
+        {"reg_hi": 31, "reg_lo": 31, "struct_field": "irq_vector__valid"}
+      ]
+    },
+    {
+      "register": "RTL003_EVT_OVERFLOW_STATUS", "contract_id": "REG-011C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    }
+  ]
+}

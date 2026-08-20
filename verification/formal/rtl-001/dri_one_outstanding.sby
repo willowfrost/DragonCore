@@ -21,7 +21,20 @@ smtbmc boolector
 # harness itself, so sby never copied/read RTL-001 or its packages at all.
 # Read order matters (packages before what references their symbols),
 # same order used throughout this project's build/sim scripts.
+#
+# dfc_types_pkg.sv added here after a second, real, confirmed gap of the
+# exact same shape: dfc_rtl001.sv gained real `rtl002_control_o`/
+# `rtl002_status_i`/`status_o` ports this session, sized via
+# `dfc_types_pkg::DFC_RTL002_CONTROL_WIDTH` etc. -- real, plain VALUE
+# constants (safe per PROJECT_CONTINUITY.md Section 2's pkg::VALUE-vs-
+# pkg::TYPE finding), but this harness's own [files]/[script] never read
+# that package, so Yosys had no idea what those constants meant --
+# confirmed via a real sby run: "ERROR: Non-constant range in declaration
+# of \rtl002_control_o". RTL-001 never referenced dfc_types_pkg at all
+# before this session's RTL-002 integration work, which is exactly why
+# this harness's file list never needed it until now.
 read -formal dfc_constants_pkg.sv
+read -formal dfc_types_pkg.sv
 read -formal dfc_registers_pkg.sv
 read -formal dfc_config_regbank_regs.sv
 read -formal dfc_rtl001.sv
@@ -30,6 +43,7 @@ prep -top formal_top
 
 [files]
 ../../../include/dfc_constants_pkg.sv
+../../../include/dfc_types_pkg.sv
 ../../../include/dfc_registers_pkg.sv
 ../../../rtl/infrastructure/generated/dfc_config_regbank_regs.sv
 ../../../rtl/infrastructure/src/dfc_rtl001.sv
@@ -66,6 +80,18 @@ dri_one_outstanding_formal.sv
 #      for the specific, confirmed reason (a hierarchical reference into
 #      the DUT's internal signal does not resolve under Yosys's native
 #      frontend).
+#   6. dfc_types_pkg.sv added to [script]/[files] after a real, confirmed
+#      run ("ERROR: Non-constant range in declaration of
+#      \rtl002_control_o") -- dfc_rtl001.sv gained real ports this
+#      session sized via dfc_types_pkg:: VALUE constants (RTL-002
+#      register-bus integration), and this harness's file list had never
+#      needed that package before, so it was never added. NOT
+#      independently re-tested against a real `sby` run at the time this
+#      fix was written (no SymbiYosys available in that sandbox) -- this
+#      is a plausible, well-grounded fix (identical in kind to the same
+#      package being added to build_ecp5.ps1's source list earlier this
+#      session for the identical reason), not a confirmed one. Treat the
+#      next real `formal.ps1` run as this fix's actual first test.
 #
 # `formal_top` now binds against the REAL RTL-001 DRI endpoint for 4 of 5
 # properties -- passing/failing against it is a genuine statement about

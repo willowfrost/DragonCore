@@ -18,8 +18,20 @@ headers and comments, don't restate their text.
    (CHTR-DOC-006).
 2. Confirm `include/dfc_*_pkg.sv` is current for this module — check the
    module's control/status struct in `dfc_types_pkg` (ARCH-002 Appendix B)
-   and its owned registers in `dfc_registers_pkg` (REG-002). If either looks
-   stale, regenerate (see `CLAUDE.md`) before writing RTL against it.
+   and its owned registers in `dfc_registers_pkg` (REG-002). **Don't check
+   this by inspection or assume it's current: just run
+   `scripts\gate.ps1`** (or `scripts\regenerate.ps1` directly, which
+   `gate.ps1` calls as its own mandatory first step). It hashes
+   `REG-002.md`/`ARCH-002.md` against the last successful generation and
+   automatically regenerates all six `include/dfc_*_pkg.sv` packages plus
+   `rtl/infrastructure/generated/dfc_config_regbank_regs.sv` if either
+   source document changed since — reporting "unchanged" and doing
+   nothing if they haven't. This is real, confirmed working end-to-end,
+   not aspirational: it already caught and corrected a real staleness gap
+   in this project (`REG-002.md` grew from 314 to 353 registers; the
+   committed packages had not been regenerated to match until this
+   automation existed). Do not hand-check package currency by reading
+   file contents or timestamps — run the script and trust its report.
 
 ## Structural rules (RTL-STD-002 SS6-8)
 

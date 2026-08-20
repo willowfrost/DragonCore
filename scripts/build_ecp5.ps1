@@ -23,8 +23,38 @@
 # reliably capture on their own (confirmed directly: a prior pnr.log
 # began mid-stream with no nextpnr-ecp5 version banner at all).
 #
-# Usage: powershell -ExecutionPolicy Bypass -File scripts\build_ecp5.ps1
+# Usage: powershell -ExecutionPolicy Bypass -File scripts\build_ecp5.ps1 [-Seed <int>] [-NoAbc9]
 # Run from the repository root.
+#
+# -Seed: passed through to nextpnr-ecp5's own --seed flag. Added after a
+# real combinational-loop failure during place-and-route (Build ID
+# 20260817_172745) needed a way to test whether the loop was tied to one
+# specific placement/packing outcome (nextpnr-ecp5 uses a fixed, default
+# seed when none is given -- confirmed by this invocation's own command
+# line below never having passed --seed before -- so simply re-running
+# this script unchanged reproduces the identical placement every time and
+# proves nothing either way). Omit this parameter for the normal,
+# reproducible default build.
+#
+# CONFIRMED via a real re-run (Build ID 20260817_173917): -Seed alone does
+# NOT change this specific loop -- identical checksum, identical loop,
+# different seed. This is expected once understood correctly: nextpnr's
+# own PACKING phase (which builds the PFUMX/wide-mux structure the loop
+# was reported in) runs before placement and isn't seed-controlled; only
+# placement itself is. This narrowed the real question to Yosys's own
+# ABC9 technology mapping (see -NoAbc9 below), not nextpnr's placer.
+#
+# -NoAbc9: passes `-noabc9` to Yosys's synth_ecp5, using its older, simpler
+# LUT mapper instead of ABC9. A genuinely different technology-mapping
+# path (unlike -Seed), added specifically to test whether ABC9's own
+# wide-mux (PFUMX) construction for a particular enable-gated register in
+# dfc_rtl024_spi_bridge.sv is what nextpnr's loop-check is tripping on.
+# Diagnostic only -- expect somewhat worse area/timing with this flag.
+
+param(
+    [int]$Seed = 0,
+    [switch]$NoAbc9
+)
 
 $ErrorActionPreference = "Stop"
 # NOTE: this is intentionally the default for ordinary PowerShell cmdlets
@@ -110,9 +140,12 @@ Write-Host "  ecppack      : $EcppackVersion"
 # ---- second, independently-maintained copy elsewhere.) ----
 $SourceFiles = @(
     "include\dfc_constants_pkg.sv",
+    "include\dfc_types_pkg.sv",
     "include\dfc_registers_pkg.sv",
     "rtl\infrastructure\generated\dfc_config_regbank_regs.sv",
     "rtl\infrastructure\src\dfc_rtl001.sv",
+    "rtl\infrastructure\src\dfc_rtl002.sv",
+    "rtl\infrastructure\src\dfc_rtl003.sv",
     "rtl\top\dfc_rtl024_spi_bridge.sv",
     "rtl\top\dfc_rtl024.sv",
     "fpga\ecp5\ulx3s_dfc_top.sv",
@@ -146,16 +179,36 @@ Push-Location $Scratch
 try {
     # ---- 1. Synthesis -> output\netlists\ulx3s_dfc_<BuildId>.json ----
     Write-Host "== build_ecp5.ps1: synthesis =="
+    # -NoAbc9 diagnostic: added after a real combinational-loop failure at
+    # place-and-route (Build ID 20260817_172745/173917) traced to a
+    # PFUMX-based wide-mux structure that Yosys's ABC9 technology mapper
+    # builds for an enable-gated register in dfc_rtl024_spi_bridge.sv
+    # (confirmed via the synthesis log's own "$abc$...$lut$aiger..." cell
+    # names -- ABC9's signature) -- and confirmed via a real re-run with a
+    # different --seed that the loop is NOT placement-dependent (seed only
+    # affects placement, not Yosys's own LUT/mux construction), narrowing
+    # this to a synthesis-technology-mapping-phase question. `-noabc9`
+    # uses Yosys's older, simpler LUT mapper instead, producing a
+    # genuinely different netlist structure for this same RTL -- a real
+    # test of whether ABC9's specific wide-mux packing is what nextpnr's
+    # loop-check is (correctly or falsely) tripping on. Expect somewhat
+    # worse area/timing with this flag; it is a diagnostic, not the
+    # intended normal build path.
+    $Abc9Arg = if ($NoAbc9) { "-noabc9" } else { "" }
+    if ($NoAbc9) { Write-Host "  (ABC9 technology mapping disabled -- diagnostic run)" }
     $synthScript = @"
 read_verilog -sv dfc_constants_pkg.sv;
+read_verilog -sv dfc_types_pkg.sv;
 read_verilog -sv dfc_registers_pkg.sv;
 read_verilog -sv dfc_config_regbank_regs.sv;
 read_verilog -sv dfc_rtl001.sv;
+read_verilog -sv dfc_rtl002.sv;
+read_verilog -sv dfc_rtl003.sv;
 read_verilog -sv dfc_rtl024_spi_bridge.sv;
 read_verilog -sv dfc_rtl024.sv;
 read_verilog dfc_ecp5_pll.v;
 read_verilog -sv ulx3s_dfc_top.sv;
-synth_ecp5 -top $Top -json ulx3s_dfc.json
+synth_ecp5 -top $Top -json ulx3s_dfc.json $Abc9Arg
 "@
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
@@ -184,10 +237,12 @@ synth_ecp5 -top $Top -json ulx3s_dfc.json
     # ---- 2. Place and route -> output\netlists\ulx3s_dfc_<BuildId>_out.config,
     #         output\reports\ecp5_pnr_report_<BuildId>.json ----
     Write-Host "== build_ecp5.ps1: place and route =="
+    $SeedArg = if ($Seed -ne 0) { "--seed $Seed" } else { "" }
+    if ($Seed -ne 0) { Write-Host "  (non-default placement seed: $Seed)" }
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     # cmd /c redirection -- see lint.ps1's header note for why.
-    cmd /c "nextpnr-ecp5 --85k --package $DevicePackage --json `"ulx3s_dfc.json`" --lpf `"ulx3s_dfc.lpf`" --textcfg `"ulx3s_dfc_out.config`" --report `"ulx3s_dfc_report.json`" > `"pnr.log`" 2>&1"
+    cmd /c "nextpnr-ecp5 --85k --package $DevicePackage --json `"ulx3s_dfc.json`" --lpf `"ulx3s_dfc.lpf`" --textcfg `"ulx3s_dfc_out.config`" --report `"ulx3s_dfc_report.json`" $SeedArg > `"pnr.log`" 2>&1"
     $ErrorActionPreference = $prevEAP
     $pnrExit = $LASTEXITCODE
     Copy-Item "pnr.log" "..\..\..\$LogDir\$PnrLogFile"
@@ -198,7 +253,18 @@ synth_ecp5 -top $Top -json ulx3s_dfc.json
         Copy-Item "ulx3s_dfc_report.json" "..\..\..\$ReportDir\$PnrReportFile"
     }
     if ($pnrExit -ne 0) {
-        Write-Error "build_ecp5.ps1: PLACE-AND-ROUTE FAILED -- see $LogDir\$PnrLogFile (this includes a marginal timing miss -- see that log's 'Max frequency' line before assuming a real design problem)"
+        # FIXED: this message used to unconditionally suggest checking for
+        # a marginal timing miss -- misleading for a combinational-loop
+        # failure (confirmed via a real run, Build ID 20260817_172745):
+        # timing analysis never even produced a "Max frequency" line in
+        # that case, since it failed before getting that far. Now checks
+        # the actual log content before choosing which explanation to show.
+        $pnrLogContent = Get-Content "..\..\..\$LogDir\$PnrLogFile" -Raw -ErrorAction SilentlyContinue
+        if ($pnrLogContent -match "combinational loop") {
+            Write-Error "build_ecp5.ps1: PLACE-AND-ROUTE FAILED -- see $LogDir\$PnrLogFile -- this is a COMBINATIONAL LOOP error, not a timing miss (timing analysis did not run). Check the loop's cell names against the real RTL first; if the RTL itself is clean, try a different placement seed (-Seed <int>) before assuming a real design defect -- nextpnr-ecp5's own packing/placement choice can vary this outcome for logic that isn't actually cyclic in the source."
+        } else {
+            Write-Error "build_ecp5.ps1: PLACE-AND-ROUTE FAILED -- see $LogDir\$PnrLogFile (this may include a marginal timing miss -- see that log's 'Max frequency' line before assuming a real design problem)"
+        }
         exit 1
     }
     Write-Host "  config   -> $ConfigDir\$ConfigFile"

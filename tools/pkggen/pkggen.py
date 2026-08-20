@@ -96,6 +96,87 @@ def emit_params(params):
     return "\n".join(lines) + "\n"
 
 
+def emit_enum(e):
+    """Emit a shared enum (e.g. dfc_operating_state_t from ARCH-002 SS4.1) as a
+    typedef enum with explicit width and explicit per-literal values -- matches
+    RTL-STD-002's own enum-type convention (`_t` suffix, explicit width) and
+    RTLSTD-FSM-011's requirement that a shared, module-crossing state encoding
+    live in the Architecture-owned package rather than be locally redefined."""
+    name = sv_ident(e["name"])
+    width = e["width"]
+    values = e["values"]
+    lines = [f"  // {e.get('trace','')}", f"  typedef enum logic [{width-1}:0] {{"]
+    entry_lines = [f"    {sv_ident(v['name'])} = {v['value']}" for v in values]
+    lines.append(",\n".join(entry_lines))
+    lines.append(f"  }} {name};")
+    return "\n".join(lines) + "\n"
+
+
+def _const_base_name(type_name):
+    """dfc_rtl002_control_t -> DFC_RTL002_CONTROL (strip trailing _t, uppercase).
+    Used only to build plain VALUE constant names -- these are localparams,
+    never a declared type, so they carry none of the pkg::TYPE toolchain risk
+    documented in PROJECT_CONTINUITY.md Section 2."""
+    base = type_name[:-2] if type_name.endswith("_t") else type_name
+    return base.upper()
+
+
+def emit_enum_width_const(e):
+    """Emits one WIDTH localparam for a shared enum, e.g.
+    DFC_OPERATING_STATE_WIDTH = 3. A plain VALUE constant, safe on the
+    person's real toolchain per the pkg::VALUE-vs-pkg::TYPE finding in
+    PROJECT_CONTINUITY.md Section 2 -- lets a consuming module size its own
+    flat-vector state register (`logic [dfc_types_pkg::
+    DFC_OPERATING_STATE_WIDTH-1:0] state_q;`) without hardcoding the width a
+    second time by hand."""
+    base = _const_base_name(e["name"])
+    return f"  localparam int unsigned {base}_WIDTH = {e['width']};\n"
+
+
+def _const_field_name(field_name):
+    """Uppercases a field name for use in a constant identifier -- does NOT
+    route through sv_ident()'s keyword-escaping logic. That escaping exists
+    to protect a struct MEMBER declaration from colliding with a lowercase
+    SV reserved keyword (e.g. `sequence`); once uppercased and embedded in
+    a DFC_STRUCTNAME__FIELDNAME_HI-style constant name, it can never
+    collide with a reserved keyword (SV keywords are case-sensitive and
+    lowercase), so escaping here would be not just unnecessary but wrong
+    -- confirmed via a real compile failure: naively uppercasing
+    sv_ident("sequence")'s escaped form ("\\sequence ", with a leading
+    backslash and a trailing space that are only meaningful as an escaped
+    identifier's own delimiters) produced the literal, malformed
+    fragment "\\SEQUENCE _HI" embedded mid-identifier, which Icarus
+    correctly rejected as a syntax error."""
+    return re.sub(r'[^A-Za-z0-9_]', '_', field_name).upper()
+
+
+def emit_struct_field_consts(s):
+    """Emits, for a struct that a module's port list needs to use as a flat
+    `logic [W-1:0]` vector (per PROJECT_CONTINUITY.md Section 2's confirmed
+    toolchain workaround: dfc_types_pkg::some_struct_t cannot be used as a
+    declared type on the person's real production Yosys build), one WIDTH
+    localparam plus one HI/LO bit-position pair per field -- all plain VALUE
+    constants (never a declared type), so referencing them from a module
+    carries none of the confirmed-broken pkg::TYPE risk. This is what lets a
+    module's bit-slice wires (`wire ctl_degraded_ack = control_i[
+    dfc_types_pkg::DFC_RTL002_CONTROL__SYS_CONTROL__DEGRADED_ACK_HI];`)
+    reference the single generated source of truth instead of a hand-copied
+    literal bit position -- closing the hand-duplication/drift risk
+    documented in that section, for this struct and every module that uses
+    it, not just the one that happened to need it first."""
+    base = _const_base_name(s["name"])
+    width = s.get("width")
+    fields = s["fields"]
+    if width is None:
+        width = max(f["hi"] for f in fields) + 1
+    lines = [f"  localparam int unsigned {base}_WIDTH = {width};"]
+    for f in fields:
+        fname = _const_field_name(f["name"])
+        lines.append(f"  localparam int unsigned {base}__{fname}_HI = {f['hi']};")
+        lines.append(f"  localparam int unsigned {base}__{fname}_LO = {f['lo']};")
+    return "\n".join(lines) + "\n"
+
+
 def emit_struct(s):
     name = sv_ident(s["name"])
     width = s.get("width")
@@ -156,11 +237,21 @@ def main():
     imports = spec.get("imports", [])
     import_lines = "".join(f"import {sv_ident(i)}::*;\n" for i in imports)
 
+    if spec.get("enums"):
+        for e in spec["enums"]:
+            body.append(emit_enum(e))
+            body.append(emit_enum_width_const(e))
     if spec.get("params"):
         body.append(emit_params(spec["params"]))
     if spec.get("structs"):
         for s in spec["structs"]:
             body.append(emit_struct(s))
+            # Bit-position/width constants for every struct, "rich" and
+            # "simple" alike -- a module needing to pack/unpack ANY of
+            # these as a flat port vector (per PROJECT_CONTINUITY.md
+            # Section 2's confirmed toolchain workaround) benefits
+            # identically, not just the 47 "rich" control/status structs.
+            body.append(emit_struct_field_consts(s))
     for key in ("irq_sources", "event_sources", "fault_sources", "event_registry"):
         if spec.get(key):
             body.append(emit_matrix_array(pkg, key, spec[key]))
@@ -187,10 +278,11 @@ def main():
     open(out_path, "w").write("\n".join(out))
     n_params = len(spec.get("params", []))
     n_structs = len(spec.get("structs", []))
+    n_enums = len(spec.get("enums", []))
     n_matrix = sum(len(spec.get(k, [])) for k in
                    ("irq_sources", "event_sources", "fault_sources", "event_registry"))
     print(f"OK: {pkg} -> {out_path}  "
-          f"({n_params} params, {n_structs} structs, {n_matrix} matrix rows)")
+          f"({n_params} params, {n_structs} structs, {n_enums} enums, {n_matrix} matrix rows)")
 
 
 if __name__ == "__main__":

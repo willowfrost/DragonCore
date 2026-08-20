@@ -18,6 +18,27 @@ module dri_transaction_tb;
   logic [31:0] dri_rsp_rdata_o;
   logic [2:0]  dri_rsp_code_o;
 
+  // This testbench exercises RTL-001's DRI protocol in isolation and does
+  // not model RTL-002 at all -- rtl002_status_i is tied to a disclosed
+  // stub ('0) and rtl002_control_o is left unread. This is fine for this
+  // testbench's actual scope (DRI protocol correctness), but means it
+  // cannot observe whether SYS_CONTROL/SUBSYS_ENABLE/RESET_CONTROL writes
+  // actually reach RTL-002 -- that's rtl002_integration_tb.sv's job.
+  logic [dfc_types_pkg::DFC_RTL002_CONTROL_WIDTH-1:0] rtl002_control_o;
+  logic [dfc_types_pkg::DFC_RTL002_STATUS_WIDTH-1:0]  rtl002_status_i = '0;
+  // Same isolation choice for RTL-003, added this session: this testbench
+  // does not model RTL-003 either -- rtl003_status_i is tied to a
+  // disclosed stub ('0) and rtl003_control_o is left unread. A `.*`
+  // wildcard port connection errors on an unmatched port under Icarus
+  // (confirmed project-wide finding, not assumed) -- these declarations
+  // exist so `dut (.*, ...)` below still elaborates now that dfc_rtl001.sv
+  // has these two new real ports.
+  logic [dfc_types_pkg::DFC_RTL003_CONTROL_WIDTH-1:0] rtl003_control_o;
+  logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status_i = '0;
+  // RTL-001's own new real status_o -- unused by this testbench (which
+  // exercises DRI protocol correctness, not RTL-001's own readiness).
+  logic [dfc_types_pkg::DFC_RTL001_STATUS_WIDTH-1:0] status_o;
+
   always #10 core_clk_i = ~core_clk_i;
 
   dfc_rtl001 dut (.*, .dbg_regbank_write_en_o());

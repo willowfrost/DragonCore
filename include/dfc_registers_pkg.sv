@@ -1422,12 +1422,22 @@ package dfc_registers_pkg;
   } dfc_reg_dfc_device_id_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_DFC_DEVICE_ID_WIDTH = 32;
+  localparam int unsigned DFC_REG_DFC_DEVICE_ID__DEVICE_ID_HI = 31;
+  localparam int unsigned DFC_REG_DFC_DEVICE_ID__DEVICE_ID_LO = 0;
+
   // REG-002 DFC_PRODUCT_REV (0x0004) field layout
   typedef struct packed {
     logic [15:0] MAJOR;  // access=CONST reset=0x0001
     logic [15:0] MINOR;  // access=CONST reset=0x0000
   } dfc_reg_dfc_product_rev_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_DFC_PRODUCT_REV_WIDTH = 32;
+  localparam int unsigned DFC_REG_DFC_PRODUCT_REV__MAJOR_HI = 31;
+  localparam int unsigned DFC_REG_DFC_PRODUCT_REV__MAJOR_LO = 16;
+  localparam int unsigned DFC_REG_DFC_PRODUCT_REV__MINOR_HI = 15;
+  localparam int unsigned DFC_REG_DFC_PRODUCT_REV__MINOR_LO = 0;
 
   // REG-002 DFC_REGMAP_REV (0x0008) field layout
   typedef struct packed {
@@ -1436,11 +1446,21 @@ package dfc_registers_pkg;
   } dfc_reg_dfc_regmap_rev_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_DFC_REGMAP_REV_WIDTH = 32;
+  localparam int unsigned DFC_REG_DFC_REGMAP_REV__MAJOR_HI = 31;
+  localparam int unsigned DFC_REG_DFC_REGMAP_REV__MAJOR_LO = 16;
+  localparam int unsigned DFC_REG_DFC_REGMAP_REV__MINOR_HI = 15;
+  localparam int unsigned DFC_REG_DFC_REGMAP_REV__MINOR_LO = 0;
+
   // REG-002 DFC_BUILD_ID (0x000C) field layout
   typedef struct packed {
     logic [31:0] BUILD_ID;  // access=CONST reset=BUILD_ID parameter
   } dfc_reg_dfc_build_id_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_DFC_BUILD_ID_WIDTH = 32;
+  localparam int unsigned DFC_REG_DFC_BUILD_ID__BUILD_ID_HI = 31;
+  localparam int unsigned DFC_REG_DFC_BUILD_ID__BUILD_ID_LO = 0;
 
   // REG-002 DFC_CAPABILITY0 (0x0010) field layout
   typedef struct packed {
@@ -1448,6 +1468,12 @@ package dfc_registers_pkg;
     logic [23:0] MODULE_PRESENT;  // access=CONST reset=0xFFFFFF
   } dfc_reg_dfc_capability0_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_DFC_CAPABILITY0_WIDTH = 32;
+  localparam int unsigned DFC_REG_DFC_CAPABILITY0__MODULE_PRESENT_HI = 23;
+  localparam int unsigned DFC_REG_DFC_CAPABILITY0__MODULE_PRESENT_LO = 0;
+  localparam int unsigned DFC_REG_DFC_CAPABILITY0__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_DFC_CAPABILITY0__RSV0_LO = 24;
 
   // REG-002 SYS_CONTROL (0x0014) field layout
   typedef struct packed {
@@ -1459,6 +1485,20 @@ package dfc_registers_pkg;
     logic OPERATIONAL_ENABLE;  // access=RW reset=0
   } dfc_reg_sys_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SYS_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_SYS_CONTROL__OPERATIONAL_ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_SYS_CONTROL__OPERATIONAL_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_SYS_CONTROL__OBSERVATIONAL_MODE_HI = 1;
+  localparam int unsigned DFC_REG_SYS_CONTROL__OBSERVATIONAL_MODE_LO = 1;
+  localparam int unsigned DFC_REG_SYS_CONTROL__GLOBAL_IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_SYS_CONTROL__GLOBAL_IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_SYS_CONTROL__GLOBAL_EVENT_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_SYS_CONTROL__GLOBAL_EVENT_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_SYS_CONTROL__DEGRADED_ACK_HI = 4;
+  localparam int unsigned DFC_REG_SYS_CONTROL__DEGRADED_ACK_LO = 4;
+  localparam int unsigned DFC_REG_SYS_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SYS_CONTROL__RSV0_LO = 5;
 
   // REG-002 SYS_STATUS (0x0018) field layout
   typedef struct packed {
@@ -1477,12 +1517,44 @@ package dfc_registers_pkg;
   } dfc_reg_sys_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SYS_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SYS_STATUS__RESET_ACTIVE_HI = 0;
+  localparam int unsigned DFC_REG_SYS_STATUS__RESET_ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_SYS_STATUS__STARTUP_HI = 1;
+  localparam int unsigned DFC_REG_SYS_STATUS__STARTUP_LO = 1;
+  localparam int unsigned DFC_REG_SYS_STATUS__HOST_READY_HI = 2;
+  localparam int unsigned DFC_REG_SYS_STATUS__HOST_READY_LO = 2;
+  localparam int unsigned DFC_REG_SYS_STATUS__NORMAL_HI = 3;
+  localparam int unsigned DFC_REG_SYS_STATUS__NORMAL_LO = 3;
+  localparam int unsigned DFC_REG_SYS_STATUS__DEGRADED_HI = 4;
+  localparam int unsigned DFC_REG_SYS_STATUS__DEGRADED_LO = 4;
+  localparam int unsigned DFC_REG_SYS_STATUS__FAULTED_HI = 5;
+  localparam int unsigned DFC_REG_SYS_STATUS__FAULTED_LO = 5;
+  localparam int unsigned DFC_REG_SYS_STATUS__OBSERVATIONAL_HI = 6;
+  localparam int unsigned DFC_REG_SYS_STATUS__OBSERVATIONAL_LO = 6;
+  localparam int unsigned DFC_REG_SYS_STATUS__TEST_DEBUG_HI = 7;
+  localparam int unsigned DFC_REG_SYS_STATUS__TEST_DEBUG_LO = 7;
+  localparam int unsigned DFC_REG_SYS_STATUS__INIT_COMPLETE_HI = 8;
+  localparam int unsigned DFC_REG_SYS_STATUS__INIT_COMPLETE_LO = 8;
+  localparam int unsigned DFC_REG_SYS_STATUS__INIT_FAILED_HI = 9;
+  localparam int unsigned DFC_REG_SYS_STATUS__INIT_FAILED_LO = 9;
+  localparam int unsigned DFC_REG_SYS_STATUS__EFFECTIVE_OPERATIONAL_ENABLE_HI = 10;
+  localparam int unsigned DFC_REG_SYS_STATUS__EFFECTIVE_OPERATIONAL_ENABLE_LO = 10;
+  localparam int unsigned DFC_REG_SYS_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SYS_STATUS__RSV0_LO = 11;
+
   // REG-002 SUBSYS_ENABLE (0x001C) field layout
   typedef struct packed {
     logic [7:0] RSV0;  // access=RSV0 reset=0x00
     logic [23:0] ENABLE;  // access=RW reset=0x80F81F
   } dfc_reg_subsys_enable_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SUBSYS_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_SUBSYS_ENABLE__ENABLE_HI = 23;
+  localparam int unsigned DFC_REG_SUBSYS_ENABLE__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_SUBSYS_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SUBSYS_ENABLE__RSV0_LO = 24;
 
   // REG-002 SUBSYS_READY (0x0020) field layout
   typedef struct packed {
@@ -1491,12 +1563,24 @@ package dfc_registers_pkg;
   } dfc_reg_subsys_ready_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SUBSYS_READY_WIDTH = 32;
+  localparam int unsigned DFC_REG_SUBSYS_READY__READY_HI = 23;
+  localparam int unsigned DFC_REG_SUBSYS_READY__READY_LO = 0;
+  localparam int unsigned DFC_REG_SUBSYS_READY__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SUBSYS_READY__RSV0_LO = 24;
+
   // REG-002 SUBSYS_FAULT (0x0024) field layout
   typedef struct packed {
     logic [7:0] RSV0;  // access=RSV0 reset=0x00
     logic [23:0] FAULT;  // access=RO reset=0x000000
   } dfc_reg_subsys_fault_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SUBSYS_FAULT_WIDTH = 32;
+  localparam int unsigned DFC_REG_SUBSYS_FAULT__FAULT_HI = 23;
+  localparam int unsigned DFC_REG_SUBSYS_FAULT__FAULT_LO = 0;
+  localparam int unsigned DFC_REG_SUBSYS_FAULT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SUBSYS_FAULT__RSV0_LO = 24;
 
   // REG-002 RESET_CONTROL (0x0028) field layout
   typedef struct packed {
@@ -1506,6 +1590,16 @@ package dfc_registers_pkg;
     logic SYSTEM_RESET;  // access=WO-CMD reset=0
   } dfc_reg_reset_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_RESET_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_RESET_CONTROL__SYSTEM_RESET_HI = 0;
+  localparam int unsigned DFC_REG_RESET_CONTROL__SYSTEM_RESET_LO = 0;
+  localparam int unsigned DFC_REG_RESET_CONTROL__MODULE_RESET_HI = 24;
+  localparam int unsigned DFC_REG_RESET_CONTROL__MODULE_RESET_LO = 1;
+  localparam int unsigned DFC_REG_RESET_CONTROL__SAFETY_DOMAIN_RESET_HI = 25;
+  localparam int unsigned DFC_REG_RESET_CONTROL__SAFETY_DOMAIN_RESET_LO = 25;
+  localparam int unsigned DFC_REG_RESET_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_RESET_CONTROL__RSV0_LO = 26;
 
   // REG-002 RESET_STATUS (0x002C) field layout
   typedef struct packed {
@@ -1517,11 +1611,27 @@ package dfc_registers_pkg;
   } dfc_reg_reset_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RESET_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RESET_STATUS__BUSY_HI = 0;
+  localparam int unsigned DFC_REG_RESET_STATUS__BUSY_LO = 0;
+  localparam int unsigned DFC_REG_RESET_STATUS__COMPLETE_HI = 1;
+  localparam int unsigned DFC_REG_RESET_STATUS__COMPLETE_LO = 1;
+  localparam int unsigned DFC_REG_RESET_STATUS__REJECTED_HI = 2;
+  localparam int unsigned DFC_REG_RESET_STATUS__REJECTED_LO = 2;
+  localparam int unsigned DFC_REG_RESET_STATUS__LAST_SCOPE_HI = 26;
+  localparam int unsigned DFC_REG_RESET_STATUS__LAST_SCOPE_LO = 3;
+  localparam int unsigned DFC_REG_RESET_STATUS__LAST_RESULT_HI = 31;
+  localparam int unsigned DFC_REG_RESET_STATUS__LAST_RESULT_LO = 27;
+
   // REG-002 PROTECT_KEY (0x0030) field layout
   typedef struct packed {
     logic [31:0] KEY;  // access=WO-CMD reset=0x00000000
   } dfc_reg_protect_key_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PROTECT_KEY_WIDTH = 32;
+  localparam int unsigned DFC_REG_PROTECT_KEY__KEY_HI = 31;
+  localparam int unsigned DFC_REG_PROTECT_KEY__KEY_LO = 0;
 
   // REG-002 PROTECT_STATUS (0x0034) field layout
   typedef struct packed {
@@ -1534,6 +1644,22 @@ package dfc_registers_pkg;
     logic KEY1_ACCEPTED;  // access=W1C reset=0
   } dfc_reg_protect_status_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PROTECT_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__KEY1_ACCEPTED_HI = 0;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__KEY1_ACCEPTED_LO = 0;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__ARMED_HI = 1;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__ARMED_LO = 1;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__EXPIRED_HI = 2;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__EXPIRED_LO = 2;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__BAD_KEY_HI = 3;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__BAD_KEY_LO = 3;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__UNAUTHORIZED_HI = 4;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__UNAUTHORIZED_LO = 4;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__REMAINING_CYCLES_HI = 20;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__REMAINING_CYCLES_LO = 5;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_PROTECT_STATUS__RSV0_LO = 21;
 
   // REG-002 CONFIG_ERROR_STATUS (0x0038) field layout
   typedef struct packed {
@@ -1549,17 +1675,45 @@ package dfc_registers_pkg;
   } dfc_reg_config_error_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__INVALID_ADDRESS_HI = 0;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__INVALID_ADDRESS_LO = 0;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__UNALIGNED_HI = 1;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__UNALIGNED_LO = 1;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__ACCESS_ERROR_HI = 2;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__ACCESS_ERROR_LO = 2;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__PROTECTED_ERROR_HI = 3;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__PROTECTED_ERROR_LO = 3;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__ENDPOINT_ERROR_HI = 4;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__ENDPOINT_ERROR_LO = 4;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__TIMEOUT_HI = 5;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__TIMEOUT_LO = 5;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__CRC_OR_FRAME_HI = 6;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__CRC_OR_FRAME_LO = 6;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__MULTIPLE_HI = 7;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__MULTIPLE_LO = 7;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_STATUS__COUNT_LO = 8;
+
   // REG-002 CONFIG_ERROR_ADDR (0x003C) field layout
   typedef struct packed {
     logic [31:0] ADDRESS;  // access=RO reset=0x00000000
   } dfc_reg_config_error_addr_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CONFIG_ERROR_ADDR_WIDTH = 32;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_ADDR__ADDRESS_HI = 31;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_ADDR__ADDRESS_LO = 0;
+
   // REG-002 CONFIG_ERROR_DATA (0x0040) field layout
   typedef struct packed {
     logic [31:0] WRITE_DATA;  // access=RO reset=0x00000000
   } dfc_reg_config_error_data_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CONFIG_ERROR_DATA_WIDTH = 32;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_DATA__WRITE_DATA_HI = 31;
+  localparam int unsigned DFC_REG_CONFIG_ERROR_DATA__WRITE_DATA_LO = 0;
 
   // REG-002 RTL002_EVT_OVERFLOW_STATUS (0x0044) field layout
   typedef struct packed {
@@ -1570,6 +1724,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl002_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL002_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 RTL001_EVT_OVERFLOW_STATUS (0x0048) field layout
   typedef struct packed {
     logic [7:0] RSV1;  // access=RSV0 reset=0x00
@@ -1579,6 +1743,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl001_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL001_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 CONDITION_MASK_SELECT (0x004C) field layout
   typedef struct packed {
     logic [26:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -1586,11 +1760,21 @@ package dfc_registers_pkg;
   } dfc_reg_condition_mask_select_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CONDITION_MASK_SELECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_CONDITION_MASK_SELECT__RTL_INDEX_HI = 4;
+  localparam int unsigned DFC_REG_CONDITION_MASK_SELECT__RTL_INDEX_LO = 0;
+  localparam int unsigned DFC_REG_CONDITION_MASK_SELECT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CONDITION_MASK_SELECT__RSV0_LO = 5;
+
   // REG-002 EVENT_CONDITION_MASK_LO (0x0050) field layout
   typedef struct packed {
     logic [31:0] MASK;  // access=RW reset=0x00000000
   } dfc_reg_event_condition_mask_lo_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_EVENT_CONDITION_MASK_LO_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVENT_CONDITION_MASK_LO__MASK_HI = 31;
+  localparam int unsigned DFC_REG_EVENT_CONDITION_MASK_LO__MASK_LO = 0;
 
   // REG-002 EVENT_CONDITION_MASK_HI (0x0054) field layout
   typedef struct packed {
@@ -1598,17 +1782,29 @@ package dfc_registers_pkg;
   } dfc_reg_event_condition_mask_hi_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVENT_CONDITION_MASK_HI_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVENT_CONDITION_MASK_HI__MASK_HI = 31;
+  localparam int unsigned DFC_REG_EVENT_CONDITION_MASK_HI__MASK_LO = 0;
+
   // REG-002 IRQ_CONDITION_MASK_LO (0x0058) field layout
   typedef struct packed {
     logic [31:0] MASK;  // access=RW reset=0x00000000
   } dfc_reg_irq_condition_mask_lo_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_IRQ_CONDITION_MASK_LO_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_CONDITION_MASK_LO__MASK_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_CONDITION_MASK_LO__MASK_LO = 0;
+
   // REG-002 IRQ_CONDITION_MASK_HI (0x005C) field layout
   typedef struct packed {
     logic [31:0] MASK;  // access=RW reset=0x00000000
   } dfc_reg_irq_condition_mask_hi_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_IRQ_CONDITION_MASK_HI_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_CONDITION_MASK_HI__MASK_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_CONDITION_MASK_HI__MASK_LO = 0;
 
   // REG-002 RESET_DIAGNOSTIC (0x0060) field layout
   typedef struct packed {
@@ -1618,11 +1814,23 @@ package dfc_registers_pkg;
   } dfc_reg_reset_diagnostic_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RESET_DIAGNOSTIC_WIDTH = 32;
+  localparam int unsigned DFC_REG_RESET_DIAGNOSTIC__TIMEOUT_HI = 0;
+  localparam int unsigned DFC_REG_RESET_DIAGNOSTIC__TIMEOUT_LO = 0;
+  localparam int unsigned DFC_REG_RESET_DIAGNOSTIC__RECOVERY_FAILURE_HI = 1;
+  localparam int unsigned DFC_REG_RESET_DIAGNOSTIC__RECOVERY_FAILURE_LO = 1;
+  localparam int unsigned DFC_REG_RESET_DIAGNOSTIC__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_RESET_DIAGNOSTIC__RSV0_LO = 2;
+
   // REG-002 IRQ_ENABLE (0x0100) field layout
   typedef struct packed {
     logic [31:0] ENABLE;  // access=RW reset=0x00000000
   } dfc_reg_irq_enable_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_IRQ_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_ENABLE__ENABLE_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_ENABLE__ENABLE_LO = 0;
 
   // REG-002 IRQ_RAW_STATUS (0x0104) field layout
   typedef struct packed {
@@ -1630,11 +1838,19 @@ package dfc_registers_pkg;
   } dfc_reg_irq_raw_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_IRQ_RAW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_RAW_STATUS__RAW_STATUS_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_RAW_STATUS__RAW_STATUS_LO = 0;
+
   // REG-002 IRQ_PENDING (0x0108) field layout
   typedef struct packed {
     logic [31:0] PENDING;  // access=RO reset=0x00000000
   } dfc_reg_irq_pending_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_IRQ_PENDING_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_PENDING__PENDING_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_PENDING__PENDING_LO = 0;
 
   // REG-002 IRQ_ACK (0x010C) field layout
   typedef struct packed {
@@ -1642,17 +1858,29 @@ package dfc_registers_pkg;
   } dfc_reg_irq_ack_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_IRQ_ACK_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_ACK__ACK_SET_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_ACK__ACK_SET_LO = 0;
+
   // REG-002 IRQ_ACKED (0x0110) field layout
   typedef struct packed {
     logic [31:0] ACKED;  // access=RO reset=0x00000000
   } dfc_reg_irq_acked_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_IRQ_ACKED_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_ACKED__ACKED_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_ACKED__ACKED_LO = 0;
+
   // REG-002 IRQ_CLEAR (0x0114) field layout
   typedef struct packed {
     logic [31:0] CLEAR;  // access=W1C reset=0x00000000
   } dfc_reg_irq_clear_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_IRQ_CLEAR_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_CLEAR__CLEAR_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_CLEAR__CLEAR_LO = 0;
 
   // REG-002 IRQ_VECTOR (0x0118) field layout
   typedef struct packed {
@@ -1661,6 +1889,14 @@ package dfc_registers_pkg;
     logic [4:0] SOURCE;  // access=RO reset=0x00
   } dfc_reg_irq_vector_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_IRQ_VECTOR_WIDTH = 32;
+  localparam int unsigned DFC_REG_IRQ_VECTOR__SOURCE_HI = 4;
+  localparam int unsigned DFC_REG_IRQ_VECTOR__SOURCE_LO = 0;
+  localparam int unsigned DFC_REG_IRQ_VECTOR__RSV0_HI = 30;
+  localparam int unsigned DFC_REG_IRQ_VECTOR__RSV0_LO = 5;
+  localparam int unsigned DFC_REG_IRQ_VECTOR__VALID_HI = 31;
+  localparam int unsigned DFC_REG_IRQ_VECTOR__VALID_LO = 31;
 
   // REG-002 RTL003_EVT_OVERFLOW_STATUS (0x011C) field layout
   typedef struct packed {
@@ -1671,6 +1907,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl003_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL003_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 TIME_CONTROL (0x0200) field layout
   typedef struct packed {
     logic [29:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -1678,6 +1924,14 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=CONST1 reset=1
   } dfc_reg_time_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TIME_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_TIME_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_TIME_CONTROL__CORRELATION_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_TIME_CONTROL__CORRELATION_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_TIME_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_TIME_CONTROL__RSV0_LO = 2;
 
   // REG-002 TIME_STATUS (0x0204) field layout
   typedef struct packed {
@@ -1690,6 +1944,20 @@ package dfc_registers_pkg;
   } dfc_reg_time_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TIME_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_STATUS__RUNNING_HI = 0;
+  localparam int unsigned DFC_REG_TIME_STATUS__RUNNING_LO = 0;
+  localparam int unsigned DFC_REG_TIME_STATUS__SNAPSHOT_VALID_HI = 1;
+  localparam int unsigned DFC_REG_TIME_STATUS__SNAPSHOT_VALID_LO = 1;
+  localparam int unsigned DFC_REG_TIME_STATUS__SYNC_VALID_HI = 2;
+  localparam int unsigned DFC_REG_TIME_STATUS__SYNC_VALID_LO = 2;
+  localparam int unsigned DFC_REG_TIME_STATUS__SYNC_UPDATED_HI = 3;
+  localparam int unsigned DFC_REG_TIME_STATUS__SYNC_UPDATED_LO = 3;
+  localparam int unsigned DFC_REG_TIME_STATUS__ERROR_HI = 4;
+  localparam int unsigned DFC_REG_TIME_STATUS__ERROR_LO = 4;
+  localparam int unsigned DFC_REG_TIME_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_TIME_STATUS__RSV0_LO = 5;
+
   // REG-002 TIME_SNAPSHOT (0x0208) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -1697,11 +1965,21 @@ package dfc_registers_pkg;
   } dfc_reg_time_snapshot_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TIME_SNAPSHOT_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_SNAPSHOT__CAPTURE_HI = 0;
+  localparam int unsigned DFC_REG_TIME_SNAPSHOT__CAPTURE_LO = 0;
+  localparam int unsigned DFC_REG_TIME_SNAPSHOT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_TIME_SNAPSHOT__RSV0_LO = 1;
+
   // REG-002 TIME_RAW_LO (0x020C) field layout
   typedef struct packed {
     logic [31:0] RAW_LO;  // access=RO reset=0x00000000
   } dfc_reg_time_raw_lo_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TIME_RAW_LO_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_RAW_LO__RAW_LO_HI = 31;
+  localparam int unsigned DFC_REG_TIME_RAW_LO__RAW_LO_LO = 0;
 
   // REG-002 TIME_RAW_HI (0x0210) field layout
   typedef struct packed {
@@ -1709,17 +1987,29 @@ package dfc_registers_pkg;
   } dfc_reg_time_raw_hi_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TIME_RAW_HI_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_RAW_HI__RAW_HI_HI = 31;
+  localparam int unsigned DFC_REG_TIME_RAW_HI__RAW_HI_LO = 0;
+
   // REG-002 TIME_SYNC_OFFSET_LO (0x0214) field layout
   typedef struct packed {
     logic [31:0] OFFSET_LO;  // access=RW reset=0x00000000
   } dfc_reg_time_sync_offset_lo_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TIME_SYNC_OFFSET_LO_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_SYNC_OFFSET_LO__OFFSET_LO_HI = 31;
+  localparam int unsigned DFC_REG_TIME_SYNC_OFFSET_LO__OFFSET_LO_LO = 0;
+
   // REG-002 TIME_SYNC_OFFSET_HI (0x0218) field layout
   typedef struct packed {
     logic [31:0] OFFSET_HI;  // access=RW reset=0x00000000
   } dfc_reg_time_sync_offset_hi_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TIME_SYNC_OFFSET_HI_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_SYNC_OFFSET_HI__OFFSET_HI_HI = 31;
+  localparam int unsigned DFC_REG_TIME_SYNC_OFFSET_HI__OFFSET_HI_LO = 0;
 
   // REG-002 TIME_SYNC_COMMIT (0x021C) field layout
   typedef struct packed {
@@ -1728,6 +2018,12 @@ package dfc_registers_pkg;
   } dfc_reg_time_sync_commit_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TIME_SYNC_COMMIT_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_SYNC_COMMIT__COMMIT_HI = 0;
+  localparam int unsigned DFC_REG_TIME_SYNC_COMMIT__COMMIT_LO = 0;
+  localparam int unsigned DFC_REG_TIME_SYNC_COMMIT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_TIME_SYNC_COMMIT__RSV0_LO = 1;
+
   // REG-002 TIME_SYNC_STATUS (0x0220) field layout
   typedef struct packed {
     logic [14:0] RSV0;  // access=RSV0 reset=0x0000
@@ -1735,6 +2031,14 @@ package dfc_registers_pkg;
     logic [15:0] UPDATE_SEQUENCE;  // access=RO reset=0x0000
   } dfc_reg_time_sync_status_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TIME_SYNC_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_SYNC_STATUS__UPDATE_SEQUENCE_HI = 15;
+  localparam int unsigned DFC_REG_TIME_SYNC_STATUS__UPDATE_SEQUENCE_LO = 0;
+  localparam int unsigned DFC_REG_TIME_SYNC_STATUS__ACTIVE_VALID_HI = 16;
+  localparam int unsigned DFC_REG_TIME_SYNC_STATUS__ACTIVE_VALID_LO = 16;
+  localparam int unsigned DFC_REG_TIME_SYNC_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_TIME_SYNC_STATUS__RSV0_LO = 17;
 
   // REG-002 RTL004_EVT_OVERFLOW_STATUS (0x0224) field layout
   typedef struct packed {
@@ -1745,17 +2049,35 @@ package dfc_registers_pkg;
   } dfc_reg_rtl004_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL004_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 TIME_ACTIVE_OFFSET_LO (0x0228) field layout
   typedef struct packed {
     logic [31:0] OFFSET_LO;  // access=RO reset=0x00000000
   } dfc_reg_time_active_offset_lo_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TIME_ACTIVE_OFFSET_LO_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_ACTIVE_OFFSET_LO__OFFSET_LO_HI = 31;
+  localparam int unsigned DFC_REG_TIME_ACTIVE_OFFSET_LO__OFFSET_LO_LO = 0;
+
   // REG-002 TIME_ACTIVE_OFFSET_HI (0x022C) field layout
   typedef struct packed {
     logic [31:0] OFFSET_HI;  // access=RO reset=0x00000000
   } dfc_reg_time_active_offset_hi_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TIME_ACTIVE_OFFSET_HI_WIDTH = 32;
+  localparam int unsigned DFC_REG_TIME_ACTIVE_OFFSET_HI__OFFSET_HI_HI = 31;
+  localparam int unsigned DFC_REG_TIME_ACTIVE_OFFSET_HI__OFFSET_HI_LO = 0;
 
   // REG-002 EVT_CONTROL (0x0300) field layout
   typedef struct packed {
@@ -1765,6 +2087,16 @@ package dfc_registers_pkg;
     logic LOGGER_ENABLE;  // access=RW reset=1
   } dfc_reg_evt_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_EVT_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_CONTROL__LOGGER_ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_EVT_CONTROL__LOGGER_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_EVT_CONTROL__OVERWRITE_OLDEST_HI = 1;
+  localparam int unsigned DFC_REG_EVT_CONTROL__OVERWRITE_OLDEST_LO = 1;
+  localparam int unsigned DFC_REG_EVT_CONTROL__RSV0_HI = 23;
+  localparam int unsigned DFC_REG_EVT_CONTROL__RSV0_LO = 2;
+  localparam int unsigned DFC_REG_EVT_CONTROL__RSV0_HI_HI = 31;
+  localparam int unsigned DFC_REG_EVT_CONTROL__RSV0_HI_LO = 24;
 
   // REG-002 EVT_STATUS (0x0304) field layout
   typedef struct packed {
@@ -1779,6 +2111,24 @@ package dfc_registers_pkg;
   } dfc_reg_evt_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_STATUS__NOT_EMPTY_HI = 0;
+  localparam int unsigned DFC_REG_EVT_STATUS__NOT_EMPTY_LO = 0;
+  localparam int unsigned DFC_REG_EVT_STATUS__FULL_HI = 1;
+  localparam int unsigned DFC_REG_EVT_STATUS__FULL_LO = 1;
+  localparam int unsigned DFC_REG_EVT_STATUS__SNAPSHOT_VALID_HI = 2;
+  localparam int unsigned DFC_REG_EVT_STATUS__SNAPSHOT_VALID_LO = 2;
+  localparam int unsigned DFC_REG_EVT_STATUS__OVERFLOW_HI = 3;
+  localparam int unsigned DFC_REG_EVT_STATUS__OVERFLOW_LO = 3;
+  localparam int unsigned DFC_REG_EVT_STATUS__SOURCE_DROP_HI = 4;
+  localparam int unsigned DFC_REG_EVT_STATUS__SOURCE_DROP_LO = 4;
+  localparam int unsigned DFC_REG_EVT_STATUS__POP_ERROR_HI = 5;
+  localparam int unsigned DFC_REG_EVT_STATUS__POP_ERROR_LO = 5;
+  localparam int unsigned DFC_REG_EVT_STATUS__CLEAR_COMPLETE_HI = 6;
+  localparam int unsigned DFC_REG_EVT_STATUS__CLEAR_COMPLETE_LO = 6;
+  localparam int unsigned DFC_REG_EVT_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_EVT_STATUS__RSV0_LO = 7;
+
   // REG-002 EVT_COUNT (0x0308) field layout
   typedef struct packed {
     logic [24:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -1786,11 +2136,21 @@ package dfc_registers_pkg;
   } dfc_reg_evt_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_COUNT__COUNT_HI = 6;
+  localparam int unsigned DFC_REG_EVT_COUNT__COUNT_LO = 0;
+  localparam int unsigned DFC_REG_EVT_COUNT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_EVT_COUNT__RSV0_LO = 7;
+
   // REG-002 EVT_OVERFLOW_COUNT (0x030C) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_evt_overflow_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_EVT_OVERFLOW_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_OVERFLOW_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_EVT_OVERFLOW_COUNT__COUNT_LO = 0;
 
   // REG-002 EVT_SOURCE_ENABLE (0x0310) field layout
   typedef struct packed {
@@ -1799,6 +2159,12 @@ package dfc_registers_pkg;
   } dfc_reg_evt_source_enable_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_SOURCE_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_SOURCE_ENABLE__SOURCE_ENABLE_HI = 23;
+  localparam int unsigned DFC_REG_EVT_SOURCE_ENABLE__SOURCE_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_EVT_SOURCE_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_EVT_SOURCE_ENABLE__RSV0_LO = 24;
+
   // REG-002 EVT_SNAPSHOT (0x0314) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -1806,17 +2172,31 @@ package dfc_registers_pkg;
   } dfc_reg_evt_snapshot_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_SNAPSHOT_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_SNAPSHOT__CAPTURE_OLDEST_HI = 0;
+  localparam int unsigned DFC_REG_EVT_SNAPSHOT__CAPTURE_OLDEST_LO = 0;
+  localparam int unsigned DFC_REG_EVT_SNAPSHOT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_EVT_SNAPSHOT__RSV0_LO = 1;
+
   // REG-002 EVT_DATA0 (0x0318) field layout
   typedef struct packed {
     logic [31:0] TIMESTAMP_LO;  // access=RO reset=0x00000000
   } dfc_reg_evt_data0_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_DATA0_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_DATA0__TIMESTAMP_LO_HI = 31;
+  localparam int unsigned DFC_REG_EVT_DATA0__TIMESTAMP_LO_LO = 0;
+
   // REG-002 EVT_DATA1 (0x031C) field layout
   typedef struct packed {
     logic [31:0] TIMESTAMP_HI;  // access=RO reset=0x00000000
   } dfc_reg_evt_data1_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_EVT_DATA1_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_DATA1__TIMESTAMP_HI_HI = 31;
+  localparam int unsigned DFC_REG_EVT_DATA1__TIMESTAMP_HI_LO = 0;
 
   // REG-002 EVT_DATA2 (0x0320) field layout
   typedef struct packed {
@@ -1826,11 +2206,23 @@ package dfc_registers_pkg;
   } dfc_reg_evt_data2_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_DATA2_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_DATA2__EVENT_ID_HI = 15;
+  localparam int unsigned DFC_REG_EVT_DATA2__EVENT_ID_LO = 0;
+  localparam int unsigned DFC_REG_EVT_DATA2__SOURCE_ID_HI = 23;
+  localparam int unsigned DFC_REG_EVT_DATA2__SOURCE_ID_LO = 16;
+  localparam int unsigned DFC_REG_EVT_DATA2__FLAGS_HI = 31;
+  localparam int unsigned DFC_REG_EVT_DATA2__FLAGS_LO = 24;
+
   // REG-002 EVT_DATA3 (0x0324) field layout
   typedef struct packed {
     logic [31:0] EVENT_DATA;  // access=RO reset=0x00000000
   } dfc_reg_evt_data3_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_EVT_DATA3_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_DATA3__EVENT_DATA_HI = 31;
+  localparam int unsigned DFC_REG_EVT_DATA3__EVENT_DATA_LO = 0;
 
   // REG-002 EVT_POP (0x0328) field layout
   typedef struct packed {
@@ -1839,6 +2231,12 @@ package dfc_registers_pkg;
   } dfc_reg_evt_pop_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_POP_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_POP__POP_HI = 0;
+  localparam int unsigned DFC_REG_EVT_POP__POP_LO = 0;
+  localparam int unsigned DFC_REG_EVT_POP__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_EVT_POP__RSV0_LO = 1;
+
   // REG-002 EVT_CLEAR (0x032C) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -1846,11 +2244,21 @@ package dfc_registers_pkg;
   } dfc_reg_evt_clear_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_CLEAR_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_CLEAR__CLEAR_ALL_HI = 0;
+  localparam int unsigned DFC_REG_EVT_CLEAR__CLEAR_ALL_LO = 0;
+  localparam int unsigned DFC_REG_EVT_CLEAR__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_EVT_CLEAR__RSV0_LO = 1;
+
   // REG-002 EVT_DROP_SOURCE (0x0330) field layout
   typedef struct packed {
     logic [31:0] SOURCE_DROP;  // access=W1C reset=0x00000000
   } dfc_reg_evt_drop_source_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_EVT_DROP_SOURCE_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_DROP_SOURCE__SOURCE_DROP_HI = 31;
+  localparam int unsigned DFC_REG_EVT_DROP_SOURCE__SOURCE_DROP_LO = 0;
 
   // REG-002 EVT_ARB_STATUS (0x0334) field layout
   typedef struct packed {
@@ -1861,11 +2269,25 @@ package dfc_registers_pkg;
   } dfc_reg_evt_arb_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS__LAST_SOURCE_HI = 4;
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS__LAST_SOURCE_LO = 0;
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS__NEXT_SOURCE_HI = 9;
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS__NEXT_SOURCE_LO = 5;
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS__ARB_ACTIVE_HI = 10;
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS__ARB_ACTIVE_LO = 10;
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_EVT_ARB_STATUS__RSV0_LO = 11;
+
   // REG-002 EVT_POP_ERROR_COUNT (0x0338) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_evt_pop_error_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_EVT_POP_ERROR_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_EVT_POP_ERROR_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_EVT_POP_ERROR_COUNT__COUNT_LO = 0;
 
   // REG-002 GPIO_CONTROL (0x0400) field layout
   typedef struct packed {
@@ -1875,12 +2297,26 @@ package dfc_registers_pkg;
   } dfc_reg_gpio_control_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_GPIO_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_GPIO_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_CONTROL__QUALIFICATION_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_GPIO_CONTROL__QUALIFICATION_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_GPIO_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_CONTROL__RSV0_LO = 2;
+
   // REG-002 GPIO_DIR (0x0404) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] DIRECTION;  // access=RW reset=0x00
   } dfc_reg_gpio_dir_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_GPIO_DIR_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_DIR__DIRECTION_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_DIR__DIRECTION_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_DIR__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_DIR__RSV0_LO = 8;
 
   // REG-002 GPIO_OUT (0x0408) field layout
   typedef struct packed {
@@ -1889,12 +2325,24 @@ package dfc_registers_pkg;
   } dfc_reg_gpio_out_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_GPIO_OUT_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_OUT__OUTPUT_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_OUT__OUTPUT_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_OUT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_OUT__RSV0_LO = 8;
+
   // REG-002 GPIO_RAW_IN (0x040C) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] RAW_INPUT;  // access=RO reset=0x00
   } dfc_reg_gpio_raw_in_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_GPIO_RAW_IN_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_RAW_IN__RAW_INPUT_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_RAW_IN__RAW_INPUT_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_RAW_IN__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_RAW_IN__RSV0_LO = 8;
 
   // REG-002 GPIO_SYNC_IN (0x0410) field layout
   typedef struct packed {
@@ -1903,12 +2351,24 @@ package dfc_registers_pkg;
   } dfc_reg_gpio_sync_in_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_GPIO_SYNC_IN_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_SYNC_IN__SYNC_INPUT_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_SYNC_IN__SYNC_INPUT_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_SYNC_IN__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_SYNC_IN__RSV0_LO = 8;
+
   // REG-002 GPIO_QUAL_IN (0x0414) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] QUAL_INPUT;  // access=RO reset=0x00
   } dfc_reg_gpio_qual_in_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_GPIO_QUAL_IN_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_QUAL_IN__QUAL_INPUT_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_QUAL_IN__QUAL_INPUT_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_QUAL_IN__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_QUAL_IN__RSV0_LO = 8;
 
   // REG-002 GPIO_RISE_ENABLE (0x0418) field layout
   typedef struct packed {
@@ -1917,12 +2377,24 @@ package dfc_registers_pkg;
   } dfc_reg_gpio_rise_enable_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_GPIO_RISE_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_RISE_ENABLE__RISE_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_RISE_ENABLE__RISE_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_RISE_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_RISE_ENABLE__RSV0_LO = 8;
+
   // REG-002 GPIO_FALL_ENABLE (0x041C) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] FALL_ENABLE;  // access=RW reset=0x00
   } dfc_reg_gpio_fall_enable_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_GPIO_FALL_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_FALL_ENABLE__FALL_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_FALL_ENABLE__FALL_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_FALL_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_FALL_ENABLE__RSV0_LO = 8;
 
   // REG-002 GPIO_EVENT_ENABLE (0x0420) field layout
   typedef struct packed {
@@ -1931,6 +2403,12 @@ package dfc_registers_pkg;
   } dfc_reg_gpio_event_enable_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_GPIO_EVENT_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_EVENT_ENABLE__EVENT_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_EVENT_ENABLE__EVENT_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_EVENT_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_EVENT_ENABLE__RSV0_LO = 8;
+
   // REG-002 GPIO_IRQ_ENABLE (0x0424) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
@@ -1938,12 +2416,24 @@ package dfc_registers_pkg;
   } dfc_reg_gpio_irq_enable_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_GPIO_IRQ_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_IRQ_ENABLE__IRQ_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_IRQ_ENABLE__IRQ_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_IRQ_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_IRQ_ENABLE__RSV0_LO = 8;
+
   // REG-002 GPIO_EVENT_STATUS (0x0428) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] EVENT;  // access=W1C reset=0x00
   } dfc_reg_gpio_event_status_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_GPIO_EVENT_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_EVENT_STATUS__EVENT_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_EVENT_STATUS__EVENT_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_EVENT_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_EVENT_STATUS__RSV0_LO = 8;
 
   // REG-002 GPIO_QUAL_0_3 (0x042C) field layout
   typedef struct packed {
@@ -1954,6 +2444,16 @@ package dfc_registers_pkg;
   } dfc_reg_gpio_qual_0_3_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3__CH0_MS_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3__CH0_MS_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3__CH1_MS_HI = 15;
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3__CH1_MS_LO = 8;
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3__CH2_MS_HI = 23;
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3__CH2_MS_LO = 16;
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3__CH3_MS_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_QUAL_0_3__CH3_MS_LO = 24;
+
   // REG-002 GPIO_QUAL_4_7 (0x0430) field layout
   typedef struct packed {
     logic [7:0] CH7_MS;  // access=RW reset=0x00
@@ -1962,6 +2462,16 @@ package dfc_registers_pkg;
     logic [7:0] CH4_MS;  // access=RW reset=0x00
   } dfc_reg_gpio_qual_4_7_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7__CH4_MS_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7__CH4_MS_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7__CH5_MS_HI = 15;
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7__CH5_MS_LO = 8;
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7__CH6_MS_HI = 23;
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7__CH6_MS_LO = 16;
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7__CH7_MS_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_QUAL_4_7__CH7_MS_LO = 24;
 
   // REG-002 RTL006_EVT_OVERFLOW_STATUS (0x0434) field layout
   typedef struct packed {
@@ -1972,6 +2482,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl006_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL006_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 GPIO_STATUS (0x0438) field layout
   typedef struct packed {
     logic [7:0] QUALIFICATION_IN_PROGRESS;  // access=RO reset=0x00
@@ -1981,6 +2501,16 @@ package dfc_registers_pkg;
   } dfc_reg_gpio_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_GPIO_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_GPIO_STATUS__COMMANDED_OUTPUT_HI = 7;
+  localparam int unsigned DFC_REG_GPIO_STATUS__COMMANDED_OUTPUT_LO = 0;
+  localparam int unsigned DFC_REG_GPIO_STATUS__EFFECTIVE_OUTPUT_HI = 15;
+  localparam int unsigned DFC_REG_GPIO_STATUS__EFFECTIVE_OUTPUT_LO = 8;
+  localparam int unsigned DFC_REG_GPIO_STATUS__DIRECTION_HI = 23;
+  localparam int unsigned DFC_REG_GPIO_STATUS__DIRECTION_LO = 16;
+  localparam int unsigned DFC_REG_GPIO_STATUS__QUALIFICATION_IN_PROGRESS_HI = 31;
+  localparam int unsigned DFC_REG_GPIO_STATUS__QUALIFICATION_IN_PROGRESS_LO = 24;
+
   // REG-002 HOST_CONTROL (0x0500) field layout
   typedef struct packed {
     logic [28:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -1989,6 +2519,16 @@ package dfc_registers_pkg;
     logic COUNTER_ENABLE;  // access=CONST1 reset=1
   } dfc_reg_host_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HOST_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_CONTROL__COUNTER_ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_HOST_CONTROL__COUNTER_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_HOST_CONTROL__EVENT_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_HOST_CONTROL__EVENT_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_HOST_CONTROL__IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_HOST_CONTROL__IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_HOST_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HOST_CONTROL__RSV0_LO = 3;
 
   // REG-002 HOST_STATUS (0x0504) field layout
   typedef struct packed {
@@ -2010,6 +2550,38 @@ package dfc_registers_pkg;
   } dfc_reg_host_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HOST_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_STATUS__READY_HI = 0;
+  localparam int unsigned DFC_REG_HOST_STATUS__READY_LO = 0;
+  localparam int unsigned DFC_REG_HOST_STATUS__BUSY_HI = 1;
+  localparam int unsigned DFC_REG_HOST_STATUS__BUSY_LO = 1;
+  localparam int unsigned DFC_REG_HOST_STATUS__INVALID_OPCODE_HI = 2;
+  localparam int unsigned DFC_REG_HOST_STATUS__INVALID_OPCODE_LO = 2;
+  localparam int unsigned DFC_REG_HOST_STATUS__INVALID_LENGTH_HI = 3;
+  localparam int unsigned DFC_REG_HOST_STATUS__INVALID_LENGTH_LO = 3;
+  localparam int unsigned DFC_REG_HOST_STATUS__UNALIGNED_HI = 4;
+  localparam int unsigned DFC_REG_HOST_STATUS__UNALIGNED_LO = 4;
+  localparam int unsigned DFC_REG_HOST_STATUS__INVALID_ADDRESS_HI = 5;
+  localparam int unsigned DFC_REG_HOST_STATUS__INVALID_ADDRESS_LO = 5;
+  localparam int unsigned DFC_REG_HOST_STATUS__ACCESS_ERROR_HI = 6;
+  localparam int unsigned DFC_REG_HOST_STATUS__ACCESS_ERROR_LO = 6;
+  localparam int unsigned DFC_REG_HOST_STATUS__PROTECTED_ERROR_HI = 7;
+  localparam int unsigned DFC_REG_HOST_STATUS__PROTECTED_ERROR_LO = 7;
+  localparam int unsigned DFC_REG_HOST_STATUS__CRC_ERROR_HI = 8;
+  localparam int unsigned DFC_REG_HOST_STATUS__CRC_ERROR_LO = 8;
+  localparam int unsigned DFC_REG_HOST_STATUS__TIMEOUT_HI = 9;
+  localparam int unsigned DFC_REG_HOST_STATUS__TIMEOUT_LO = 9;
+  localparam int unsigned DFC_REG_HOST_STATUS__ENDPOINT_ERROR_HI = 10;
+  localparam int unsigned DFC_REG_HOST_STATUS__ENDPOINT_ERROR_LO = 10;
+  localparam int unsigned DFC_REG_HOST_STATUS__ABORTED_HI = 11;
+  localparam int unsigned DFC_REG_HOST_STATUS__ABORTED_LO = 11;
+  localparam int unsigned DFC_REG_HOST_STATUS__RSV0_HI = 12;
+  localparam int unsigned DFC_REG_HOST_STATUS__RSV0_LO = 12;
+  localparam int unsigned DFC_REG_HOST_STATUS__RESPONSE_TRUNCATED_HI = 13;
+  localparam int unsigned DFC_REG_HOST_STATUS__RESPONSE_TRUNCATED_LO = 13;
+  localparam int unsigned DFC_REG_HOST_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_HOST_STATUS__RSV1_LO = 14;
+
   // REG-002 HOST_LAST_RESULT (0x0508) field layout
   typedef struct packed {
     logic [6:0] RSV0;  // access=RSV0 reset=0x00
@@ -2021,11 +2593,29 @@ package dfc_registers_pkg;
   } dfc_reg_host_last_result_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__SPI_STATUS_HI = 7;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__SPI_STATUS_LO = 0;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__DRI_CODE_HI = 10;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__DRI_CODE_LO = 8;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__COMPLETED_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__COMPLETED_COUNT_LO = 11;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__OPCODE_HI = 23;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__OPCODE_LO = 16;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__VALID_HI = 24;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__VALID_LO = 24;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HOST_LAST_RESULT__RSV0_LO = 25;
+
   // REG-002 HOST_LAST_ADDRESS (0x050C) field layout
   typedef struct packed {
     logic [31:0] ADDRESS;  // access=RO reset=0x00000000
   } dfc_reg_host_last_address_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HOST_LAST_ADDRESS_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_LAST_ADDRESS__ADDRESS_HI = 31;
+  localparam int unsigned DFC_REG_HOST_LAST_ADDRESS__ADDRESS_LO = 0;
 
   // REG-002 HOST_COMPLETED_COUNT (0x0510) field layout
   typedef struct packed {
@@ -2033,11 +2623,19 @@ package dfc_registers_pkg;
   } dfc_reg_host_completed_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HOST_COMPLETED_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_COMPLETED_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_HOST_COMPLETED_COUNT__COUNT_LO = 0;
+
   // REG-002 HOST_CRC_ERROR_COUNT (0x0514) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_host_crc_error_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HOST_CRC_ERROR_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_CRC_ERROR_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_HOST_CRC_ERROR_COUNT__COUNT_LO = 0;
 
   // REG-002 HOST_ABORT_COUNT (0x0518) field layout
   typedef struct packed {
@@ -2045,17 +2643,29 @@ package dfc_registers_pkg;
   } dfc_reg_host_abort_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HOST_ABORT_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_ABORT_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_HOST_ABORT_COUNT__COUNT_LO = 0;
+
   // REG-002 HOST_TIMEOUT_COUNT (0x051C) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_host_timeout_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HOST_TIMEOUT_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_TIMEOUT_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_HOST_TIMEOUT_COUNT__COUNT_LO = 0;
+
   // REG-002 HOST_ACCESS_ERROR_COUNT (0x0520) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_host_access_error_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HOST_ACCESS_ERROR_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_ACCESS_ERROR_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_HOST_ACCESS_ERROR_COUNT__COUNT_LO = 0;
 
   // REG-002 RTL024_EVT_OVERFLOW_STATUS (0x0524) field layout
   typedef struct packed {
@@ -2066,6 +2676,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl024_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL024_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 BUFFER_STATUS (0x0528) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
@@ -2074,12 +2694,26 @@ package dfc_registers_pkg;
   } dfc_reg_buffer_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_BUFFER_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_BUFFER_STATUS__CLIENT_ERROR_HI = 6;
+  localparam int unsigned DFC_REG_BUFFER_STATUS__CLIENT_ERROR_LO = 0;
+  localparam int unsigned DFC_REG_BUFFER_STATUS__INTERNAL_ERROR_HI = 7;
+  localparam int unsigned DFC_REG_BUFFER_STATUS__INTERNAL_ERROR_LO = 7;
+  localparam int unsigned DFC_REG_BUFFER_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_BUFFER_STATUS__RSV0_LO = 8;
+
   // REG-002 HOST_LAST_SEQUENCE (0x052C) field layout
   typedef struct packed {
     logic [20:0] RSV0;  // access=RSV0 reset=0x000000
     logic [10:0] SEQUENCE;  // access=RO reset=0x000
   } dfc_reg_host_last_sequence_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HOST_LAST_SEQUENCE_WIDTH = 32;
+  localparam int unsigned DFC_REG_HOST_LAST_SEQUENCE__SEQUENCE_HI = 10;
+  localparam int unsigned DFC_REG_HOST_LAST_SEQUENCE__SEQUENCE_LO = 0;
+  localparam int unsigned DFC_REG_HOST_LAST_SEQUENCE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HOST_LAST_SEQUENCE__RSV0_LO = 11;
 
   // REG-002 CLOCK_RESET_STATUS (0x0530) field layout
   typedef struct packed {
@@ -2090,12 +2724,28 @@ package dfc_registers_pkg;
   } dfc_reg_clock_reset_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS__CLOCK_FAULT_ACTIVE_HI = 0;
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS__CLOCK_FAULT_ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS__CLOCK_FAULT_STICKY_HI = 1;
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS__CLOCK_FAULT_STICKY_LO = 1;
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS__ILLEGAL_RELEASE_HI = 2;
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS__ILLEGAL_RELEASE_LO = 2;
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CLOCK_RESET_STATUS__RSV0_LO = 3;
+
   // REG-002 BUFFER_CLIENT_ERROR_COUNT_0_1 (0x0534) field layout
   typedef struct packed {
     logic [15:0] CLIENT1_COUNT;  // access=COUNTER16-CLR reset=0x0000
     logic [15:0] CLIENT0_COUNT;  // access=COUNTER16-CLR reset=0x0000
   } dfc_reg_buffer_client_error_count_0_1_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_0_1_WIDTH = 32;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_0_1__CLIENT0_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_0_1__CLIENT0_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_0_1__CLIENT1_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_0_1__CLIENT1_COUNT_LO = 16;
 
   // REG-002 BUFFER_CLIENT_ERROR_COUNT_2_3 (0x0538) field layout
   typedef struct packed {
@@ -2104,12 +2754,24 @@ package dfc_registers_pkg;
   } dfc_reg_buffer_client_error_count_2_3_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_2_3_WIDTH = 32;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_2_3__CLIENT2_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_2_3__CLIENT2_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_2_3__CLIENT3_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_2_3__CLIENT3_COUNT_LO = 16;
+
   // REG-002 BUFFER_CLIENT_ERROR_COUNT_4_5 (0x053C) field layout
   typedef struct packed {
     logic [15:0] CLIENT5_COUNT;  // access=COUNTER16-CLR reset=0x0000
     logic [15:0] CLIENT4_COUNT;  // access=COUNTER16-CLR reset=0x0000
   } dfc_reg_buffer_client_error_count_4_5_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_4_5_WIDTH = 32;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_4_5__CLIENT4_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_4_5__CLIENT4_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_4_5__CLIENT5_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_4_5__CLIENT5_COUNT_LO = 16;
 
   // REG-002 BUFFER_CLIENT_ERROR_COUNT_6 (0x0540) field layout
   typedef struct packed {
@@ -2118,11 +2780,21 @@ package dfc_registers_pkg;
   } dfc_reg_buffer_client_error_count_6_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_6_WIDTH = 32;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_6__CLIENT6_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_6__CLIENT6_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_6__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_BUFFER_CLIENT_ERROR_COUNT_6__RSV0_LO = 16;
+
   // REG-002 BUFFER_INTERNAL_ERROR_COUNT (0x0544) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_buffer_internal_error_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_BUFFER_INTERNAL_ERROR_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_BUFFER_INTERNAL_ERROR_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_BUFFER_INTERNAL_ERROR_COUNT__COUNT_LO = 0;
 
   // REG-002 TEST_CONTROL (0x0600) field layout
   typedef struct packed {
@@ -2132,6 +2804,16 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_test_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TEST_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_TEST_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_TEST_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_TEST_CONTROL__LOOPBACK_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_TEST_CONTROL__LOOPBACK_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_TEST_CONTROL__INJECTION_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_TEST_CONTROL__INJECTION_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_TEST_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_TEST_CONTROL__RSV0_LO = 3;
 
   // REG-002 TEST_STATUS (0x0604) field layout
   typedef struct packed {
@@ -2152,12 +2834,48 @@ package dfc_registers_pkg;
   } dfc_reg_test_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TEST_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_TEST_STATUS__PHYSICAL_AUTH_HI = 0;
+  localparam int unsigned DFC_REG_TEST_STATUS__PHYSICAL_AUTH_LO = 0;
+  localparam int unsigned DFC_REG_TEST_STATUS__ACTIVE_HI = 1;
+  localparam int unsigned DFC_REG_TEST_STATUS__ACTIVE_LO = 1;
+  localparam int unsigned DFC_REG_TEST_STATUS__COMMAND_COMPLETE_HI = 2;
+  localparam int unsigned DFC_REG_TEST_STATUS__COMMAND_COMPLETE_LO = 2;
+  localparam int unsigned DFC_REG_TEST_STATUS__COMMAND_REJECTED_HI = 3;
+  localparam int unsigned DFC_REG_TEST_STATUS__COMMAND_REJECTED_LO = 3;
+  localparam int unsigned DFC_REG_TEST_STATUS__SAFETY_BLOCKED_HI = 4;
+  localparam int unsigned DFC_REG_TEST_STATUS__SAFETY_BLOCKED_LO = 4;
+  localparam int unsigned DFC_REG_TEST_STATUS__BUSY_HI = 5;
+  localparam int unsigned DFC_REG_TEST_STATUS__BUSY_LO = 5;
+  localparam int unsigned DFC_REG_TEST_STATUS__UNSAFE_REJECTED_HI = 6;
+  localparam int unsigned DFC_REG_TEST_STATUS__UNSAFE_REJECTED_LO = 6;
+  localparam int unsigned DFC_REG_TEST_STATUS__DEAUTHORIZATION_ABORTED_HI = 7;
+  localparam int unsigned DFC_REG_TEST_STATUS__DEAUTHORIZATION_ABORTED_LO = 7;
+  localparam int unsigned DFC_REG_TEST_STATUS__LOOPBACK_ACTIVE_HI = 8;
+  localparam int unsigned DFC_REG_TEST_STATUS__LOOPBACK_ACTIVE_LO = 8;
+  localparam int unsigned DFC_REG_TEST_STATUS__INJECTION_ENABLED_HI = 9;
+  localparam int unsigned DFC_REG_TEST_STATUS__INJECTION_ENABLED_LO = 9;
+  localparam int unsigned DFC_REG_TEST_STATUS__NATURAL_FAULT_OBSERVED_HI = 10;
+  localparam int unsigned DFC_REG_TEST_STATUS__NATURAL_FAULT_OBSERVED_LO = 10;
+  localparam int unsigned DFC_REG_TEST_STATUS__INJECTED_FAULT_OBSERVED_HI = 11;
+  localparam int unsigned DFC_REG_TEST_STATUS__INJECTED_FAULT_OBSERVED_LO = 11;
+  localparam int unsigned DFC_REG_TEST_STATUS__TERMINAL_REASON_HI = 19;
+  localparam int unsigned DFC_REG_TEST_STATUS__TERMINAL_REASON_LO = 12;
+  localparam int unsigned DFC_REG_TEST_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_TEST_STATUS__RSV0_LO = 20;
+
   // REG-002 TEST_COMMAND (0x0608) field layout
   typedef struct packed {
     logic [23:0] ARGUMENT;  // access=WO-CMD reset=0x000000
     logic [7:0] COMMAND;  // access=WO-CMD reset=0x00
   } dfc_reg_test_command_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TEST_COMMAND_WIDTH = 32;
+  localparam int unsigned DFC_REG_TEST_COMMAND__COMMAND_HI = 7;
+  localparam int unsigned DFC_REG_TEST_COMMAND__COMMAND_LO = 0;
+  localparam int unsigned DFC_REG_TEST_COMMAND__ARGUMENT_HI = 31;
+  localparam int unsigned DFC_REG_TEST_COMMAND__ARGUMENT_LO = 8;
 
   // REG-002 TEST_LOOPBACK (0x060C) field layout
   typedef struct packed {
@@ -2166,11 +2884,21 @@ package dfc_registers_pkg;
   } dfc_reg_test_loopback_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TEST_LOOPBACK_WIDTH = 32;
+  localparam int unsigned DFC_REG_TEST_LOOPBACK__LOOPBACK_SELECT_HI = 7;
+  localparam int unsigned DFC_REG_TEST_LOOPBACK__LOOPBACK_SELECT_LO = 0;
+  localparam int unsigned DFC_REG_TEST_LOOPBACK__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_TEST_LOOPBACK__RSV0_LO = 8;
+
   // REG-002 TEST_IRQ_INJECT (0x0610) field layout
   typedef struct packed {
     logic [31:0] SOURCE_MASK;  // access=WO-CMD reset=0x00000000
   } dfc_reg_test_irq_inject_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TEST_IRQ_INJECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_TEST_IRQ_INJECT__SOURCE_MASK_HI = 31;
+  localparam int unsigned DFC_REG_TEST_IRQ_INJECT__SOURCE_MASK_LO = 0;
 
   // REG-002 TEST_FAULT_INJECT (0x0614) field layout
   typedef struct packed {
@@ -2178,11 +2906,19 @@ package dfc_registers_pkg;
   } dfc_reg_test_fault_inject_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_TEST_FAULT_INJECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_TEST_FAULT_INJECT__SOURCE_MASK_HI = 31;
+  localparam int unsigned DFC_REG_TEST_FAULT_INJECT__SOURCE_MASK_LO = 0;
+
   // REG-002 TEST_REJECTION_ABORT_COUNT (0x0618) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_test_rejection_abort_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_TEST_REJECTION_ABORT_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_TEST_REJECTION_ABORT_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_TEST_REJECTION_ABORT_COUNT__COUNT_LO = 0;
 
   // REG-002 ARX_CONTROL (0x1000) field layout
   typedef struct packed {
@@ -2194,6 +2930,20 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_arx_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ARX_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ARX_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ARX_CONTROL__HIGH_SPEED_HI = 1;
+  localparam int unsigned DFC_REG_ARX_CONTROL__HIGH_SPEED_LO = 1;
+  localparam int unsigned DFC_REG_ARX_CONTROL__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ARX_CONTROL__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ARX_CONTROL__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_ARX_CONTROL__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_ARX_CONTROL__ACCEPT_PARITY_ERROR_HI = 4;
+  localparam int unsigned DFC_REG_ARX_CONTROL__ACCEPT_PARITY_ERROR_LO = 4;
+  localparam int unsigned DFC_REG_ARX_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ARX_CONTROL__RSV0_LO = 5;
 
   // REG-002 ARX_STATUS (0x1004) field layout
   typedef struct packed {
@@ -2210,12 +2960,40 @@ package dfc_registers_pkg;
   } dfc_reg_arx_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ARX_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_STATUS__ENABLED_HI = 0;
+  localparam int unsigned DFC_REG_ARX_STATUS__ENABLED_LO = 0;
+  localparam int unsigned DFC_REG_ARX_STATUS__NOT_EMPTY_HI = 1;
+  localparam int unsigned DFC_REG_ARX_STATUS__NOT_EMPTY_LO = 1;
+  localparam int unsigned DFC_REG_ARX_STATUS__FULL_HI = 2;
+  localparam int unsigned DFC_REG_ARX_STATUS__FULL_LO = 2;
+  localparam int unsigned DFC_REG_ARX_STATUS__SNAPSHOT_VALID_HI = 3;
+  localparam int unsigned DFC_REG_ARX_STATUS__SNAPSHOT_VALID_LO = 3;
+  localparam int unsigned DFC_REG_ARX_STATUS__PARITY_ERROR_HI = 4;
+  localparam int unsigned DFC_REG_ARX_STATUS__PARITY_ERROR_LO = 4;
+  localparam int unsigned DFC_REG_ARX_STATUS__FRAMING_ERROR_HI = 5;
+  localparam int unsigned DFC_REG_ARX_STATUS__FRAMING_ERROR_LO = 5;
+  localparam int unsigned DFC_REG_ARX_STATUS__OVERRUN_HI = 6;
+  localparam int unsigned DFC_REG_ARX_STATUS__OVERRUN_LO = 6;
+  localparam int unsigned DFC_REG_ARX_STATUS__ADAPTER_ERROR_HI = 7;
+  localparam int unsigned DFC_REG_ARX_STATUS__ADAPTER_ERROR_LO = 7;
+  localparam int unsigned DFC_REG_ARX_STATUS__POP_REJECTED_HI = 8;
+  localparam int unsigned DFC_REG_ARX_STATUS__POP_REJECTED_LO = 8;
+  localparam int unsigned DFC_REG_ARX_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ARX_STATUS__RSV0_LO = 9;
+
   // REG-002 ARX_QUEUE_LEVEL (0x1008) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
     logic [3:0] LEVEL;  // access=RO reset=0x0
   } dfc_reg_arx_queue_level_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ARX_QUEUE_LEVEL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_QUEUE_LEVEL__LEVEL_HI = 3;
+  localparam int unsigned DFC_REG_ARX_QUEUE_LEVEL__LEVEL_LO = 0;
+  localparam int unsigned DFC_REG_ARX_QUEUE_LEVEL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ARX_QUEUE_LEVEL__RSV0_LO = 4;
 
   // REG-002 ARX_SNAPSHOT (0x100C) field layout
   typedef struct packed {
@@ -2224,11 +3002,21 @@ package dfc_registers_pkg;
   } dfc_reg_arx_snapshot_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ARX_SNAPSHOT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_SNAPSHOT__CAPTURE_HI = 0;
+  localparam int unsigned DFC_REG_ARX_SNAPSHOT__CAPTURE_LO = 0;
+  localparam int unsigned DFC_REG_ARX_SNAPSHOT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ARX_SNAPSHOT__RSV0_LO = 1;
+
   // REG-002 ARX_DATA (0x1010) field layout
   typedef struct packed {
     logic [31:0] WORD;  // access=RO reset=0x00000000
   } dfc_reg_arx_data_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ARX_DATA_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_DATA__WORD_HI = 31;
+  localparam int unsigned DFC_REG_ARX_DATA__WORD_LO = 0;
 
   // REG-002 ARX_META (0x1014) field layout
   typedef struct packed {
@@ -2241,17 +3029,39 @@ package dfc_registers_pkg;
   } dfc_reg_arx_meta_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ARX_META_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_META__PARITY_OK_HI = 0;
+  localparam int unsigned DFC_REG_ARX_META__PARITY_OK_LO = 0;
+  localparam int unsigned DFC_REG_ARX_META__FRAMING_OK_HI = 1;
+  localparam int unsigned DFC_REG_ARX_META__FRAMING_OK_LO = 1;
+  localparam int unsigned DFC_REG_ARX_META__HIGH_SPEED_HI = 2;
+  localparam int unsigned DFC_REG_ARX_META__HIGH_SPEED_LO = 2;
+  localparam int unsigned DFC_REG_ARX_META__ERROR_PRESENT_HI = 3;
+  localparam int unsigned DFC_REG_ARX_META__ERROR_PRESENT_LO = 3;
+  localparam int unsigned DFC_REG_ARX_META__ERROR_CODE_HI = 15;
+  localparam int unsigned DFC_REG_ARX_META__ERROR_CODE_LO = 4;
+  localparam int unsigned DFC_REG_ARX_META__SEQUENCE_HI = 31;
+  localparam int unsigned DFC_REG_ARX_META__SEQUENCE_LO = 16;
+
   // REG-002 ARX_TIME_LO (0x1018) field layout
   typedef struct packed {
     logic [31:0] TIMESTAMP_LO;  // access=RO reset=0x00000000
   } dfc_reg_arx_time_lo_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ARX_TIME_LO_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_TIME_LO__TIMESTAMP_LO_HI = 31;
+  localparam int unsigned DFC_REG_ARX_TIME_LO__TIMESTAMP_LO_LO = 0;
+
   // REG-002 ARX_TIME_HI (0x101C) field layout
   typedef struct packed {
     logic [31:0] TIMESTAMP_HI;  // access=RO reset=0x00000000
   } dfc_reg_arx_time_hi_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ARX_TIME_HI_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_TIME_HI__TIMESTAMP_HI_HI = 31;
+  localparam int unsigned DFC_REG_ARX_TIME_HI__TIMESTAMP_HI_LO = 0;
 
   // REG-002 ARX_POP (0x1020) field layout
   typedef struct packed {
@@ -2260,17 +3070,31 @@ package dfc_registers_pkg;
   } dfc_reg_arx_pop_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ARX_POP_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_POP__POP_HI = 0;
+  localparam int unsigned DFC_REG_ARX_POP__POP_LO = 0;
+  localparam int unsigned DFC_REG_ARX_POP__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ARX_POP__RSV0_LO = 1;
+
   // REG-002 ARX_ERROR_COUNT (0x1024) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_arx_error_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ARX_ERROR_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_ERROR_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ARX_ERROR_COUNT__COUNT_LO = 0;
+
   // REG-002 ARX_OVERFLOW_COUNT (0x1028) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_arx_overflow_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ARX_OVERFLOW_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_OVERFLOW_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ARX_OVERFLOW_COUNT__COUNT_LO = 0;
 
   // REG-002 RTL017_EVT_OVERFLOW_STATUS (0x102C) field layout
   typedef struct packed {
@@ -2281,11 +3105,25 @@ package dfc_registers_pkg;
   } dfc_reg_rtl017_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL017_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 ARX_REJECTED_ACCESS_COUNT (0x1030) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_arx_rejected_access_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ARX_REJECTED_ACCESS_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ARX_REJECTED_ACCESS_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ARX_REJECTED_ACCESS_COUNT__COUNT_LO = 0;
 
   // REG-002 ATX_CONTROL (0x1100) field layout
   typedef struct packed {
@@ -2297,6 +3135,20 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_atx_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ATX_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ATX_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ATX_CONTROL__HIGH_SPEED_HI = 1;
+  localparam int unsigned DFC_REG_ATX_CONTROL__HIGH_SPEED_LO = 1;
+  localparam int unsigned DFC_REG_ATX_CONTROL__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ATX_CONTROL__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ATX_CONTROL__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_ATX_CONTROL__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_ATX_CONTROL__AUTO_PARITY_HI = 4;
+  localparam int unsigned DFC_REG_ATX_CONTROL__AUTO_PARITY_LO = 4;
+  localparam int unsigned DFC_REG_ATX_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ATX_CONTROL__RSV0_LO = 5;
 
   // REG-002 ATX_STATUS (0x1104) field layout
   typedef struct packed {
@@ -2312,6 +3164,26 @@ package dfc_registers_pkg;
   } dfc_reg_atx_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ATX_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_STATUS__ENABLED_HI = 0;
+  localparam int unsigned DFC_REG_ATX_STATUS__ENABLED_LO = 0;
+  localparam int unsigned DFC_REG_ATX_STATUS__BUSY_HI = 1;
+  localparam int unsigned DFC_REG_ATX_STATUS__BUSY_LO = 1;
+  localparam int unsigned DFC_REG_ATX_STATUS__QUEUE_EMPTY_HI = 2;
+  localparam int unsigned DFC_REG_ATX_STATUS__QUEUE_EMPTY_LO = 2;
+  localparam int unsigned DFC_REG_ATX_STATUS__QUEUE_FULL_HI = 3;
+  localparam int unsigned DFC_REG_ATX_STATUS__QUEUE_FULL_LO = 3;
+  localparam int unsigned DFC_REG_ATX_STATUS__COMPLETE_HI = 4;
+  localparam int unsigned DFC_REG_ATX_STATUS__COMPLETE_LO = 4;
+  localparam int unsigned DFC_REG_ATX_STATUS__UNDERRUN_HI = 5;
+  localparam int unsigned DFC_REG_ATX_STATUS__UNDERRUN_LO = 5;
+  localparam int unsigned DFC_REG_ATX_STATUS__REJECTED_HI = 6;
+  localparam int unsigned DFC_REG_ATX_STATUS__REJECTED_LO = 6;
+  localparam int unsigned DFC_REG_ATX_STATUS__ADAPTER_ERROR_HI = 7;
+  localparam int unsigned DFC_REG_ATX_STATUS__ADAPTER_ERROR_LO = 7;
+  localparam int unsigned DFC_REG_ATX_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ATX_STATUS__RSV0_LO = 8;
+
   // REG-002 ATX_QUEUE_LEVEL (0x1108) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -2319,11 +3191,21 @@ package dfc_registers_pkg;
   } dfc_reg_atx_queue_level_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ATX_QUEUE_LEVEL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_QUEUE_LEVEL__LEVEL_HI = 3;
+  localparam int unsigned DFC_REG_ATX_QUEUE_LEVEL__LEVEL_LO = 0;
+  localparam int unsigned DFC_REG_ATX_QUEUE_LEVEL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ATX_QUEUE_LEVEL__RSV0_LO = 4;
+
   // REG-002 ATX_DATA_STAGE (0x110C) field layout
   typedef struct packed {
     logic [31:0] WORD;  // access=RW reset=0x00000000
   } dfc_reg_atx_data_stage_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ATX_DATA_STAGE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_DATA_STAGE__WORD_HI = 31;
+  localparam int unsigned DFC_REG_ATX_DATA_STAGE__WORD_LO = 0;
 
   // REG-002 ATX_META_STAGE (0x1110) field layout
   typedef struct packed {
@@ -2334,6 +3216,16 @@ package dfc_registers_pkg;
   } dfc_reg_atx_meta_stage_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ATX_META_STAGE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_META_STAGE__PARITY_OVERRIDE_VALID_HI = 0;
+  localparam int unsigned DFC_REG_ATX_META_STAGE__PARITY_OVERRIDE_VALID_LO = 0;
+  localparam int unsigned DFC_REG_ATX_META_STAGE__PARITY_BIT_HI = 1;
+  localparam int unsigned DFC_REG_ATX_META_STAGE__PARITY_BIT_LO = 1;
+  localparam int unsigned DFC_REG_ATX_META_STAGE__TAG_HI = 15;
+  localparam int unsigned DFC_REG_ATX_META_STAGE__TAG_LO = 2;
+  localparam int unsigned DFC_REG_ATX_META_STAGE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ATX_META_STAGE__RSV0_LO = 16;
+
   // REG-002 ATX_PUSH (0x1114) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -2341,17 +3233,31 @@ package dfc_registers_pkg;
   } dfc_reg_atx_push_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ATX_PUSH_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_PUSH__PUSH_HI = 0;
+  localparam int unsigned DFC_REG_ATX_PUSH__PUSH_LO = 0;
+  localparam int unsigned DFC_REG_ATX_PUSH__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ATX_PUSH__RSV0_LO = 1;
+
   // REG-002 ATX_ERROR_COUNT (0x1118) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_atx_error_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ATX_ERROR_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_ERROR_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ATX_ERROR_COUNT__COUNT_LO = 0;
+
   // REG-002 ATX_UNDERRUN_COUNT (0x111C) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_atx_underrun_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ATX_UNDERRUN_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_UNDERRUN_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ATX_UNDERRUN_COUNT__COUNT_LO = 0;
 
   // REG-002 RTL018_EVT_OVERFLOW_STATUS (0x1120) field layout
   typedef struct packed {
@@ -2362,6 +3268,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl018_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL018_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 ATX_INTERWORD_GAP_BITS (0x1124) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
@@ -2369,11 +3285,21 @@ package dfc_registers_pkg;
   } dfc_reg_atx_interword_gap_bits_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ATX_INTERWORD_GAP_BITS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_INTERWORD_GAP_BITS__GAP_BITS_HI = 7;
+  localparam int unsigned DFC_REG_ATX_INTERWORD_GAP_BITS__GAP_BITS_LO = 0;
+  localparam int unsigned DFC_REG_ATX_INTERWORD_GAP_BITS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ATX_INTERWORD_GAP_BITS__RSV0_LO = 8;
+
   // REG-002 ATX_REJECTED_PUSH_COUNT (0x1128) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_atx_rejected_push_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ATX_REJECTED_PUSH_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ATX_REJECTED_PUSH_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ATX_REJECTED_PUSH_COUNT__COUNT_LO = 0;
 
   // REG-002 CAN_CONTROL (0x1200) field layout
   typedef struct packed {
@@ -2386,6 +3312,22 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_can_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CAN_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_CAN_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_CAN_CONTROL__LOOPBACK_HI = 1;
+  localparam int unsigned DFC_REG_CAN_CONTROL__LOOPBACK_LO = 1;
+  localparam int unsigned DFC_REG_CAN_CONTROL__LISTEN_ONLY_HI = 2;
+  localparam int unsigned DFC_REG_CAN_CONTROL__LISTEN_ONLY_LO = 2;
+  localparam int unsigned DFC_REG_CAN_CONTROL__EVENT_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_CAN_CONTROL__EVENT_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_CAN_CONTROL__IRQ_ENABLE_HI = 4;
+  localparam int unsigned DFC_REG_CAN_CONTROL__IRQ_ENABLE_LO = 4;
+  localparam int unsigned DFC_REG_CAN_CONTROL__AUTOMATIC_BUS_OFF_RECOVERY_HI = 5;
+  localparam int unsigned DFC_REG_CAN_CONTROL__AUTOMATIC_BUS_OFF_RECOVERY_LO = 5;
+  localparam int unsigned DFC_REG_CAN_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_CONTROL__RSV0_LO = 6;
 
   // REG-002 CAN_STATUS (0x1204) field layout
   typedef struct packed {
@@ -2404,6 +3346,32 @@ package dfc_registers_pkg;
   } dfc_reg_can_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_STATUS__ENABLED_HI = 0;
+  localparam int unsigned DFC_REG_CAN_STATUS__ENABLED_LO = 0;
+  localparam int unsigned DFC_REG_CAN_STATUS__RX_NOT_EMPTY_HI = 1;
+  localparam int unsigned DFC_REG_CAN_STATUS__RX_NOT_EMPTY_LO = 1;
+  localparam int unsigned DFC_REG_CAN_STATUS__TX_NOT_FULL_HI = 2;
+  localparam int unsigned DFC_REG_CAN_STATUS__TX_NOT_FULL_LO = 2;
+  localparam int unsigned DFC_REG_CAN_STATUS__ERROR_WARNING_HI = 3;
+  localparam int unsigned DFC_REG_CAN_STATUS__ERROR_WARNING_LO = 3;
+  localparam int unsigned DFC_REG_CAN_STATUS__ERROR_PASSIVE_HI = 4;
+  localparam int unsigned DFC_REG_CAN_STATUS__ERROR_PASSIVE_LO = 4;
+  localparam int unsigned DFC_REG_CAN_STATUS__BUS_OFF_HI = 5;
+  localparam int unsigned DFC_REG_CAN_STATUS__BUS_OFF_LO = 5;
+  localparam int unsigned DFC_REG_CAN_STATUS__RX_OVERFLOW_HI = 6;
+  localparam int unsigned DFC_REG_CAN_STATUS__RX_OVERFLOW_LO = 6;
+  localparam int unsigned DFC_REG_CAN_STATUS__TX_REJECTED_HI = 7;
+  localparam int unsigned DFC_REG_CAN_STATUS__TX_REJECTED_LO = 7;
+  localparam int unsigned DFC_REG_CAN_STATUS__PROTOCOL_ERROR_HI = 8;
+  localparam int unsigned DFC_REG_CAN_STATUS__PROTOCOL_ERROR_LO = 8;
+  localparam int unsigned DFC_REG_CAN_STATUS__TRANSCEIVER_ERROR_HI = 9;
+  localparam int unsigned DFC_REG_CAN_STATUS__TRANSCEIVER_ERROR_LO = 9;
+  localparam int unsigned DFC_REG_CAN_STATUS__RX_POP_REJECTED_HI = 10;
+  localparam int unsigned DFC_REG_CAN_STATUS__RX_POP_REJECTED_LO = 10;
+  localparam int unsigned DFC_REG_CAN_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_STATUS__RSV0_LO = 11;
+
   // REG-002 CAN_BIT_TIMING (0x1208) field layout
   typedef struct packed {
     logic [6:0] RSV0;  // access=RSV0 reset=0x00
@@ -2414,6 +3382,18 @@ package dfc_registers_pkg;
   } dfc_reg_can_bit_timing_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__PRESCALER_MINUS_1_HI = 9;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__PRESCALER_MINUS_1_LO = 0;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__TSEG1_MINUS_1_HI = 15;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__TSEG1_MINUS_1_LO = 10;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__TSEG2_MINUS_1_HI = 20;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__TSEG2_MINUS_1_LO = 16;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__SJW_MINUS_1_HI = 24;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__SJW_MINUS_1_LO = 21;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_BIT_TIMING__RSV0_LO = 25;
+
   // REG-002 CAN_ERROR_COUNT (0x120C) field layout
   typedef struct packed {
     logic [15:0] PROTOCOL_ERROR_COUNT;  // access=RO reset=0x0000
@@ -2422,6 +3402,14 @@ package dfc_registers_pkg;
   } dfc_reg_can_error_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_ERROR_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_ERROR_COUNT__TX_ERROR_COUNT_HI = 7;
+  localparam int unsigned DFC_REG_CAN_ERROR_COUNT__TX_ERROR_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_CAN_ERROR_COUNT__RX_ERROR_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_CAN_ERROR_COUNT__RX_ERROR_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_CAN_ERROR_COUNT__PROTOCOL_ERROR_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_CAN_ERROR_COUNT__PROTOCOL_ERROR_COUNT_LO = 16;
+
   // REG-002 CAN_RX_LEVEL (0x1210) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -2429,12 +3417,24 @@ package dfc_registers_pkg;
   } dfc_reg_can_rx_level_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_RX_LEVEL_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_LEVEL__LEVEL_HI = 3;
+  localparam int unsigned DFC_REG_CAN_RX_LEVEL__LEVEL_LO = 0;
+  localparam int unsigned DFC_REG_CAN_RX_LEVEL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_LEVEL__RSV0_LO = 4;
+
   // REG-002 CAN_RX_SNAPSHOT (0x1214) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
     logic CAPTURE;  // access=WO-CMD reset=0
   } dfc_reg_can_rx_snapshot_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CAN_RX_SNAPSHOT_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_SNAPSHOT__CAPTURE_HI = 0;
+  localparam int unsigned DFC_REG_CAN_RX_SNAPSHOT__CAPTURE_LO = 0;
+  localparam int unsigned DFC_REG_CAN_RX_SNAPSHOT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_SNAPSHOT__RSV0_LO = 1;
 
   // REG-002 CAN_RX_ID (0x1218) field layout
   typedef struct packed {
@@ -2445,6 +3445,16 @@ package dfc_registers_pkg;
   } dfc_reg_can_rx_id_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_RX_ID_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_ID__IDENTIFIER_HI = 28;
+  localparam int unsigned DFC_REG_CAN_RX_ID__IDENTIFIER_LO = 0;
+  localparam int unsigned DFC_REG_CAN_RX_ID__IDE_HI = 29;
+  localparam int unsigned DFC_REG_CAN_RX_ID__IDE_LO = 29;
+  localparam int unsigned DFC_REG_CAN_RX_ID__RTR_HI = 30;
+  localparam int unsigned DFC_REG_CAN_RX_ID__RTR_LO = 30;
+  localparam int unsigned DFC_REG_CAN_RX_ID__VALID_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_ID__VALID_LO = 31;
+
   // REG-002 CAN_RX_META (0x121C) field layout
   typedef struct packed {
     logic [15:0] SEQUENCE;  // access=RO reset=0x0000
@@ -2453,11 +3463,23 @@ package dfc_registers_pkg;
   } dfc_reg_can_rx_meta_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_RX_META_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_META__DLC_HI = 3;
+  localparam int unsigned DFC_REG_CAN_RX_META__DLC_LO = 0;
+  localparam int unsigned DFC_REG_CAN_RX_META__FLAGS_HI = 15;
+  localparam int unsigned DFC_REG_CAN_RX_META__FLAGS_LO = 4;
+  localparam int unsigned DFC_REG_CAN_RX_META__SEQUENCE_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_META__SEQUENCE_LO = 16;
+
   // REG-002 CAN_RX_DATA_LO (0x1220) field layout
   typedef struct packed {
     logic [31:0] DATA_0_3;  // access=RO reset=0x00000000
   } dfc_reg_can_rx_data_lo_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CAN_RX_DATA_LO_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_DATA_LO__DATA_0_3_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_DATA_LO__DATA_0_3_LO = 0;
 
   // REG-002 CAN_RX_DATA_HI (0x1224) field layout
   typedef struct packed {
@@ -2465,17 +3487,29 @@ package dfc_registers_pkg;
   } dfc_reg_can_rx_data_hi_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_RX_DATA_HI_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_DATA_HI__DATA_4_7_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_DATA_HI__DATA_4_7_LO = 0;
+
   // REG-002 CAN_RX_TIME_LO (0x1228) field layout
   typedef struct packed {
     logic [31:0] TIMESTAMP_LO;  // access=RO reset=0x00000000
   } dfc_reg_can_rx_time_lo_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_RX_TIME_LO_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_TIME_LO__TIMESTAMP_LO_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_TIME_LO__TIMESTAMP_LO_LO = 0;
+
   // REG-002 CAN_RX_TIME_HI (0x122C) field layout
   typedef struct packed {
     logic [31:0] TIMESTAMP_HI;  // access=RO reset=0x00000000
   } dfc_reg_can_rx_time_hi_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CAN_RX_TIME_HI_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_TIME_HI__TIMESTAMP_HI_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_TIME_HI__TIMESTAMP_HI_LO = 0;
 
   // REG-002 CAN_RX_POP (0x1230) field layout
   typedef struct packed {
@@ -2484,12 +3518,24 @@ package dfc_registers_pkg;
   } dfc_reg_can_rx_pop_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_RX_POP_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_POP__POP_HI = 0;
+  localparam int unsigned DFC_REG_CAN_RX_POP__POP_LO = 0;
+  localparam int unsigned DFC_REG_CAN_RX_POP__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_POP__RSV0_LO = 1;
+
   // REG-002 CAN_TX_LEVEL (0x1234) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
     logic [3:0] LEVEL;  // access=RO reset=0x0
   } dfc_reg_can_tx_level_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CAN_TX_LEVEL_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_TX_LEVEL__LEVEL_HI = 3;
+  localparam int unsigned DFC_REG_CAN_TX_LEVEL__LEVEL_LO = 0;
+  localparam int unsigned DFC_REG_CAN_TX_LEVEL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_TX_LEVEL__RSV0_LO = 4;
 
   // REG-002 CAN_TX_ID_STAGE (0x1238) field layout
   typedef struct packed {
@@ -2500,6 +3546,16 @@ package dfc_registers_pkg;
   } dfc_reg_can_tx_id_stage_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE__IDENTIFIER_HI = 28;
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE__IDENTIFIER_LO = 0;
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE__IDE_HI = 29;
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE__IDE_LO = 29;
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE__RTR_HI = 30;
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE__RTR_LO = 30;
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_TX_ID_STAGE__RSV0_LO = 31;
+
   // REG-002 CAN_TX_META_STAGE (0x123C) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -2507,11 +3563,21 @@ package dfc_registers_pkg;
   } dfc_reg_can_tx_meta_stage_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_TX_META_STAGE_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_TX_META_STAGE__DLC_HI = 3;
+  localparam int unsigned DFC_REG_CAN_TX_META_STAGE__DLC_LO = 0;
+  localparam int unsigned DFC_REG_CAN_TX_META_STAGE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_TX_META_STAGE__RSV0_LO = 4;
+
   // REG-002 CAN_TX_DATA_LO_STAGE (0x1240) field layout
   typedef struct packed {
     logic [31:0] DATA_0_3;  // access=RW reset=0x00000000
   } dfc_reg_can_tx_data_lo_stage_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CAN_TX_DATA_LO_STAGE_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_TX_DATA_LO_STAGE__DATA_0_3_HI = 31;
+  localparam int unsigned DFC_REG_CAN_TX_DATA_LO_STAGE__DATA_0_3_LO = 0;
 
   // REG-002 CAN_TX_DATA_HI_STAGE (0x1244) field layout
   typedef struct packed {
@@ -2519,12 +3585,22 @@ package dfc_registers_pkg;
   } dfc_reg_can_tx_data_hi_stage_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_TX_DATA_HI_STAGE_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_TX_DATA_HI_STAGE__DATA_4_7_HI = 31;
+  localparam int unsigned DFC_REG_CAN_TX_DATA_HI_STAGE__DATA_4_7_LO = 0;
+
   // REG-002 CAN_TX_PUSH (0x1248) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
     logic PUSH;  // access=WO-CMD reset=0
   } dfc_reg_can_tx_push_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CAN_TX_PUSH_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_TX_PUSH__PUSH_HI = 0;
+  localparam int unsigned DFC_REG_CAN_TX_PUSH__PUSH_LO = 0;
+  localparam int unsigned DFC_REG_CAN_TX_PUSH__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_TX_PUSH__RSV0_LO = 1;
 
   // REG-002 RTL019_EVT_OVERFLOW_STATUS (0x124C) field layout
   typedef struct packed {
@@ -2535,6 +3611,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl019_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL019_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 CAN_RECOVERY (0x1250) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -2542,17 +3628,31 @@ package dfc_registers_pkg;
   } dfc_reg_can_recovery_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_RECOVERY_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RECOVERY__REQUEST_HI = 0;
+  localparam int unsigned DFC_REG_CAN_RECOVERY__REQUEST_LO = 0;
+  localparam int unsigned DFC_REG_CAN_RECOVERY__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RECOVERY__RSV0_LO = 1;
+
   // REG-002 CAN_RX_OVERFLOW_COUNT (0x1254) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_can_rx_overflow_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_CAN_RX_OVERFLOW_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_RX_OVERFLOW_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_CAN_RX_OVERFLOW_COUNT__COUNT_LO = 0;
+
   // REG-002 CAN_TX_REJECTED_COUNT (0x1258) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_can_tx_rejected_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_CAN_TX_REJECTED_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_CAN_TX_REJECTED_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_CAN_TX_REJECTED_COUNT__COUNT_LO = 0;
 
   // REG-002 UART_CONTROL (0x1300) field layout
   typedef struct packed {
@@ -2564,6 +3664,20 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_uart_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UART_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_UART_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_UART_CONTROL__PARITY_HI = 2;
+  localparam int unsigned DFC_REG_UART_CONTROL__PARITY_LO = 1;
+  localparam int unsigned DFC_REG_UART_CONTROL__TWO_STOP_BITS_HI = 3;
+  localparam int unsigned DFC_REG_UART_CONTROL__TWO_STOP_BITS_LO = 3;
+  localparam int unsigned DFC_REG_UART_CONTROL__EVENT_ENABLE_HI = 4;
+  localparam int unsigned DFC_REG_UART_CONTROL__EVENT_ENABLE_LO = 4;
+  localparam int unsigned DFC_REG_UART_CONTROL__IRQ_ENABLE_HI = 5;
+  localparam int unsigned DFC_REG_UART_CONTROL__IRQ_ENABLE_LO = 5;
+  localparam int unsigned DFC_REG_UART_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UART_CONTROL__RSV0_LO = 6;
 
   // REG-002 UART_STATUS (0x1304) field layout
   typedef struct packed {
@@ -2582,11 +3696,41 @@ package dfc_registers_pkg;
   } dfc_reg_uart_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UART_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_STATUS__ENABLED_HI = 0;
+  localparam int unsigned DFC_REG_UART_STATUS__ENABLED_LO = 0;
+  localparam int unsigned DFC_REG_UART_STATUS__RX_NOT_EMPTY_HI = 1;
+  localparam int unsigned DFC_REG_UART_STATUS__RX_NOT_EMPTY_LO = 1;
+  localparam int unsigned DFC_REG_UART_STATUS__TX_NOT_FULL_HI = 2;
+  localparam int unsigned DFC_REG_UART_STATUS__TX_NOT_FULL_LO = 2;
+  localparam int unsigned DFC_REG_UART_STATUS__TX_BUSY_HI = 3;
+  localparam int unsigned DFC_REG_UART_STATUS__TX_BUSY_LO = 3;
+  localparam int unsigned DFC_REG_UART_STATUS__FRAMING_ERROR_HI = 4;
+  localparam int unsigned DFC_REG_UART_STATUS__FRAMING_ERROR_LO = 4;
+  localparam int unsigned DFC_REG_UART_STATUS__PARITY_ERROR_HI = 5;
+  localparam int unsigned DFC_REG_UART_STATUS__PARITY_ERROR_LO = 5;
+  localparam int unsigned DFC_REG_UART_STATUS__RX_OVERFLOW_HI = 6;
+  localparam int unsigned DFC_REG_UART_STATUS__RX_OVERFLOW_LO = 6;
+  localparam int unsigned DFC_REG_UART_STATUS__TX_UNDERFLOW_HI = 7;
+  localparam int unsigned DFC_REG_UART_STATUS__TX_UNDERFLOW_LO = 7;
+  localparam int unsigned DFC_REG_UART_STATUS__BREAK_DETECTED_HI = 8;
+  localparam int unsigned DFC_REG_UART_STATUS__BREAK_DETECTED_LO = 8;
+  localparam int unsigned DFC_REG_UART_STATUS__RX_UNDERFLOW_HI = 9;
+  localparam int unsigned DFC_REG_UART_STATUS__RX_UNDERFLOW_LO = 9;
+  localparam int unsigned DFC_REG_UART_STATUS__TX_REJECTED_HI = 10;
+  localparam int unsigned DFC_REG_UART_STATUS__TX_REJECTED_LO = 10;
+  localparam int unsigned DFC_REG_UART_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UART_STATUS__RSV0_LO = 11;
+
   // REG-002 UART_BAUD_DIV (0x1308) field layout
   typedef struct packed {
     logic [31:0] DIVISOR;  // access=RW reset=0x000001B2
   } dfc_reg_uart_baud_div_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UART_BAUD_DIV_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_BAUD_DIV__DIVISOR_HI = 31;
+  localparam int unsigned DFC_REG_UART_BAUD_DIV__DIVISOR_LO = 0;
 
   // REG-002 UART_RX_LEVEL (0x130C) field layout
   typedef struct packed {
@@ -2594,6 +3738,12 @@ package dfc_registers_pkg;
     logic [4:0] LEVEL;  // access=RO reset=0x00
   } dfc_reg_uart_rx_level_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UART_RX_LEVEL_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_RX_LEVEL__LEVEL_HI = 4;
+  localparam int unsigned DFC_REG_UART_RX_LEVEL__LEVEL_LO = 0;
+  localparam int unsigned DFC_REG_UART_RX_LEVEL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UART_RX_LEVEL__RSV0_LO = 5;
 
   // REG-002 UART_RX_DATA (0x1310) field layout
   typedef struct packed {
@@ -2604,12 +3754,28 @@ package dfc_registers_pkg;
   } dfc_reg_uart_rx_data_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UART_RX_DATA_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_RX_DATA__DATA_HI = 7;
+  localparam int unsigned DFC_REG_UART_RX_DATA__DATA_LO = 0;
+  localparam int unsigned DFC_REG_UART_RX_DATA__ERROR_FLAGS_HI = 15;
+  localparam int unsigned DFC_REG_UART_RX_DATA__ERROR_FLAGS_LO = 8;
+  localparam int unsigned DFC_REG_UART_RX_DATA__VALID_HI = 16;
+  localparam int unsigned DFC_REG_UART_RX_DATA__VALID_LO = 16;
+  localparam int unsigned DFC_REG_UART_RX_DATA__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UART_RX_DATA__RSV0_LO = 17;
+
   // REG-002 UART_RX_POP (0x1314) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
     logic POP;  // access=WO-CMD reset=0
   } dfc_reg_uart_rx_pop_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UART_RX_POP_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_RX_POP__POP_HI = 0;
+  localparam int unsigned DFC_REG_UART_RX_POP__POP_LO = 0;
+  localparam int unsigned DFC_REG_UART_RX_POP__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UART_RX_POP__RSV0_LO = 1;
 
   // REG-002 UART_TX_LEVEL (0x1318) field layout
   typedef struct packed {
@@ -2618,12 +3784,24 @@ package dfc_registers_pkg;
   } dfc_reg_uart_tx_level_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UART_TX_LEVEL_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_TX_LEVEL__LEVEL_HI = 4;
+  localparam int unsigned DFC_REG_UART_TX_LEVEL__LEVEL_LO = 0;
+  localparam int unsigned DFC_REG_UART_TX_LEVEL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UART_TX_LEVEL__RSV0_LO = 5;
+
   // REG-002 UART_TX_DATA (0x131C) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] DATA;  // access=RW reset=0x00
   } dfc_reg_uart_tx_data_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UART_TX_DATA_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_TX_DATA__DATA_HI = 7;
+  localparam int unsigned DFC_REG_UART_TX_DATA__DATA_LO = 0;
+  localparam int unsigned DFC_REG_UART_TX_DATA__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UART_TX_DATA__RSV0_LO = 8;
 
   // REG-002 UART_TX_PUSH (0x1320) field layout
   typedef struct packed {
@@ -2632,11 +3810,21 @@ package dfc_registers_pkg;
   } dfc_reg_uart_tx_push_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UART_TX_PUSH_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_TX_PUSH__PUSH_HI = 0;
+  localparam int unsigned DFC_REG_UART_TX_PUSH__PUSH_LO = 0;
+  localparam int unsigned DFC_REG_UART_TX_PUSH__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UART_TX_PUSH__RSV0_LO = 1;
+
   // REG-002 UART_ERROR_COUNT (0x1324) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_uart_error_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UART_ERROR_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_ERROR_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_UART_ERROR_COUNT__COUNT_LO = 0;
 
   // REG-002 RTL020_EVT_OVERFLOW_STATUS (0x1328) field layout
   typedef struct packed {
@@ -2647,11 +3835,25 @@ package dfc_registers_pkg;
   } dfc_reg_rtl020_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL020_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 UART_RX_OVERFLOW_COUNT (0x132C) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_uart_rx_overflow_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UART_RX_OVERFLOW_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_RX_OVERFLOW_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_UART_RX_OVERFLOW_COUNT__COUNT_LO = 0;
 
   // REG-002 UART_RX_UNDERFLOW_COUNT (0x1330) field layout
   typedef struct packed {
@@ -2659,17 +3861,29 @@ package dfc_registers_pkg;
   } dfc_reg_uart_rx_underflow_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UART_RX_UNDERFLOW_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_RX_UNDERFLOW_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_UART_RX_UNDERFLOW_COUNT__COUNT_LO = 0;
+
   // REG-002 UART_TX_REJECTED_COUNT (0x1334) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_uart_tx_rejected_count_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UART_TX_REJECTED_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_TX_REJECTED_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_UART_TX_REJECTED_COUNT__COUNT_LO = 0;
+
   // REG-002 UART_TX_UNDERFLOW_COUNT (0x1338) field layout
   typedef struct packed {
     logic [31:0] COUNT;  // access=COUNTER-CLR reset=0x00000000
   } dfc_reg_uart_tx_underflow_count_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UART_TX_UNDERFLOW_COUNT_WIDTH = 32;
+  localparam int unsigned DFC_REG_UART_TX_UNDERFLOW_COUNT__COUNT_HI = 31;
+  localparam int unsigned DFC_REG_UART_TX_UNDERFLOW_COUNT__COUNT_LO = 0;
 
   // REG-002 ROUTE_CONTROL (0x1400) field layout
   typedef struct packed {
@@ -2679,6 +3893,16 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_route_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ROUTE_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_CONTROL__EVENT_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_ROUTE_CONTROL__EVENT_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_ROUTE_CONTROL__IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ROUTE_CONTROL__IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ROUTE_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_CONTROL__RSV0_LO = 3;
 
   // REG-002 ROUTE_STATUS (0x1404) field layout
   typedef struct packed {
@@ -2693,12 +3917,36 @@ package dfc_registers_pkg;
   } dfc_reg_route_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__ACTIVE_HI = 0;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__COMMIT_COMPLETE_HI = 1;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__COMMIT_COMPLETE_LO = 1;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__COMMIT_REJECTED_HI = 2;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__COMMIT_REJECTED_LO = 2;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__DEST_OVERFLOW_HI = 3;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__DEST_OVERFLOW_LO = 3;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__UNAUTHORIZED_HI = 4;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__UNAUTHORIZED_LO = 4;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__RSV0_LO = 5;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__LAST_ERROR_HI = 15;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__LAST_ERROR_LO = 8;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__DROP_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_STATUS__DROP_COUNT_LO = 16;
+
   // REG-002 ROUTE_ENTRY_SELECT (0x1408) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
     logic [3:0] ENTRY;  // access=RW reset=0x0
   } dfc_reg_route_entry_select_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_SELECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_SELECT__ENTRY_HI = 3;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_SELECT__ENTRY_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_SELECT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_SELECT__RSV0_LO = 4;
 
   // REG-002 ROUTE_STAGE_SOURCE (0x140C) field layout
   typedef struct packed {
@@ -2707,6 +3955,12 @@ package dfc_registers_pkg;
   } dfc_reg_route_stage_source_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_STAGE_SOURCE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_SOURCE__SOURCE_ID_HI = 7;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_SOURCE__SOURCE_ID_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_SOURCE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_SOURCE__RSV0_LO = 8;
+
   // REG-002 ROUTE_STAGE_DEST (0x1410) field layout
   typedef struct packed {
     logic [26:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -2714,11 +3968,21 @@ package dfc_registers_pkg;
   } dfc_reg_route_stage_dest_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_STAGE_DEST_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_DEST__DEST_MASK_HI = 4;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_DEST__DEST_MASK_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_DEST__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_DEST__RSV0_LO = 5;
+
   // REG-002 ROUTE_STAGE_TYPE_MASK (0x1414) field layout
   typedef struct packed {
     logic [31:0] TYPE_MASK;  // access=RW reset=0x00000000
   } dfc_reg_route_stage_type_mask_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_STAGE_TYPE_MASK_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_TYPE_MASK__TYPE_MASK_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_TYPE_MASK__TYPE_MASK_LO = 0;
 
   // REG-002 ROUTE_STAGE_FILTER_VALUE (0x1418) field layout
   typedef struct packed {
@@ -2726,11 +3990,19 @@ package dfc_registers_pkg;
   } dfc_reg_route_stage_filter_value_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_STAGE_FILTER_VALUE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_FILTER_VALUE__FILTER_VALUE_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_FILTER_VALUE__FILTER_VALUE_LO = 0;
+
   // REG-002 ROUTE_STAGE_FILTER_MASK (0x141C) field layout
   typedef struct packed {
     logic [31:0] FILTER_MASK;  // access=RW reset=0x00000000
   } dfc_reg_route_stage_filter_mask_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_STAGE_FILTER_MASK_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_FILTER_MASK__FILTER_MASK_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_FILTER_MASK__FILTER_MASK_LO = 0;
 
   // REG-002 ROUTE_STAGE_CONTROL (0x1420) field layout
   typedef struct packed {
@@ -2740,6 +4012,14 @@ package dfc_registers_pkg;
   } dfc_reg_route_stage_control_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_STAGE_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_CONTROL__DROP_ON_FULL_HI = 1;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_CONTROL__DROP_ON_FULL_LO = 1;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_STAGE_CONTROL__RSV0_LO = 2;
+
   // REG-002 ROUTE_VALIDATE_COMMIT (0x1424) field layout
   typedef struct packed {
     logic [29:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -2748,12 +4028,26 @@ package dfc_registers_pkg;
   } dfc_reg_route_validate_commit_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_VALIDATE_COMMIT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_VALIDATE_COMMIT__VALIDATE_COMMIT_HI = 0;
+  localparam int unsigned DFC_REG_ROUTE_VALIDATE_COMMIT__VALIDATE_COMMIT_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_VALIDATE_COMMIT__DISABLE_ENTRY_HI = 1;
+  localparam int unsigned DFC_REG_ROUTE_VALIDATE_COMMIT__DISABLE_ENTRY_LO = 1;
+  localparam int unsigned DFC_REG_ROUTE_VALIDATE_COMMIT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_VALIDATE_COMMIT__RSV0_LO = 2;
+
   // REG-002 ROUTE_ACTIVE_SOURCE (0x1428) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] SOURCE;  // access=RO reset=0x00
   } dfc_reg_route_active_source_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_SOURCE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_SOURCE__SOURCE_HI = 7;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_SOURCE__SOURCE_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_SOURCE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_SOURCE__RSV0_LO = 8;
 
   // REG-002 ROUTE_ACTIVE_DEST (0x142C) field layout
   typedef struct packed {
@@ -2762,11 +4056,21 @@ package dfc_registers_pkg;
   } dfc_reg_route_active_dest_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_DEST_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_DEST__DEST_MASK_HI = 4;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_DEST__DEST_MASK_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_DEST__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_DEST__RSV0_LO = 5;
+
   // REG-002 ROUTE_ACTIVE_TYPE_MASK (0x1430) field layout
   typedef struct packed {
     logic [31:0] TYPE_MASK;  // access=RO reset=0x00000000
   } dfc_reg_route_active_type_mask_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_TYPE_MASK_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_TYPE_MASK__TYPE_MASK_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_TYPE_MASK__TYPE_MASK_LO = 0;
 
   // REG-002 ROUTE_ACTIVE_FILTER_VALUE (0x1434) field layout
   typedef struct packed {
@@ -2774,11 +4078,19 @@ package dfc_registers_pkg;
   } dfc_reg_route_active_filter_value_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_FILTER_VALUE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_FILTER_VALUE__FILTER_VALUE_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_FILTER_VALUE__FILTER_VALUE_LO = 0;
+
   // REG-002 ROUTE_ACTIVE_FILTER_MASK (0x1438) field layout
   typedef struct packed {
     logic [31:0] FILTER_MASK;  // access=RO reset=0x00000000
   } dfc_reg_route_active_filter_mask_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_FILTER_MASK_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_FILTER_MASK__FILTER_MASK_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_FILTER_MASK__FILTER_MASK_LO = 0;
 
   // REG-002 ROUTE_ENTRY_STATUS (0x143C) field layout
   typedef struct packed {
@@ -2790,6 +4102,18 @@ package dfc_registers_pkg;
   } dfc_reg_route_entry_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__ACTIVE_HI = 0;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__VALID_HI = 1;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__VALID_LO = 1;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__ERROR_HI = 2;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__ERROR_LO = 2;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__RSV0_HI = 15;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__RSV0_LO = 3;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__FORWARDED_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_ENTRY_STATUS__FORWARDED_COUNT_LO = 16;
+
   // REG-002 RTL021_EVT_OVERFLOW_STATUS (0x1440) field layout
   typedef struct packed {
     logic [7:0] RSV1;  // access=RSV0 reset=0x00
@@ -2799,12 +4123,28 @@ package dfc_registers_pkg;
   } dfc_reg_rtl021_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL021_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 ROUTE_INGRESS_LOSS_COUNT_0_1 (0x1444) field layout
   typedef struct packed {
     logic [15:0] SOURCE1_COUNT;  // access=COUNTER16-CLR reset=0x0000
     logic [15:0] SOURCE0_COUNT;  // access=COUNTER16-CLR reset=0x0000
   } dfc_reg_route_ingress_loss_count_0_1_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_0_1_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_0_1__SOURCE0_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_0_1__SOURCE0_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_0_1__SOURCE1_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_0_1__SOURCE1_COUNT_LO = 16;
 
   // REG-002 ROUTE_INGRESS_LOSS_COUNT_2_3 (0x1448) field layout
   typedef struct packed {
@@ -2813,12 +4153,24 @@ package dfc_registers_pkg;
   } dfc_reg_route_ingress_loss_count_2_3_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_2_3_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_2_3__SOURCE2_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_2_3__SOURCE2_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_2_3__SOURCE3_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_2_3__SOURCE3_COUNT_LO = 16;
+
   // REG-002 ROUTE_INGRESS_LOSS_COUNT_4 (0x144C) field layout
   typedef struct packed {
     logic [15:0] RSV0;  // access=RSV0 reset=0x0000
     logic [15:0] SOURCE4_COUNT;  // access=COUNTER16-CLR reset=0x0000
   } dfc_reg_route_ingress_loss_count_4_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_4_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_4__SOURCE4_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_4__SOURCE4_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_4__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_INGRESS_LOSS_COUNT_4__RSV0_LO = 16;
 
   // REG-002 ROUTE_DESTINATION_DROP_COUNT_0_1 (0x1450) field layout
   typedef struct packed {
@@ -2827,12 +4179,24 @@ package dfc_registers_pkg;
   } dfc_reg_route_destination_drop_count_0_1_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_0_1_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_0_1__DEST0_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_0_1__DEST0_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_0_1__DEST1_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_0_1__DEST1_COUNT_LO = 16;
+
   // REG-002 ROUTE_DESTINATION_DROP_COUNT_2_3 (0x1454) field layout
   typedef struct packed {
     logic [15:0] DEST3_COUNT;  // access=COUNTER16-CLR reset=0x0000
     logic [15:0] DEST2_COUNT;  // access=COUNTER16-CLR reset=0x0000
   } dfc_reg_route_destination_drop_count_2_3_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_2_3_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_2_3__DEST2_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_2_3__DEST2_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_2_3__DEST3_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_2_3__DEST3_COUNT_LO = 16;
 
   // REG-002 ROUTE_DESTINATION_DROP_COUNT_4 (0x1458) field layout
   typedef struct packed {
@@ -2841,6 +4205,12 @@ package dfc_registers_pkg;
   } dfc_reg_route_destination_drop_count_4_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_4_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_4__DEST4_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_4__DEST4_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_4__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_DESTINATION_DROP_COUNT_4__RSV0_LO = 16;
+
   // REG-002 ROUTE_ACTIVE_CONTROL (0x145C) field layout
   typedef struct packed {
     logic [29:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -2848,6 +4218,14 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RO reset=0
   } dfc_reg_route_active_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_CONTROL__DROP_ON_FULL_HI = 1;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_CONTROL__DROP_ON_FULL_LO = 1;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROUTE_ACTIVE_CONTROL__RSV0_LO = 2;
 
   // REG-002 ROTOR_CONTROL (0x2000) field layout
   typedef struct packed {
@@ -2858,6 +4236,18 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_rotor_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROTOR_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__RISING_EDGE_HI = 1;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__RISING_EDGE_LO = 1;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_CONTROL__RSV0_LO = 4;
 
   // REG-002 ROTOR_STATUS (0x2004) field layout
   typedef struct packed {
@@ -2871,6 +4261,22 @@ package dfc_registers_pkg;
   } dfc_reg_rotor_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROTOR_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__VALID_HI = 0;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__VALID_LO = 0;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__LOW_HI = 1;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__LOW_LO = 1;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__HIGH_HI = 2;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__HIGH_LO = 2;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__TIMEOUT_HI = 3;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__TIMEOUT_LO = 3;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__RANGE_ERROR_HI = 4;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__RANGE_ERROR_LO = 4;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__UPDATED_HI = 5;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__UPDATED_LO = 5;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_STATUS__RSV0_LO = 6;
+
   // REG-002 ROTOR_RPM (0x2008) field layout
   typedef struct packed {
     logic [15:0] RSV0;  // access=RSV0 reset=0x0000
@@ -2878,11 +4284,21 @@ package dfc_registers_pkg;
   } dfc_reg_rotor_rpm_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROTOR_RPM_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_RPM__RPM_HI = 15;
+  localparam int unsigned DFC_REG_ROTOR_RPM__RPM_LO = 0;
+  localparam int unsigned DFC_REG_ROTOR_RPM__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_RPM__RSV0_LO = 16;
+
   // REG-002 ROTOR_PERIOD_TICKS (0x200C) field layout
   typedef struct packed {
     logic [31:0] PERIOD_TICKS;  // access=RO reset=0x00000000
   } dfc_reg_rotor_period_ticks_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROTOR_PERIOD_TICKS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_PERIOD_TICKS__PERIOD_TICKS_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_PERIOD_TICKS__PERIOD_TICKS_LO = 0;
 
   // REG-002 ROTOR_THRESH_LOW (0x2010) field layout
   typedef struct packed {
@@ -2891,12 +4307,24 @@ package dfc_registers_pkg;
   } dfc_reg_rotor_thresh_low_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROTOR_THRESH_LOW_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_THRESH_LOW__THRESHOLD_HI = 15;
+  localparam int unsigned DFC_REG_ROTOR_THRESH_LOW__THRESHOLD_LO = 0;
+  localparam int unsigned DFC_REG_ROTOR_THRESH_LOW__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_THRESH_LOW__RSV0_LO = 16;
+
   // REG-002 ROTOR_THRESH_HIGH (0x2014) field layout
   typedef struct packed {
     logic [15:0] RSV0;  // access=RSV0 reset=0x0000
     logic [15:0] THRESHOLD;  // access=RW reset=0x03E8
   } dfc_reg_rotor_thresh_high_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROTOR_THRESH_HIGH_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_THRESH_HIGH__THRESHOLD_HI = 15;
+  localparam int unsigned DFC_REG_ROTOR_THRESH_HIGH__THRESHOLD_LO = 0;
+  localparam int unsigned DFC_REG_ROTOR_THRESH_HIGH__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_THRESH_HIGH__RSV0_LO = 16;
 
   // REG-002 ROTOR_PULSES_PER_REV (0x2018) field layout
   typedef struct packed {
@@ -2905,17 +4333,31 @@ package dfc_registers_pkg;
   } dfc_reg_rotor_pulses_per_rev_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROTOR_PULSES_PER_REV_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_PULSES_PER_REV__PPR_HI = 15;
+  localparam int unsigned DFC_REG_ROTOR_PULSES_PER_REV__PPR_LO = 0;
+  localparam int unsigned DFC_REG_ROTOR_PULSES_PER_REV__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_PULSES_PER_REV__RSV0_LO = 16;
+
   // REG-002 ROTOR_TIMEOUT_US (0x201C) field layout
   typedef struct packed {
     logic [31:0] TIMEOUT_US;  // access=RW reset=0x000186A0
   } dfc_reg_rotor_timeout_us_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ROTOR_TIMEOUT_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_TIMEOUT_US__TIMEOUT_US_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_TIMEOUT_US__TIMEOUT_US_LO = 0;
+
   // REG-002 ROTOR_EDGE_FILTER (0x2020) field layout
   typedef struct packed {
     logic [31:0] MIN_EDGE_CYCLES;  // access=RW reset=0x00000000
   } dfc_reg_rotor_edge_filter_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROTOR_EDGE_FILTER_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_EDGE_FILTER__MIN_EDGE_CYCLES_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_EDGE_FILTER__MIN_EDGE_CYCLES_LO = 0;
 
   // REG-002 RTL007_EVT_OVERFLOW_STATUS (0x2024) field layout
   typedef struct packed {
@@ -2926,12 +4368,28 @@ package dfc_registers_pkg;
   } dfc_reg_rtl007_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL007_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 ROTOR_HYSTERESIS (0x2028) field layout
   typedef struct packed {
     logic [15:0] RSV0;  // access=RSV0 reset=0x0000
     logic [15:0] HYSTERESIS;  // access=RW reset=0x0000
   } dfc_reg_rotor_hysteresis_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ROTOR_HYSTERESIS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ROTOR_HYSTERESIS__HYSTERESIS_HI = 15;
+  localparam int unsigned DFC_REG_ROTOR_HYSTERESIS__HYSTERESIS_LO = 0;
+  localparam int unsigned DFC_REG_ROTOR_HYSTERESIS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ROTOR_HYSTERESIS__RSV0_LO = 16;
 
   // REG-002 ENGINE_CONTROL (0x2100) field layout
   typedef struct packed {
@@ -2942,6 +4400,18 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_engine_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ENGINE_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__RISING_EDGE_HI = 1;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__RISING_EDGE_LO = 1;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_CONTROL__RSV0_LO = 4;
 
   // REG-002 ENGINE_STATUS (0x2104) field layout
   typedef struct packed {
@@ -2955,6 +4425,22 @@ package dfc_registers_pkg;
   } dfc_reg_engine_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ENGINE_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__VALID_HI = 0;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__VALID_LO = 0;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__LOW_HI = 1;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__LOW_LO = 1;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__HIGH_HI = 2;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__HIGH_LO = 2;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__TIMEOUT_HI = 3;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__TIMEOUT_LO = 3;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__RANGE_ERROR_HI = 4;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__RANGE_ERROR_LO = 4;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__UPDATED_HI = 5;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__UPDATED_LO = 5;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_STATUS__RSV0_LO = 6;
+
   // REG-002 ENGINE_RPM (0x2108) field layout
   typedef struct packed {
     logic [15:0] RSV0;  // access=RSV0 reset=0x0000
@@ -2962,11 +4448,21 @@ package dfc_registers_pkg;
   } dfc_reg_engine_rpm_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ENGINE_RPM_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_RPM__RPM_HI = 15;
+  localparam int unsigned DFC_REG_ENGINE_RPM__RPM_LO = 0;
+  localparam int unsigned DFC_REG_ENGINE_RPM__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_RPM__RSV0_LO = 16;
+
   // REG-002 ENGINE_PERIOD_TICKS (0x210C) field layout
   typedef struct packed {
     logic [31:0] PERIOD_TICKS;  // access=RO reset=0x00000000
   } dfc_reg_engine_period_ticks_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ENGINE_PERIOD_TICKS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_PERIOD_TICKS__PERIOD_TICKS_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_PERIOD_TICKS__PERIOD_TICKS_LO = 0;
 
   // REG-002 ENGINE_THRESH_LOW (0x2110) field layout
   typedef struct packed {
@@ -2975,12 +4471,24 @@ package dfc_registers_pkg;
   } dfc_reg_engine_thresh_low_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ENGINE_THRESH_LOW_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_THRESH_LOW__THRESHOLD_HI = 15;
+  localparam int unsigned DFC_REG_ENGINE_THRESH_LOW__THRESHOLD_LO = 0;
+  localparam int unsigned DFC_REG_ENGINE_THRESH_LOW__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_THRESH_LOW__RSV0_LO = 16;
+
   // REG-002 ENGINE_THRESH_HIGH (0x2114) field layout
   typedef struct packed {
     logic [15:0] RSV0;  // access=RSV0 reset=0x0000
     logic [15:0] THRESHOLD;  // access=RW reset=0x4E20
   } dfc_reg_engine_thresh_high_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ENGINE_THRESH_HIGH_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_THRESH_HIGH__THRESHOLD_HI = 15;
+  localparam int unsigned DFC_REG_ENGINE_THRESH_HIGH__THRESHOLD_LO = 0;
+  localparam int unsigned DFC_REG_ENGINE_THRESH_HIGH__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_THRESH_HIGH__RSV0_LO = 16;
 
   // REG-002 ENGINE_PULSES_PER_REV (0x2118) field layout
   typedef struct packed {
@@ -2989,17 +4497,31 @@ package dfc_registers_pkg;
   } dfc_reg_engine_pulses_per_rev_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ENGINE_PULSES_PER_REV_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_PULSES_PER_REV__PPR_HI = 15;
+  localparam int unsigned DFC_REG_ENGINE_PULSES_PER_REV__PPR_LO = 0;
+  localparam int unsigned DFC_REG_ENGINE_PULSES_PER_REV__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_PULSES_PER_REV__RSV0_LO = 16;
+
   // REG-002 ENGINE_TIMEOUT_US (0x211C) field layout
   typedef struct packed {
     logic [31:0] TIMEOUT_US;  // access=RW reset=0x000186A0
   } dfc_reg_engine_timeout_us_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ENGINE_TIMEOUT_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_TIMEOUT_US__TIMEOUT_US_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_TIMEOUT_US__TIMEOUT_US_LO = 0;
+
   // REG-002 ENGINE_EDGE_FILTER (0x2120) field layout
   typedef struct packed {
     logic [31:0] MIN_EDGE_CYCLES;  // access=RW reset=0x00000000
   } dfc_reg_engine_edge_filter_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ENGINE_EDGE_FILTER_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_EDGE_FILTER__MIN_EDGE_CYCLES_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_EDGE_FILTER__MIN_EDGE_CYCLES_LO = 0;
 
   // REG-002 RTL008_EVT_OVERFLOW_STATUS (0x2124) field layout
   typedef struct packed {
@@ -3010,12 +4532,28 @@ package dfc_registers_pkg;
   } dfc_reg_rtl008_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL008_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 ENGINE_HYSTERESIS (0x2128) field layout
   typedef struct packed {
     logic [15:0] RSV0;  // access=RSV0 reset=0x0000
     logic [15:0] HYSTERESIS;  // access=RW reset=0x0000
   } dfc_reg_engine_hysteresis_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ENGINE_HYSTERESIS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ENGINE_HYSTERESIS__HYSTERESIS_HI = 15;
+  localparam int unsigned DFC_REG_ENGINE_HYSTERESIS__HYSTERESIS_LO = 0;
+  localparam int unsigned DFC_REG_ENGINE_HYSTERESIS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ENGINE_HYSTERESIS__RSV0_LO = 16;
 
   // REG-002 PULSE0_CONTROL (0x2200) field layout
   typedef struct packed {
@@ -3026,6 +4564,18 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_pulse0_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE0_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__RISING_EDGE_HI = 1;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__RISING_EDGE_LO = 1;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_CONTROL__RSV0_LO = 4;
 
   // REG-002 PULSE0_STATUS (0x2204) field layout
   typedef struct packed {
@@ -3039,11 +4589,31 @@ package dfc_registers_pkg;
   } dfc_reg_pulse0_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_PULSE0_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__VALID_HI = 0;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__VALID_LO = 0;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__LOW_HI = 1;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__LOW_LO = 1;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__HIGH_HI = 2;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__HIGH_LO = 2;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__TIMEOUT_HI = 3;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__TIMEOUT_LO = 3;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__RANGE_ERROR_HI = 4;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__RANGE_ERROR_LO = 4;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__UPDATED_HI = 5;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__UPDATED_LO = 5;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_STATUS__RSV0_LO = 6;
+
   // REG-002 PULSE0_FREQ_Q17_15 (0x2208) field layout
   typedef struct packed {
     logic [31:0] FREQUENCY_Q17_15;  // access=RO reset=0x00000000
   } dfc_reg_pulse0_freq_q17_15_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE0_FREQ_Q17_15_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_FREQ_Q17_15__FREQUENCY_Q17_15_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_FREQ_Q17_15__FREQUENCY_Q17_15_LO = 0;
 
   // REG-002 PULSE0_PERIOD_TICKS (0x220C) field layout
   typedef struct packed {
@@ -3051,11 +4621,19 @@ package dfc_registers_pkg;
   } dfc_reg_pulse0_period_ticks_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_PULSE0_PERIOD_TICKS_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_PERIOD_TICKS__PERIOD_TICKS_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_PERIOD_TICKS__PERIOD_TICKS_LO = 0;
+
   // REG-002 PULSE0_THRESH_LOW_Q17_15 (0x2210) field layout
   typedef struct packed {
     logic [31:0] THRESHOLD;  // access=RW reset=0x00004000
   } dfc_reg_pulse0_thresh_low_q17_15_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE0_THRESH_LOW_Q17_15_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_THRESH_LOW_Q17_15__THRESHOLD_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_THRESH_LOW_Q17_15__THRESHOLD_LO = 0;
 
   // REG-002 PULSE0_THRESH_HIGH_Q17_15 (0x2214) field layout
   typedef struct packed {
@@ -3063,11 +4641,19 @@ package dfc_registers_pkg;
   } dfc_reg_pulse0_thresh_high_q17_15_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_PULSE0_THRESH_HIGH_Q17_15_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_THRESH_HIGH_Q17_15__THRESHOLD_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_THRESH_HIGH_Q17_15__THRESHOLD_LO = 0;
+
   // REG-002 PULSE0_TIMEOUT_US (0x2218) field layout
   typedef struct packed {
     logic [31:0] TIMEOUT_US;  // access=RW reset=0x002625A0
   } dfc_reg_pulse0_timeout_us_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE0_TIMEOUT_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_TIMEOUT_US__TIMEOUT_US_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_TIMEOUT_US__TIMEOUT_US_LO = 0;
 
   // REG-002 PULSE0_EDGE_FILTER (0x221C) field layout
   typedef struct packed {
@@ -3075,11 +4661,19 @@ package dfc_registers_pkg;
   } dfc_reg_pulse0_edge_filter_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_PULSE0_EDGE_FILTER_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_EDGE_FILTER__MIN_EDGE_CYCLES_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_EDGE_FILTER__MIN_EDGE_CYCLES_LO = 0;
+
   // REG-002 PULSE0_HYSTERESIS_Q17_15 (0x2220) field layout
   typedef struct packed {
     logic [31:0] HYSTERESIS;  // access=RW reset=0x00000000
   } dfc_reg_pulse0_hysteresis_q17_15_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE0_HYSTERESIS_Q17_15_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE0_HYSTERESIS_Q17_15__HYSTERESIS_HI = 31;
+  localparam int unsigned DFC_REG_PULSE0_HYSTERESIS_Q17_15__HYSTERESIS_LO = 0;
 
   // REG-002 PULSE1_CONTROL (0x2230) field layout
   typedef struct packed {
@@ -3090,6 +4684,18 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_pulse1_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE1_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__RISING_EDGE_HI = 1;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__RISING_EDGE_LO = 1;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_CONTROL__RSV0_LO = 4;
 
   // REG-002 PULSE1_STATUS (0x2234) field layout
   typedef struct packed {
@@ -3103,11 +4709,31 @@ package dfc_registers_pkg;
   } dfc_reg_pulse1_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_PULSE1_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__VALID_HI = 0;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__VALID_LO = 0;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__LOW_HI = 1;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__LOW_LO = 1;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__HIGH_HI = 2;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__HIGH_LO = 2;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__TIMEOUT_HI = 3;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__TIMEOUT_LO = 3;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__RANGE_ERROR_HI = 4;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__RANGE_ERROR_LO = 4;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__UPDATED_HI = 5;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__UPDATED_LO = 5;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_STATUS__RSV0_LO = 6;
+
   // REG-002 PULSE1_FREQ_Q17_15 (0x2238) field layout
   typedef struct packed {
     logic [31:0] FREQUENCY_Q17_15;  // access=RO reset=0x00000000
   } dfc_reg_pulse1_freq_q17_15_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE1_FREQ_Q17_15_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_FREQ_Q17_15__FREQUENCY_Q17_15_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_FREQ_Q17_15__FREQUENCY_Q17_15_LO = 0;
 
   // REG-002 PULSE1_PERIOD_TICKS (0x223C) field layout
   typedef struct packed {
@@ -3115,11 +4741,19 @@ package dfc_registers_pkg;
   } dfc_reg_pulse1_period_ticks_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_PULSE1_PERIOD_TICKS_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_PERIOD_TICKS__PERIOD_TICKS_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_PERIOD_TICKS__PERIOD_TICKS_LO = 0;
+
   // REG-002 PULSE1_THRESH_LOW_Q17_15 (0x2240) field layout
   typedef struct packed {
     logic [31:0] THRESHOLD;  // access=RW reset=0x00004000
   } dfc_reg_pulse1_thresh_low_q17_15_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE1_THRESH_LOW_Q17_15_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_THRESH_LOW_Q17_15__THRESHOLD_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_THRESH_LOW_Q17_15__THRESHOLD_LO = 0;
 
   // REG-002 PULSE1_THRESH_HIGH_Q17_15 (0x2244) field layout
   typedef struct packed {
@@ -3127,17 +4761,29 @@ package dfc_registers_pkg;
   } dfc_reg_pulse1_thresh_high_q17_15_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_PULSE1_THRESH_HIGH_Q17_15_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_THRESH_HIGH_Q17_15__THRESHOLD_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_THRESH_HIGH_Q17_15__THRESHOLD_LO = 0;
+
   // REG-002 PULSE1_TIMEOUT_US (0x2248) field layout
   typedef struct packed {
     logic [31:0] TIMEOUT_US;  // access=RW reset=0x002625A0
   } dfc_reg_pulse1_timeout_us_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_PULSE1_TIMEOUT_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_TIMEOUT_US__TIMEOUT_US_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_TIMEOUT_US__TIMEOUT_US_LO = 0;
+
   // REG-002 PULSE1_EDGE_FILTER (0x224C) field layout
   typedef struct packed {
     logic [31:0] MIN_EDGE_CYCLES;  // access=RW reset=0x00000000
   } dfc_reg_pulse1_edge_filter_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE1_EDGE_FILTER_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_EDGE_FILTER__MIN_EDGE_CYCLES_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_EDGE_FILTER__MIN_EDGE_CYCLES_LO = 0;
 
   // REG-002 RTL009_EVT_OVERFLOW_STATUS (0x2250) field layout
   typedef struct packed {
@@ -3148,11 +4794,25 @@ package dfc_registers_pkg;
   } dfc_reg_rtl009_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL009_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 PULSE1_HYSTERESIS_Q17_15 (0x2254) field layout
   typedef struct packed {
     logic [31:0] HYSTERESIS;  // access=RW reset=0x00000000
   } dfc_reg_pulse1_hysteresis_q17_15_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_PULSE1_HYSTERESIS_Q17_15_WIDTH = 32;
+  localparam int unsigned DFC_REG_PULSE1_HYSTERESIS_Q17_15__HYSTERESIS_HI = 31;
+  localparam int unsigned DFC_REG_PULSE1_HYSTERESIS_Q17_15__HYSTERESIS_LO = 0;
 
   // REG-002 SENSOR_CONTROL (0x2300) field layout
   typedef struct packed {
@@ -3162,6 +4822,16 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_sensor_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_SENSOR_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR_CONTROL__EVENT_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_SENSOR_CONTROL__EVENT_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_SENSOR_CONTROL__IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_SENSOR_CONTROL__IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_SENSOR_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR_CONTROL__RSV0_LO = 3;
 
   // REG-002 SENSOR_STATUS (0x2304) field layout
   typedef struct packed {
@@ -3175,6 +4845,22 @@ package dfc_registers_pkg;
   } dfc_reg_sensor_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__ANY_INVALID_HI = 0;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__ANY_INVALID_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__ANY_STALE_HI = 1;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__ANY_STALE_LO = 1;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__ANY_LOW_HI = 2;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__ANY_LOW_LO = 2;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__ANY_HIGH_HI = 3;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__ANY_HIGH_LO = 3;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__UPDATE_REJECTED_HI = 4;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__UPDATE_REJECTED_LO = 4;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__UPDATED_HI = 5;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__UPDATED_LO = 5;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR_STATUS__RSV0_LO = 6;
+
   // REG-002 SENSOR_UPDATE_SELECT (0x2308) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -3182,11 +4868,21 @@ package dfc_registers_pkg;
   } dfc_reg_sensor_update_select_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_SELECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_SELECT__CHANNEL_HI = 0;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_SELECT__CHANNEL_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_SELECT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_SELECT__RSV0_LO = 1;
+
   // REG-002 SENSOR_UPDATE_VALUE (0x230C) field layout
   typedef struct packed {
     logic [31:0] VALUE;  // access=RW reset=0x00000000
   } dfc_reg_sensor_update_value_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_VALUE_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_VALUE__VALUE_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_VALUE__VALUE_LO = 0;
 
   // REG-002 SENSOR_UPDATE_META (0x2310) field layout
   typedef struct packed {
@@ -3196,6 +4892,14 @@ package dfc_registers_pkg;
   } dfc_reg_sensor_update_meta_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_META_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_META__VALID_HI = 0;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_META__VALID_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_META__SOURCE_HI = 7;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_META__SOURCE_LO = 1;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_META__SEQUENCE_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_META__SEQUENCE_LO = 8;
+
   // REG-002 SENSOR_UPDATE_COMMIT (0x2314) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -3203,11 +4907,21 @@ package dfc_registers_pkg;
   } dfc_reg_sensor_update_commit_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_COMMIT_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_COMMIT__COMMIT_HI = 0;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_COMMIT__COMMIT_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_COMMIT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR_UPDATE_COMMIT__RSV0_LO = 1;
+
   // REG-002 SENSOR0_VALUE (0x2320) field layout
   typedef struct packed {
     logic [31:0] VALUE;  // access=RO reset=0x00000000
   } dfc_reg_sensor0_value_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR0_VALUE_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_VALUE__VALUE_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_VALUE__VALUE_LO = 0;
 
   // REG-002 SENSOR0_STATUS (0x2324) field layout
   typedef struct packed {
@@ -3220,11 +4934,29 @@ package dfc_registers_pkg;
   } dfc_reg_sensor0_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR0_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__VALID_HI = 0;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__VALID_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__STALE_HI = 1;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__STALE_LO = 1;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__LOW_HI = 2;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__LOW_LO = 2;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__HIGH_HI = 3;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__HIGH_LO = 3;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__EVENT_HI = 4;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__EVENT_LO = 4;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_STATUS__RSV0_LO = 5;
+
   // REG-002 SENSOR0_MAX_AGE_MS (0x2328) field layout
   typedef struct packed {
     logic [31:0] MAX_AGE_MS;  // access=RW reset=0x00000000
   } dfc_reg_sensor0_max_age_ms_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR0_MAX_AGE_MS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_MAX_AGE_MS__MAX_AGE_MS_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_MAX_AGE_MS__MAX_AGE_MS_LO = 0;
 
   // REG-002 SENSOR0_CURRENT_AGE_MS (0x232C) field layout
   typedef struct packed {
@@ -3232,17 +4964,29 @@ package dfc_registers_pkg;
   } dfc_reg_sensor0_current_age_ms_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR0_CURRENT_AGE_MS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_CURRENT_AGE_MS__CURRENT_AGE_MS_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_CURRENT_AGE_MS__CURRENT_AGE_MS_LO = 0;
+
   // REG-002 SENSOR0_THRESH_LOW (0x2330) field layout
   typedef struct packed {
     logic [31:0] THRESHOLD;  // access=RW reset=0x80000000
   } dfc_reg_sensor0_thresh_low_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR0_THRESH_LOW_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_THRESH_LOW__THRESHOLD_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_THRESH_LOW__THRESHOLD_LO = 0;
+
   // REG-002 SENSOR0_THRESH_HIGH (0x2334) field layout
   typedef struct packed {
     logic [31:0] THRESHOLD;  // access=RW reset=0x7FFFFFFF
   } dfc_reg_sensor0_thresh_high_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR0_THRESH_HIGH_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_THRESH_HIGH__THRESHOLD_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_THRESH_HIGH__THRESHOLD_LO = 0;
 
   // REG-002 SENSOR0_EVENT_IRQ_CFG (0x2338) field layout
   typedef struct packed {
@@ -3252,11 +4996,23 @@ package dfc_registers_pkg;
   } dfc_reg_sensor0_event_irq_cfg_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR0_EVENT_IRQ_CFG_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_EVENT_IRQ_CFG__EVENT_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_SENSOR0_EVENT_IRQ_CFG__EVENT_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR0_EVENT_IRQ_CFG__IRQ_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_SENSOR0_EVENT_IRQ_CFG__IRQ_ENABLE_LO = 4;
+  localparam int unsigned DFC_REG_SENSOR0_EVENT_IRQ_CFG__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_EVENT_IRQ_CFG__RSV0_LO = 8;
+
   // REG-002 SENSOR1_VALUE (0x2340) field layout
   typedef struct packed {
     logic [31:0] VALUE;  // access=RO reset=0x00000000
   } dfc_reg_sensor1_value_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR1_VALUE_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_VALUE__VALUE_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_VALUE__VALUE_LO = 0;
 
   // REG-002 SENSOR1_STATUS (0x2344) field layout
   typedef struct packed {
@@ -3269,11 +5025,29 @@ package dfc_registers_pkg;
   } dfc_reg_sensor1_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR1_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__VALID_HI = 0;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__VALID_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__STALE_HI = 1;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__STALE_LO = 1;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__LOW_HI = 2;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__LOW_LO = 2;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__HIGH_HI = 3;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__HIGH_LO = 3;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__EVENT_HI = 4;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__EVENT_LO = 4;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_STATUS__RSV0_LO = 5;
+
   // REG-002 SENSOR1_MAX_AGE_MS (0x2348) field layout
   typedef struct packed {
     logic [31:0] MAX_AGE_MS;  // access=RW reset=0x00000000
   } dfc_reg_sensor1_max_age_ms_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR1_MAX_AGE_MS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_MAX_AGE_MS__MAX_AGE_MS_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_MAX_AGE_MS__MAX_AGE_MS_LO = 0;
 
   // REG-002 SENSOR1_CURRENT_AGE_MS (0x234C) field layout
   typedef struct packed {
@@ -3281,17 +5055,29 @@ package dfc_registers_pkg;
   } dfc_reg_sensor1_current_age_ms_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR1_CURRENT_AGE_MS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_CURRENT_AGE_MS__CURRENT_AGE_MS_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_CURRENT_AGE_MS__CURRENT_AGE_MS_LO = 0;
+
   // REG-002 SENSOR1_THRESH_LOW (0x2350) field layout
   typedef struct packed {
     logic [31:0] THRESHOLD;  // access=RW reset=0x80000000
   } dfc_reg_sensor1_thresh_low_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR1_THRESH_LOW_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_THRESH_LOW__THRESHOLD_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_THRESH_LOW__THRESHOLD_LO = 0;
+
   // REG-002 SENSOR1_THRESH_HIGH (0x2354) field layout
   typedef struct packed {
     logic [31:0] THRESHOLD;  // access=RW reset=0x7FFFFFFF
   } dfc_reg_sensor1_thresh_high_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR1_THRESH_HIGH_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_THRESH_HIGH__THRESHOLD_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_THRESH_HIGH__THRESHOLD_LO = 0;
 
   // REG-002 SENSOR1_EVENT_IRQ_CFG (0x2358) field layout
   typedef struct packed {
@@ -3300,6 +5086,14 @@ package dfc_registers_pkg;
     logic [3:0] EVENT_ENABLE;  // access=RW reset=0x0
   } dfc_reg_sensor1_event_irq_cfg_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR1_EVENT_IRQ_CFG_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_EVENT_IRQ_CFG__EVENT_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_SENSOR1_EVENT_IRQ_CFG__EVENT_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR1_EVENT_IRQ_CFG__IRQ_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_SENSOR1_EVENT_IRQ_CFG__IRQ_ENABLE_LO = 4;
+  localparam int unsigned DFC_REG_SENSOR1_EVENT_IRQ_CFG__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_EVENT_IRQ_CFG__RSV0_LO = 8;
 
   // REG-002 RTL010_EVT_OVERFLOW_STATUS (0x235C) field layout
   typedef struct packed {
@@ -3310,11 +5104,25 @@ package dfc_registers_pkg;
   } dfc_reg_rtl010_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL010_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 SENSOR0_HYSTERESIS (0x2360) field layout
   typedef struct packed {
     logic [31:0] HYSTERESIS;  // access=RW reset=0x00000000
   } dfc_reg_sensor0_hysteresis_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR0_HYSTERESIS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_HYSTERESIS__HYSTERESIS_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_HYSTERESIS__HYSTERESIS_LO = 0;
 
   // REG-002 SENSOR0_META (0x2364) field layout
   typedef struct packed {
@@ -3324,11 +5132,23 @@ package dfc_registers_pkg;
   } dfc_reg_sensor0_meta_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR0_META_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR0_META__SOURCE_HI = 6;
+  localparam int unsigned DFC_REG_SENSOR0_META__SOURCE_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR0_META__SEQUENCE_HI = 30;
+  localparam int unsigned DFC_REG_SENSOR0_META__SEQUENCE_LO = 7;
+  localparam int unsigned DFC_REG_SENSOR0_META__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR0_META__RSV0_LO = 31;
+
   // REG-002 SENSOR1_HYSTERESIS (0x2368) field layout
   typedef struct packed {
     logic [31:0] HYSTERESIS;  // access=RW reset=0x00000000
   } dfc_reg_sensor1_hysteresis_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SENSOR1_HYSTERESIS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_HYSTERESIS__HYSTERESIS_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_HYSTERESIS__HYSTERESIS_LO = 0;
 
   // REG-002 SENSOR1_META (0x236C) field layout
   typedef struct packed {
@@ -3338,12 +5158,26 @@ package dfc_registers_pkg;
   } dfc_reg_sensor1_meta_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SENSOR1_META_WIDTH = 32;
+  localparam int unsigned DFC_REG_SENSOR1_META__SOURCE_HI = 6;
+  localparam int unsigned DFC_REG_SENSOR1_META__SOURCE_LO = 0;
+  localparam int unsigned DFC_REG_SENSOR1_META__SEQUENCE_HI = 30;
+  localparam int unsigned DFC_REG_SENSOR1_META__SEQUENCE_LO = 7;
+  localparam int unsigned DFC_REG_SENSOR1_META__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SENSOR1_META__RSV0_LO = 31;
+
   // REG-002 HEALTH_CONTROL (0x2400) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_health_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HEALTH_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_HEALTH_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_CONTROL__RSV0_LO = 1;
 
   // REG-002 HEALTH_RAW_IN (0x2404) field layout
   typedef struct packed {
@@ -3352,12 +5186,24 @@ package dfc_registers_pkg;
   } dfc_reg_health_raw_in_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HEALTH_RAW_IN_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_RAW_IN__RAW_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_RAW_IN__RAW_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_RAW_IN__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_RAW_IN__RSV0_LO = 8;
+
   // REG-002 HEALTH_SYNC_IN (0x2408) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] SYNC;  // access=RO reset=0x00
   } dfc_reg_health_sync_in_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HEALTH_SYNC_IN_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_SYNC_IN__SYNC_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_SYNC_IN__SYNC_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_SYNC_IN__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_SYNC_IN__RSV0_LO = 8;
 
   // REG-002 HEALTH_QUAL_IN (0x240C) field layout
   typedef struct packed {
@@ -3366,12 +5212,24 @@ package dfc_registers_pkg;
   } dfc_reg_health_qual_in_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HEALTH_QUAL_IN_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_IN__QUALIFIED_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_IN__QUALIFIED_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_IN__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_IN__RSV0_LO = 8;
+
   // REG-002 HEALTH_ACTIVE (0x2410) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] ACTIVE;  // access=RO reset=0x00
   } dfc_reg_health_active_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HEALTH_ACTIVE_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_ACTIVE__ACTIVE_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_ACTIVE__ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_ACTIVE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_ACTIVE__RSV0_LO = 8;
 
   // REG-002 HEALTH_STICKY (0x2414) field layout
   typedef struct packed {
@@ -3382,12 +5240,28 @@ package dfc_registers_pkg;
   } dfc_reg_health_sticky_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HEALTH_STICKY_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_STICKY__ASSERTED_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_STICKY__ASSERTED_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_STICKY__RECOVERED_HI = 15;
+  localparam int unsigned DFC_REG_HEALTH_STICKY__RECOVERED_LO = 8;
+  localparam int unsigned DFC_REG_HEALTH_STICKY__QUALIFICATION_FAILURE_HI = 23;
+  localparam int unsigned DFC_REG_HEALTH_STICKY__QUALIFICATION_FAILURE_LO = 16;
+  localparam int unsigned DFC_REG_HEALTH_STICKY__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_STICKY__RSV0_LO = 24;
+
   // REG-002 HEALTH_POLARITY (0x2418) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] ACTIVE_HIGH;  // access=RW reset=0x00
   } dfc_reg_health_polarity_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HEALTH_POLARITY_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_POLARITY__ACTIVE_HIGH_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_POLARITY__ACTIVE_HIGH_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_POLARITY__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_POLARITY__RSV0_LO = 8;
 
   // REG-002 HEALTH_FAULT_ENABLE (0x241C) field layout
   typedef struct packed {
@@ -3396,6 +5270,12 @@ package dfc_registers_pkg;
   } dfc_reg_health_fault_enable_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HEALTH_FAULT_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_FAULT_ENABLE__FAULT_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_FAULT_ENABLE__FAULT_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_FAULT_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_FAULT_ENABLE__RSV0_LO = 8;
+
   // REG-002 HEALTH_EVENT_ENABLE (0x2420) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
@@ -3403,12 +5283,24 @@ package dfc_registers_pkg;
   } dfc_reg_health_event_enable_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HEALTH_EVENT_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_EVENT_ENABLE__EVENT_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_EVENT_ENABLE__EVENT_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_EVENT_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_EVENT_ENABLE__RSV0_LO = 8;
+
   // REG-002 HEALTH_IRQ_ENABLE (0x2424) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] IRQ_ENABLE;  // access=RW reset=0x00
   } dfc_reg_health_irq_enable_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HEALTH_IRQ_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_IRQ_ENABLE__IRQ_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_IRQ_ENABLE__IRQ_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_IRQ_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_IRQ_ENABLE__RSV0_LO = 8;
 
   // REG-002 HEALTH_QUAL_0_3 (0x2428) field layout
   typedef struct packed {
@@ -3419,6 +5311,16 @@ package dfc_registers_pkg;
   } dfc_reg_health_qual_0_3_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3__CH0_MS_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3__CH0_MS_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3__CH1_MS_HI = 15;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3__CH1_MS_LO = 8;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3__CH2_MS_HI = 23;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3__CH2_MS_LO = 16;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3__CH3_MS_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_0_3__CH3_MS_LO = 24;
+
   // REG-002 HEALTH_QUAL_4_7 (0x242C) field layout
   typedef struct packed {
     logic [7:0] CH7_MS;  // access=RW reset=0x00
@@ -3427,6 +5329,16 @@ package dfc_registers_pkg;
     logic [7:0] CH4_MS;  // access=RW reset=0x00
   } dfc_reg_health_qual_4_7_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7__CH4_MS_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7__CH4_MS_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7__CH5_MS_HI = 15;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7__CH5_MS_LO = 8;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7__CH6_MS_HI = 23;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7__CH6_MS_LO = 16;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7__CH7_MS_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_QUAL_4_7__CH7_MS_LO = 24;
 
   // REG-002 RTL011_EVT_OVERFLOW_STATUS (0x2430) field layout
   typedef struct packed {
@@ -3437,6 +5349,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl011_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL011_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 HEALTH_QUALIFICATION (0x2434) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
@@ -3444,12 +5366,24 @@ package dfc_registers_pkg;
   } dfc_reg_health_qualification_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_HEALTH_QUALIFICATION_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_QUALIFICATION__IN_PROGRESS_HI = 7;
+  localparam int unsigned DFC_REG_HEALTH_QUALIFICATION__IN_PROGRESS_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_QUALIFICATION__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_QUALIFICATION__RSV0_LO = 8;
+
   // REG-002 HEALTH_STATUS (0x2438) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
     logic AGGREGATE_FAULT;  // access=RO reset=0
   } dfc_reg_health_status_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_HEALTH_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_HEALTH_STATUS__AGGREGATE_FAULT_HI = 0;
+  localparam int unsigned DFC_REG_HEALTH_STATUS__AGGREGATE_FAULT_LO = 0;
+  localparam int unsigned DFC_REG_HEALTH_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_HEALTH_STATUS__RSV0_LO = 1;
 
   // REG-002 WDOG_CONTROL (0x3000) field layout
   typedef struct packed {
@@ -3463,11 +5397,31 @@ package dfc_registers_pkg;
   } dfc_reg_wdog_control_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_WDOG_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__WINDOW_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__WINDOW_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__FAULT_ENABLE_HI = 4;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__FAULT_ENABLE_LO = 4;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__SAFETY_RESPONSE_MASK_HI = 8;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__SAFETY_RESPONSE_MASK_LO = 5;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_WDOG_CONTROL__RSV0_LO = 9;
+
   // REG-002 WDOG_WINDOW_OPEN_US (0x3004) field layout
   typedef struct packed {
     logic [31:0] WINDOW_OPEN_US;  // access=RW reset=0x00000000
   } dfc_reg_wdog_window_open_us_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_WDOG_WINDOW_OPEN_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_WDOG_WINDOW_OPEN_US__WINDOW_OPEN_US_HI = 31;
+  localparam int unsigned DFC_REG_WDOG_WINDOW_OPEN_US__WINDOW_OPEN_US_LO = 0;
 
   // REG-002 WDOG_TIMEOUT_US (0x3008) field layout
   typedef struct packed {
@@ -3475,11 +5429,19 @@ package dfc_registers_pkg;
   } dfc_reg_wdog_timeout_us_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_WDOG_TIMEOUT_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_WDOG_TIMEOUT_US__TIMEOUT_US_HI = 31;
+  localparam int unsigned DFC_REG_WDOG_TIMEOUT_US__TIMEOUT_US_LO = 0;
+
   // REG-002 WDOG_SERVICE (0x300C) field layout
   typedef struct packed {
     logic [31:0] SERVICE_KEY;  // access=WO-CMD reset=0x00000000
   } dfc_reg_wdog_service_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_WDOG_SERVICE_WIDTH = 32;
+  localparam int unsigned DFC_REG_WDOG_SERVICE__SERVICE_KEY_HI = 31;
+  localparam int unsigned DFC_REG_WDOG_SERVICE__SERVICE_KEY_LO = 0;
 
   // REG-002 WDOG_STATUS (0x3010) field layout
   typedef struct packed {
@@ -3494,11 +5456,33 @@ package dfc_registers_pkg;
   } dfc_reg_wdog_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_WDOG_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_WDOG_STATUS__ENABLED_HI = 0;
+  localparam int unsigned DFC_REG_WDOG_STATUS__ENABLED_LO = 0;
+  localparam int unsigned DFC_REG_WDOG_STATUS__WINDOW_OPEN_HI = 1;
+  localparam int unsigned DFC_REG_WDOG_STATUS__WINDOW_OPEN_LO = 1;
+  localparam int unsigned DFC_REG_WDOG_STATUS__SERVICE_ACCEPTED_HI = 2;
+  localparam int unsigned DFC_REG_WDOG_STATUS__SERVICE_ACCEPTED_LO = 2;
+  localparam int unsigned DFC_REG_WDOG_STATUS__EARLY_SERVICE_HI = 3;
+  localparam int unsigned DFC_REG_WDOG_STATUS__EARLY_SERVICE_LO = 3;
+  localparam int unsigned DFC_REG_WDOG_STATUS__BAD_SERVICE_KEY_HI = 4;
+  localparam int unsigned DFC_REG_WDOG_STATUS__BAD_SERVICE_KEY_LO = 4;
+  localparam int unsigned DFC_REG_WDOG_STATUS__TIMEOUT_HI = 5;
+  localparam int unsigned DFC_REG_WDOG_STATUS__TIMEOUT_LO = 5;
+  localparam int unsigned DFC_REG_WDOG_STATUS__RESPONSE_PENDING_HI = 6;
+  localparam int unsigned DFC_REG_WDOG_STATUS__RESPONSE_PENDING_LO = 6;
+  localparam int unsigned DFC_REG_WDOG_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_WDOG_STATUS__RSV0_LO = 7;
+
   // REG-002 WDOG_ELAPSED_US (0x3014) field layout
   typedef struct packed {
     logic [31:0] ELAPSED_US;  // access=RO reset=0x00000000
   } dfc_reg_wdog_elapsed_us_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_WDOG_ELAPSED_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_WDOG_ELAPSED_US__ELAPSED_US_HI = 31;
+  localparam int unsigned DFC_REG_WDOG_ELAPSED_US__ELAPSED_US_LO = 0;
 
   // REG-002 WDOG_RECOVERY (0x3018) field layout
   typedef struct packed {
@@ -3506,6 +5490,12 @@ package dfc_registers_pkg;
     logic RECOVER;  // access=WO-CMD reset=0
   } dfc_reg_wdog_recovery_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_WDOG_RECOVERY_WIDTH = 32;
+  localparam int unsigned DFC_REG_WDOG_RECOVERY__RECOVER_HI = 0;
+  localparam int unsigned DFC_REG_WDOG_RECOVERY__RECOVER_LO = 0;
+  localparam int unsigned DFC_REG_WDOG_RECOVERY__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_WDOG_RECOVERY__RSV0_LO = 1;
 
   // REG-002 RTL012_EVT_OVERFLOW_STATUS (0x301C) field layout
   typedef struct packed {
@@ -3516,6 +5506,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl012_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL012_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 FAULT_CONTROL (0x3100) field layout
   typedef struct packed {
     logic [29:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -3523,6 +5523,14 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_fault_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_FAULT_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_FAULT_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_FAULT_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_FAULT_CONTROL__CLEAR_ALL_REQ_HI = 1;
+  localparam int unsigned DFC_REG_FAULT_CONTROL__CLEAR_ALL_REQ_LO = 1;
+  localparam int unsigned DFC_REG_FAULT_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_FAULT_CONTROL__RSV0_LO = 2;
 
   // REG-002 FAULT_STATUS (0x3104) field layout
   typedef struct packed {
@@ -3535,6 +5543,20 @@ package dfc_registers_pkg;
   } dfc_reg_fault_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_FAULT_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_FAULT_STATUS__FAULT_ACTIVE_HI = 0;
+  localparam int unsigned DFC_REG_FAULT_STATUS__FAULT_ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_FAULT_STATUS__MULTI_FAULT_HI = 1;
+  localparam int unsigned DFC_REG_FAULT_STATUS__MULTI_FAULT_LO = 1;
+  localparam int unsigned DFC_REG_FAULT_STATUS__EVENT_PENDING_HI = 2;
+  localparam int unsigned DFC_REG_FAULT_STATUS__EVENT_PENDING_LO = 2;
+  localparam int unsigned DFC_REG_FAULT_STATUS__RESPONSE_PENDING_HI = 3;
+  localparam int unsigned DFC_REG_FAULT_STATUS__RESPONSE_PENDING_LO = 3;
+  localparam int unsigned DFC_REG_FAULT_STATUS__CLASS_VALID_HI = 4;
+  localparam int unsigned DFC_REG_FAULT_STATUS__CLASS_VALID_LO = 4;
+  localparam int unsigned DFC_REG_FAULT_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_FAULT_STATUS__RSV0_LO = 5;
+
   // REG-002 FAULT_CLASS (0x3108) field layout
   typedef struct packed {
     logic [17:0] RSV0;  // access=RSV0 reset=0x00000
@@ -3543,6 +5565,16 @@ package dfc_registers_pkg;
     logic [7:0] CLASS;  // access=RO reset=0x00
   } dfc_reg_fault_class_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_FAULT_CLASS_WIDTH = 32;
+  localparam int unsigned DFC_REG_FAULT_CLASS__CLASS_HI = 7;
+  localparam int unsigned DFC_REG_FAULT_CLASS__CLASS_LO = 0;
+  localparam int unsigned DFC_REG_FAULT_CLASS__PRIMARY_SOURCE_HI = 12;
+  localparam int unsigned DFC_REG_FAULT_CLASS__PRIMARY_SOURCE_LO = 8;
+  localparam int unsigned DFC_REG_FAULT_CLASS__MULTIPLE_HI = 13;
+  localparam int unsigned DFC_REG_FAULT_CLASS__MULTIPLE_LO = 13;
+  localparam int unsigned DFC_REG_FAULT_CLASS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_FAULT_CLASS__RSV0_LO = 14;
 
   // REG-002 FAULT_RESPONSE (0x310C) field layout
   typedef struct packed {
@@ -3555,6 +5587,20 @@ package dfc_registers_pkg;
   } dfc_reg_fault_response_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_FAULT_RESPONSE_WIDTH = 32;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__DEGRADED_ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__DEGRADED_ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__SAFETY_RESPONSE_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__SAFETY_RESPONSE_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__EVENT_ON_CLEAR_HI = 2;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__EVENT_ON_CLEAR_LO = 2;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__LATCH_UNTIL_HOST_CLEAR_HI = 3;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__LATCH_UNTIL_HOST_CLEAR_LO = 3;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__SAFETY_OUTPUT_REQUEST_ENABLE_HI = 7;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__SAFETY_OUTPUT_REQUEST_ENABLE_LO = 4;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_FAULT_RESPONSE__RSV0_LO = 8;
+
   // REG-002 DEGRADED_STATUS (0x3110) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -3565,11 +5611,27 @@ package dfc_registers_pkg;
   } dfc_reg_degraded_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_DEGRADED_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__ACTIVE_HI = 0;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__ENTRY_HI = 1;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__ENTRY_LO = 1;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__RECOVERY_AVAILABLE_HI = 2;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__RECOVERY_AVAILABLE_LO = 2;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__RECOVERED_HI = 3;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__RECOVERED_LO = 3;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_DEGRADED_STATUS__RSV0_LO = 4;
+
   // REG-002 FAULT_ACTIVE_SOURCE (0x3114) field layout
   typedef struct packed {
     logic [31:0] ACTIVE_SOURCE;  // access=RO reset=0x00000000
   } dfc_reg_fault_active_source_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_FAULT_ACTIVE_SOURCE_WIDTH = 32;
+  localparam int unsigned DFC_REG_FAULT_ACTIVE_SOURCE__ACTIVE_SOURCE_HI = 31;
+  localparam int unsigned DFC_REG_FAULT_ACTIVE_SOURCE__ACTIVE_SOURCE_LO = 0;
 
   // REG-002 FAULT_LATCHED_SOURCE (0x3118) field layout
   typedef struct packed {
@@ -3577,11 +5639,19 @@ package dfc_registers_pkg;
   } dfc_reg_fault_latched_source_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_FAULT_LATCHED_SOURCE_WIDTH = 32;
+  localparam int unsigned DFC_REG_FAULT_LATCHED_SOURCE__LATCHED_SOURCE_HI = 31;
+  localparam int unsigned DFC_REG_FAULT_LATCHED_SOURCE__LATCHED_SOURCE_LO = 0;
+
   // REG-002 FAULT_RECOVERABLE_MASK (0x311C) field layout
   typedef struct packed {
     logic [31:0] RECOVERABLE;  // access=CONST reset=0x00017FEF
   } dfc_reg_fault_recoverable_mask_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_FAULT_RECOVERABLE_MASK_WIDTH = 32;
+  localparam int unsigned DFC_REG_FAULT_RECOVERABLE_MASK__RECOVERABLE_HI = 31;
+  localparam int unsigned DFC_REG_FAULT_RECOVERABLE_MASK__RECOVERABLE_LO = 0;
 
   // REG-002 RTL013_EVT_OVERFLOW_STATUS (0x3120) field layout
   typedef struct packed {
@@ -3592,6 +5662,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl013_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL013_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 ILOCK_CONTROL (0x3200) field layout
   typedef struct packed {
     logic [28:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -3600,6 +5680,16 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_ilock_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ILOCK_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ILOCK_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_CONTROL__EVENT_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_ILOCK_CONTROL__EVENT_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_ILOCK_CONTROL__IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ILOCK_CONTROL__IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ILOCK_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_CONTROL__RSV0_LO = 3;
 
   // REG-002 ILOCK_STATUS (0x3204) field layout
   typedef struct packed {
@@ -3611,12 +5701,30 @@ package dfc_registers_pkg;
   } dfc_reg_ilock_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ILOCK_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__VIOLATION_ACTIVE_HI = 7;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__VIOLATION_ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__VIOLATION_STICKY_HI = 15;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__VIOLATION_STICKY_LO = 8;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__COMMIT_COMPLETE_HI = 16;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__COMMIT_COMPLETE_LO = 16;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__COMMIT_REJECTED_HI = 17;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__COMMIT_REJECTED_LO = 17;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__RSV0_LO = 18;
+
   // REG-002 ILOCK_ENTRY_SELECT (0x3208) field layout
   typedef struct packed {
     logic [28:0] RSV0;  // access=RSV0 reset=0x00000000
     logic [2:0] ENTRY;  // access=RW reset=0x0
   } dfc_reg_ilock_entry_select_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ILOCK_ENTRY_SELECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_ENTRY_SELECT__ENTRY_HI = 2;
+  localparam int unsigned DFC_REG_ILOCK_ENTRY_SELECT__ENTRY_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_ENTRY_SELECT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_ENTRY_SELECT__RSV0_LO = 3;
 
   // REG-002 ILOCK_STAGE_TERMS (0x320C) field layout
   typedef struct packed {
@@ -3627,6 +5735,16 @@ package dfc_registers_pkg;
   } dfc_reg_ilock_stage_terms_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS__TERM0_HI = 7;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS__TERM0_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS__TERM1_HI = 15;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS__TERM1_LO = 8;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS__TERM2_HI = 23;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS__TERM2_LO = 16;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS__TERM3_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_TERMS__TERM3_LO = 24;
+
   // REG-002 ILOCK_STAGE_LOGIC (0x3210) field layout
   typedef struct packed {
     logic [24:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -3635,12 +5753,26 @@ package dfc_registers_pkg;
   } dfc_reg_ilock_stage_logic_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ILOCK_STAGE_LOGIC_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_LOGIC__INVERT_MASK_HI = 3;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_LOGIC__INVERT_MASK_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_LOGIC__OPERATOR_HI = 6;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_LOGIC__OPERATOR_LO = 4;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_LOGIC__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_LOGIC__RSV0_LO = 7;
+
   // REG-002 ILOCK_STAGE_GUARD (0x3214) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] GUARD_MASK;  // access=RW reset=0x00
   } dfc_reg_ilock_stage_guard_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ILOCK_STAGE_GUARD_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_GUARD__GUARD_MASK_HI = 7;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_GUARD__GUARD_MASK_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_GUARD__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_GUARD__RSV0_LO = 8;
 
   // REG-002 ILOCK_STAGE_ENABLE (0x3218) field layout
   typedef struct packed {
@@ -3652,12 +5784,30 @@ package dfc_registers_pkg;
   } dfc_reg_ilock_stage_enable_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__LATCH_VIOLATION_HI = 1;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__LATCH_VIOLATION_LO = 1;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_ENABLE__RSV0_LO = 4;
+
   // REG-002 ILOCK_VALIDATE_COMMIT (0x321C) field layout
   typedef struct packed {
     logic [30:0] RSV0;  // access=RSV0 reset=0x00000000
     logic COMMIT_ALL;  // access=WO-CMD reset=0
   } dfc_reg_ilock_validate_commit_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ILOCK_VALIDATE_COMMIT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_VALIDATE_COMMIT__COMMIT_ALL_HI = 0;
+  localparam int unsigned DFC_REG_ILOCK_VALIDATE_COMMIT__COMMIT_ALL_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_VALIDATE_COMMIT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_VALIDATE_COMMIT__RSV0_LO = 1;
 
   // REG-002 ILOCK_ACTIVE_RESULT (0x3220) field layout
   typedef struct packed {
@@ -3666,6 +5816,14 @@ package dfc_registers_pkg;
     logic [7:0] ENTRY_TRUE;  // access=RO reset=0x00
   } dfc_reg_ilock_active_result_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESULT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESULT__ENTRY_TRUE_HI = 7;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESULT__ENTRY_TRUE_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESULT__GUARD_ALLOWED_HI = 15;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESULT__GUARD_ALLOWED_LO = 8;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESULT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESULT__RSV0_LO = 16;
 
   // REG-002 RTL014_EVT_OVERFLOW_STATUS (0x3224) field layout
   typedef struct packed {
@@ -3676,12 +5834,28 @@ package dfc_registers_pkg;
   } dfc_reg_rtl014_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL014_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 ILOCK_STAGE_RESPONSE (0x3228) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
     logic [3:0] SAFETY_RESPONSE_MASK;  // access=RW reset=0x0
   } dfc_reg_ilock_stage_response_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ILOCK_STAGE_RESPONSE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_RESPONSE__SAFETY_RESPONSE_MASK_HI = 3;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_RESPONSE__SAFETY_RESPONSE_MASK_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_RESPONSE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_STAGE_RESPONSE__RSV0_LO = 4;
 
   // REG-002 ILOCK_ACTIVE_TERMS (0x322C) field layout
   typedef struct packed {
@@ -3692,6 +5866,16 @@ package dfc_registers_pkg;
   } dfc_reg_ilock_active_terms_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS__TERM0_HI = 7;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS__TERM0_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS__TERM1_HI = 15;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS__TERM1_LO = 8;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS__TERM2_HI = 23;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS__TERM2_LO = 16;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS__TERM3_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_TERMS__TERM3_LO = 24;
+
   // REG-002 ILOCK_ACTIVE_LOGIC (0x3230) field layout
   typedef struct packed {
     logic [24:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -3700,12 +5884,26 @@ package dfc_registers_pkg;
   } dfc_reg_ilock_active_logic_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_LOGIC_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_LOGIC__INVERT_MASK_HI = 3;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_LOGIC__INVERT_MASK_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_LOGIC__OPERATOR_HI = 6;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_LOGIC__OPERATOR_LO = 4;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_LOGIC__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_LOGIC__RSV0_LO = 7;
+
   // REG-002 ILOCK_ACTIVE_GUARD (0x3234) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] GUARD_MASK;  // access=RO reset=0x00
   } dfc_reg_ilock_active_guard_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_GUARD_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_GUARD__GUARD_MASK_HI = 7;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_GUARD__GUARD_MASK_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_GUARD__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_GUARD__RSV0_LO = 8;
 
   // REG-002 ILOCK_ACTIVE_ENABLE (0x3238) field layout
   typedef struct packed {
@@ -3717,12 +5915,30 @@ package dfc_registers_pkg;
   } dfc_reg_ilock_active_enable_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__LATCH_VIOLATION_HI = 1;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__LATCH_VIOLATION_LO = 1;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_ENABLE__RSV0_LO = 4;
+
   // REG-002 ILOCK_ACTIVE_RESPONSE (0x323C) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
     logic [3:0] SAFETY_RESPONSE_MASK;  // access=RO reset=0x0
   } dfc_reg_ilock_active_response_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESPONSE_WIDTH = 32;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESPONSE__SAFETY_RESPONSE_MASK_HI = 3;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESPONSE__SAFETY_RESPONSE_MASK_LO = 0;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESPONSE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ILOCK_ACTIVE_RESPONSE__RSV0_LO = 4;
 
   // REG-002 LLINK_CONTROL (0x3300) field layout
   typedef struct packed {
@@ -3733,6 +5949,16 @@ package dfc_registers_pkg;
   } dfc_reg_llink_control_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_LLINK_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_LLINK_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_LLINK_CONTROL__EVENT_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_LLINK_CONTROL__EVENT_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_LLINK_CONTROL__IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_LLINK_CONTROL__IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_LLINK_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_CONTROL__RSV0_LO = 3;
+
   // REG-002 LLINK_STATUS (0x3304) field layout
   typedef struct packed {
     logic [7:0] RSV0;  // access=RSV0 reset=0x00
@@ -3742,12 +5968,28 @@ package dfc_registers_pkg;
   } dfc_reg_llink_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_LLINK_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_STATUS__LOST_ACTIVE_HI = 7;
+  localparam int unsigned DFC_REG_LLINK_STATUS__LOST_ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_LLINK_STATUS__LOST_STICKY_HI = 15;
+  localparam int unsigned DFC_REG_LLINK_STATUS__LOST_STICKY_LO = 8;
+  localparam int unsigned DFC_REG_LLINK_STATUS__RECOVERED_HI = 23;
+  localparam int unsigned DFC_REG_LLINK_STATUS__RECOVERED_LO = 16;
+  localparam int unsigned DFC_REG_LLINK_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_STATUS__RSV0_LO = 24;
+
   // REG-002 LLINK_MONITOR_SELECT (0x3308) field layout
   typedef struct packed {
     logic [28:0] RSV0;  // access=RSV0 reset=0x00000000
     logic [2:0] MONITOR;  // access=RW reset=0x0
   } dfc_reg_llink_monitor_select_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_LLINK_MONITOR_SELECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_SELECT__MONITOR_HI = 2;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_SELECT__MONITOR_LO = 0;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_SELECT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_SELECT__RSV0_LO = 3;
 
   // REG-002 LLINK_MONITOR_CONTROL (0x330C) field layout
   typedef struct packed {
@@ -3760,11 +6002,29 @@ package dfc_registers_pkg;
   } dfc_reg_llink_monitor_control_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__EVENT_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__EVENT_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__FAULT_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__FAULT_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__SAFETY_RESPONSE_MASK_HI = 7;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__SAFETY_RESPONSE_MASK_LO = 4;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_MONITOR_CONTROL__RSV0_LO = 8;
+
   // REG-002 LLINK_QUALIFY_US (0x3310) field layout
   typedef struct packed {
     logic [31:0] QUALIFY_US;  // access=RW reset=0x00000000
   } dfc_reg_llink_qualify_us_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_LLINK_QUALIFY_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_QUALIFY_US__QUALIFY_US_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_QUALIFY_US__QUALIFY_US_LO = 0;
 
   // REG-002 LLINK_TIMEOUT_US (0x3314) field layout
   typedef struct packed {
@@ -3772,11 +6032,19 @@ package dfc_registers_pkg;
   } dfc_reg_llink_timeout_us_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_LLINK_TIMEOUT_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_TIMEOUT_US__TIMEOUT_US_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_TIMEOUT_US__TIMEOUT_US_LO = 0;
+
   // REG-002 LLINK_RECOVERY_US (0x3318) field layout
   typedef struct packed {
     logic [31:0] RECOVERY_US;  // access=RW reset=0x000186A0
   } dfc_reg_llink_recovery_us_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_LLINK_RECOVERY_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_RECOVERY_US__RECOVERY_US_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_RECOVERY_US__RECOVERY_US_LO = 0;
 
   // REG-002 LLINK_ELAPSED_US (0x331C) field layout
   typedef struct packed {
@@ -3784,12 +6052,22 @@ package dfc_registers_pkg;
   } dfc_reg_llink_elapsed_us_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_LLINK_ELAPSED_US_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_ELAPSED_US__ELAPSED_US_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_ELAPSED_US__ELAPSED_US_LO = 0;
+
   // REG-002 LLINK_ACTIVITY_INJECT (0x3320) field layout
   typedef struct packed {
     logic [29:0] RSV0;  // access=RSV0 reset=0x00000000
     logic [1:0] HEARTBEAT;  // access=WO-CMD reset=0x0
   } dfc_reg_llink_activity_inject_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_LLINK_ACTIVITY_INJECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_LLINK_ACTIVITY_INJECT__HEARTBEAT_HI = 1;
+  localparam int unsigned DFC_REG_LLINK_ACTIVITY_INJECT__HEARTBEAT_LO = 0;
+  localparam int unsigned DFC_REG_LLINK_ACTIVITY_INJECT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_LLINK_ACTIVITY_INJECT__RSV0_LO = 2;
 
   // REG-002 RTL015_EVT_OVERFLOW_STATUS (0x3324) field layout
   typedef struct packed {
@@ -3800,6 +6078,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl015_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL015_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 SAFETY_CONTROL (0x3400) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -3809,6 +6097,18 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_safety_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SAFETY_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__EVENT_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__EVENT_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__GLOBAL_INHIBIT_HI = 3;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__GLOBAL_INHIBIT_LO = 3;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SAFETY_CONTROL__RSV0_LO = 4;
 
   // REG-002 SAFETY_STATUS (0x3404) field layout
   typedef struct packed {
@@ -3821,12 +6121,32 @@ package dfc_registers_pkg;
   } dfc_reg_safety_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SAFETY_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__COMMANDED_HI = 3;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__COMMANDED_LO = 0;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__EFFECTIVE_HI = 7;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__EFFECTIVE_LO = 4;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__INHIBITED_HI = 11;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__INHIBITED_LO = 8;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__FAULTED_HI = 15;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__FAULTED_LO = 12;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__EVENT_HI = 19;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__EVENT_LO = 16;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SAFETY_STATUS__RSV0_LO = 20;
+
   // REG-002 SAFETY_CHANNEL_SELECT (0x3408) field layout
   typedef struct packed {
     logic [29:0] RSV0;  // access=RSV0 reset=0x00000000
     logic [1:0] CHANNEL;  // access=RW reset=0x0
   } dfc_reg_safety_channel_select_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_SELECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_SELECT__CHANNEL_HI = 1;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_SELECT__CHANNEL_LO = 0;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_SELECT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_SELECT__RSV0_LO = 2;
 
   // REG-002 SAFETY_CHANNEL_CONTROL (0x340C) field layout
   typedef struct packed {
@@ -3837,11 +6157,25 @@ package dfc_registers_pkg;
   } dfc_reg_safety_channel_control_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL__ACTIVE_HIGH_HI = 1;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL__ACTIVE_HIGH_LO = 1;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL__LATCH_RESPONSE_HI = 2;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL__LATCH_RESPONSE_LO = 2;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_CONTROL__RSV0_LO = 3;
+
   // REG-002 SAFETY_RESPONSE_MASK (0x3410) field layout
   typedef struct packed {
     logic [31:0] RESPONSE_SOURCE_MASK;  // access=RW reset=0x00000000
   } dfc_reg_safety_response_mask_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SAFETY_RESPONSE_MASK_WIDTH = 32;
+  localparam int unsigned DFC_REG_SAFETY_RESPONSE_MASK__RESPONSE_SOURCE_MASK_HI = 31;
+  localparam int unsigned DFC_REG_SAFETY_RESPONSE_MASK__RESPONSE_SOURCE_MASK_LO = 0;
 
   // REG-002 SAFETY_INTERLOCK_MASK (0x3414) field layout
   typedef struct packed {
@@ -3849,6 +6183,12 @@ package dfc_registers_pkg;
     logic [7:0] REQUIRED_INTERLOCKS;  // access=RW reset=0x00
   } dfc_reg_safety_interlock_mask_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_SAFETY_INTERLOCK_MASK_WIDTH = 32;
+  localparam int unsigned DFC_REG_SAFETY_INTERLOCK_MASK__REQUIRED_INTERLOCKS_HI = 7;
+  localparam int unsigned DFC_REG_SAFETY_INTERLOCK_MASK__REQUIRED_INTERLOCKS_LO = 0;
+  localparam int unsigned DFC_REG_SAFETY_INTERLOCK_MASK__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SAFETY_INTERLOCK_MASK__RSV0_LO = 8;
 
   // REG-002 SAFETY_CHANNEL_STATUS (0x3418) field layout
   typedef struct packed {
@@ -3869,6 +6209,36 @@ package dfc_registers_pkg;
   } dfc_reg_safety_channel_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__COMMAND_REQUEST_HI = 0;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__COMMAND_REQUEST_LO = 0;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__EFFECTIVE_OUTPUT_HI = 1;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__EFFECTIVE_OUTPUT_LO = 1;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__DISABLED_HI = 2;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__DISABLED_LO = 2;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__OBSERVATIONAL_INHIBIT_HI = 3;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__OBSERVATIONAL_INHIBIT_LO = 3;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__INTERLOCK_INHIBIT_HI = 4;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__INTERLOCK_INHIBIT_LO = 4;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__FAULT_INHIBIT_HI = 5;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__FAULT_INHIBIT_LO = 5;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__RESET_ACTIVE_HI = 6;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__RESET_ACTIVE_LO = 6;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__TEST_INHIBIT_HI = 7;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__TEST_INHIBIT_LO = 7;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__LATCHED_REQUEST_HI = 8;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__LATCHED_REQUEST_LO = 8;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__COMMANDED_HI = 9;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__COMMANDED_LO = 9;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__CONTROLLER_DISABLED_HI = 10;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__CONTROLLER_DISABLED_LO = 10;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__GLOBAL_INHIBIT_HI = 11;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__GLOBAL_INHIBIT_LO = 11;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__OPERATIONAL_INHIBIT_HI = 12;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__OPERATIONAL_INHIBIT_LO = 12;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_SAFETY_CHANNEL_STATUS__RSV0_LO = 13;
+
   // REG-002 RTL016_EVT_OVERFLOW_STATUS (0x341C) field layout
   typedef struct packed {
     logic [7:0] RSV1;  // access=RSV0 reset=0x00
@@ -3877,6 +6247,16 @@ package dfc_registers_pkg;
     logic EVENT_OVERFLOW;  // access=W1C reset=0
   } dfc_reg_rtl016_evt_overflow_status_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL016_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
 
   // REG-002 ULI_CONTROL (0x4000) field layout
   typedef struct packed {
@@ -3887,6 +6267,18 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_uli_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_ULI_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_ULI_CONTROL__RESET_REQ_HI = 1;
+  localparam int unsigned DFC_REG_ULI_CONTROL__RESET_REQ_LO = 1;
+  localparam int unsigned DFC_REG_ULI_CONTROL__EVENT_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_ULI_CONTROL__EVENT_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_ULI_CONTROL__IRQ_ENABLE_HI = 3;
+  localparam int unsigned DFC_REG_ULI_CONTROL__IRQ_ENABLE_LO = 3;
+  localparam int unsigned DFC_REG_ULI_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_CONTROL__RSV0_LO = 4;
 
   // REG-002 ULI_STATUS (0x4004) field layout
   typedef struct packed {
@@ -3902,11 +6294,35 @@ package dfc_registers_pkg;
   } dfc_reg_uli_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_STATUS__ENABLED_HI = 0;
+  localparam int unsigned DFC_REG_ULI_STATUS__ENABLED_LO = 0;
+  localparam int unsigned DFC_REG_ULI_STATUS__READY_HI = 1;
+  localparam int unsigned DFC_REG_ULI_STATUS__READY_LO = 1;
+  localparam int unsigned DFC_REG_ULI_STATUS__IN_MAILBOX_NOT_EMPTY_HI = 2;
+  localparam int unsigned DFC_REG_ULI_STATUS__IN_MAILBOX_NOT_EMPTY_LO = 2;
+  localparam int unsigned DFC_REG_ULI_STATUS__OUT_MAILBOX_NOT_EMPTY_HI = 3;
+  localparam int unsigned DFC_REG_ULI_STATUS__OUT_MAILBOX_NOT_EMPTY_LO = 3;
+  localparam int unsigned DFC_REG_ULI_STATUS__IN_MAILBOX_FULL_HI = 4;
+  localparam int unsigned DFC_REG_ULI_STATUS__IN_MAILBOX_FULL_LO = 4;
+  localparam int unsigned DFC_REG_ULI_STATUS__OUT_MAILBOX_FULL_HI = 5;
+  localparam int unsigned DFC_REG_ULI_STATUS__OUT_MAILBOX_FULL_LO = 5;
+  localparam int unsigned DFC_REG_ULI_STATUS__VIOLATION_HI = 6;
+  localparam int unsigned DFC_REG_ULI_STATUS__VIOLATION_LO = 6;
+  localparam int unsigned DFC_REG_ULI_STATUS__RESET_COMPLETE_HI = 7;
+  localparam int unsigned DFC_REG_ULI_STATUS__RESET_COMPLETE_LO = 7;
+  localparam int unsigned DFC_REG_ULI_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_STATUS__RSV0_LO = 8;
+
   // REG-002 ULI_PARAM0 (0x4008) field layout
   typedef struct packed {
     logic [31:0] PARAM0;  // access=RW reset=0x00000000
   } dfc_reg_uli_param0_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_PARAM0_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_PARAM0__PARAM0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_PARAM0__PARAM0_LO = 0;
 
   // REG-002 ULI_PARAM1 (0x400C) field layout
   typedef struct packed {
@@ -3914,11 +6330,19 @@ package dfc_registers_pkg;
   } dfc_reg_uli_param1_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_PARAM1_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_PARAM1__PARAM1_HI = 31;
+  localparam int unsigned DFC_REG_ULI_PARAM1__PARAM1_LO = 0;
+
   // REG-002 ULI_PARAM2 (0x4010) field layout
   typedef struct packed {
     logic [31:0] PARAM2;  // access=RW reset=0x00000000
   } dfc_reg_uli_param2_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_PARAM2_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_PARAM2__PARAM2_HI = 31;
+  localparam int unsigned DFC_REG_ULI_PARAM2__PARAM2_LO = 0;
 
   // REG-002 ULI_PARAM3 (0x4014) field layout
   typedef struct packed {
@@ -3926,11 +6350,19 @@ package dfc_registers_pkg;
   } dfc_reg_uli_param3_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_PARAM3_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_PARAM3__PARAM3_HI = 31;
+  localparam int unsigned DFC_REG_ULI_PARAM3__PARAM3_LO = 0;
+
   // REG-002 ULI_PARAM4 (0x4018) field layout
   typedef struct packed {
     logic [31:0] PARAM4;  // access=RW reset=0x00000000
   } dfc_reg_uli_param4_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_PARAM4_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_PARAM4__PARAM4_HI = 31;
+  localparam int unsigned DFC_REG_ULI_PARAM4__PARAM4_LO = 0;
 
   // REG-002 ULI_PARAM5 (0x401C) field layout
   typedef struct packed {
@@ -3938,17 +6370,29 @@ package dfc_registers_pkg;
   } dfc_reg_uli_param5_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_PARAM5_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_PARAM5__PARAM5_HI = 31;
+  localparam int unsigned DFC_REG_ULI_PARAM5__PARAM5_LO = 0;
+
   // REG-002 ULI_PARAM6 (0x4020) field layout
   typedef struct packed {
     logic [31:0] PARAM6;  // access=RW reset=0x00000000
   } dfc_reg_uli_param6_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_PARAM6_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_PARAM6__PARAM6_HI = 31;
+  localparam int unsigned DFC_REG_ULI_PARAM6__PARAM6_LO = 0;
+
   // REG-002 ULI_PARAM7 (0x4024) field layout
   typedef struct packed {
     logic [31:0] PARAM7;  // access=RW reset=0x00000000
   } dfc_reg_uli_param7_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_PARAM7_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_PARAM7__PARAM7_HI = 31;
+  localparam int unsigned DFC_REG_ULI_PARAM7__PARAM7_LO = 0;
 
   // REG-002 ULI_IN_LEVEL (0x4028) field layout
   typedef struct packed {
@@ -3957,11 +6401,21 @@ package dfc_registers_pkg;
   } dfc_reg_uli_in_level_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_IN_LEVEL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_IN_LEVEL__LEVEL_HI = 2;
+  localparam int unsigned DFC_REG_ULI_IN_LEVEL__LEVEL_LO = 0;
+  localparam int unsigned DFC_REG_ULI_IN_LEVEL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_IN_LEVEL__RSV0_LO = 3;
+
   // REG-002 ULI_IN_DATA (0x402C) field layout
   typedef struct packed {
     logic [31:0] MAILBOX_DATA;  // access=RW reset=0x00000000
   } dfc_reg_uli_in_data_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_IN_DATA_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_IN_DATA__MAILBOX_DATA_HI = 31;
+  localparam int unsigned DFC_REG_ULI_IN_DATA__MAILBOX_DATA_LO = 0;
 
   // REG-002 ULI_IN_PUSH (0x4030) field layout
   typedef struct packed {
@@ -3970,6 +6424,12 @@ package dfc_registers_pkg;
   } dfc_reg_uli_in_push_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_IN_PUSH_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_IN_PUSH__PUSH_HI = 0;
+  localparam int unsigned DFC_REG_ULI_IN_PUSH__PUSH_LO = 0;
+  localparam int unsigned DFC_REG_ULI_IN_PUSH__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_IN_PUSH__RSV0_LO = 1;
+
   // REG-002 ULI_OUT_LEVEL (0x4034) field layout
   typedef struct packed {
     logic [28:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -3977,11 +6437,21 @@ package dfc_registers_pkg;
   } dfc_reg_uli_out_level_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_OUT_LEVEL_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_OUT_LEVEL__LEVEL_HI = 2;
+  localparam int unsigned DFC_REG_ULI_OUT_LEVEL__LEVEL_LO = 0;
+  localparam int unsigned DFC_REG_ULI_OUT_LEVEL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_OUT_LEVEL__RSV0_LO = 3;
+
   // REG-002 ULI_OUT_DATA (0x4038) field layout
   typedef struct packed {
     logic [31:0] MAILBOX_DATA;  // access=RO reset=0x00000000
   } dfc_reg_uli_out_data_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_OUT_DATA_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_OUT_DATA__MAILBOX_DATA_HI = 31;
+  localparam int unsigned DFC_REG_ULI_OUT_DATA__MAILBOX_DATA_LO = 0;
 
   // REG-002 ULI_OUT_POP (0x403C) field layout
   typedef struct packed {
@@ -3990,12 +6460,24 @@ package dfc_registers_pkg;
   } dfc_reg_uli_out_pop_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_OUT_POP_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_OUT_POP__POP_HI = 0;
+  localparam int unsigned DFC_REG_ULI_OUT_POP__POP_LO = 0;
+  localparam int unsigned DFC_REG_ULI_OUT_POP__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_OUT_POP__RSV0_LO = 1;
+
   // REG-002 ULI_IO_DIRECTION (0x4040) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
     logic [3:0] OUTPUT_DIRECTION;  // access=CONST reset=0x0
   } dfc_reg_uli_io_direction_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_IO_DIRECTION_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_IO_DIRECTION__OUTPUT_DIRECTION_HI = 3;
+  localparam int unsigned DFC_REG_ULI_IO_DIRECTION__OUTPUT_DIRECTION_LO = 0;
+  localparam int unsigned DFC_REG_ULI_IO_DIRECTION__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_IO_DIRECTION__RSV0_LO = 4;
 
   // REG-002 ULI_IO_INPUT (0x4044) field layout
   typedef struct packed {
@@ -4004,12 +6486,24 @@ package dfc_registers_pkg;
   } dfc_reg_uli_io_input_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_IO_INPUT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_IO_INPUT__INPUT_HI = 3;
+  localparam int unsigned DFC_REG_ULI_IO_INPUT__INPUT_LO = 0;
+  localparam int unsigned DFC_REG_ULI_IO_INPUT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_IO_INPUT__RSV0_LO = 4;
+
   // REG-002 ULI_IO_OUTPUT (0x4048) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
     logic [3:0] OUTPUT_REQUEST;  // access=RW reset=0x0
   } dfc_reg_uli_io_output_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_IO_OUTPUT_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_IO_OUTPUT__OUTPUT_REQUEST_HI = 3;
+  localparam int unsigned DFC_REG_ULI_IO_OUTPUT__OUTPUT_REQUEST_LO = 0;
+  localparam int unsigned DFC_REG_ULI_IO_OUTPUT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_IO_OUTPUT__RSV0_LO = 4;
 
   // REG-002 RTL022_EVT_OVERFLOW_STATUS (0x404C) field layout
   typedef struct packed {
@@ -4019,6 +6513,16 @@ package dfc_registers_pkg;
     logic EVENT_OVERFLOW;  // access=W1C reset=0
   } dfc_reg_rtl022_evt_overflow_status_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL022_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
 
   // REG-002 ULI_MAILBOX_STATUS (0x4050) field layout
   typedef struct packed {
@@ -4030,6 +6534,18 @@ package dfc_registers_pkg;
   } dfc_reg_uli_mailbox_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__INPUT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__INPUT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__INPUT_UNDERFLOW_HI = 1;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__INPUT_UNDERFLOW_LO = 1;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__OUTPUT_OVERFLOW_HI = 2;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__OUTPUT_OVERFLOW_LO = 2;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__OUTPUT_UNDERFLOW_HI = 3;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__OUTPUT_UNDERFLOW_LO = 3;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_STATUS__RSV0_LO = 4;
+
   // REG-002 ULI_MAILBOX_LOSS_COUNT_0_1 (0x4054) field layout
   typedef struct packed {
     logic [15:0] INPUT_UNDERFLOW_COUNT;  // access=COUNTER16-CLR reset=0x0000
@@ -4037,12 +6553,24 @@ package dfc_registers_pkg;
   } dfc_reg_uli_mailbox_loss_count_0_1_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_0_1_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_0_1__INPUT_OVERFLOW_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_0_1__INPUT_OVERFLOW_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_0_1__INPUT_UNDERFLOW_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_0_1__INPUT_UNDERFLOW_COUNT_LO = 16;
+
   // REG-002 ULI_MAILBOX_LOSS_COUNT_2_3 (0x4058) field layout
   typedef struct packed {
     logic [15:0] OUTPUT_UNDERFLOW_COUNT;  // access=COUNTER16-CLR reset=0x0000
     logic [15:0] OUTPUT_OVERFLOW_COUNT;  // access=COUNTER16-CLR reset=0x0000
   } dfc_reg_uli_mailbox_loss_count_2_3_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_2_3_WIDTH = 32;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_2_3__OUTPUT_OVERFLOW_COUNT_HI = 15;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_2_3__OUTPUT_OVERFLOW_COUNT_LO = 0;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_2_3__OUTPUT_UNDERFLOW_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_ULI_MAILBOX_LOSS_COUNT_2_3__OUTPUT_UNDERFLOW_COUNT_LO = 16;
 
   // REG-002 UROUTE_CONTROL (0x4100) field layout
   typedef struct packed {
@@ -4052,6 +6580,16 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RW reset=0
   } dfc_reg_uroute_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UROUTE_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_UROUTE_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_CONTROL__EVENT_ENABLE_HI = 1;
+  localparam int unsigned DFC_REG_UROUTE_CONTROL__EVENT_ENABLE_LO = 1;
+  localparam int unsigned DFC_REG_UROUTE_CONTROL__IRQ_ENABLE_HI = 2;
+  localparam int unsigned DFC_REG_UROUTE_CONTROL__IRQ_ENABLE_LO = 2;
+  localparam int unsigned DFC_REG_UROUTE_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_CONTROL__RSV0_LO = 3;
 
   // REG-002 UROUTE_STATUS (0x4104) field layout
   typedef struct packed {
@@ -4065,12 +6603,34 @@ package dfc_registers_pkg;
   } dfc_reg_uroute_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UROUTE_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__ACTIVE_HI = 0;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__COMMIT_COMPLETE_HI = 1;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__COMMIT_COMPLETE_LO = 1;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__COMMIT_REJECTED_HI = 2;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__COMMIT_REJECTED_LO = 2;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__FORBIDDEN_DEST_HI = 3;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__FORBIDDEN_DEST_LO = 3;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__CONFLICT_HI = 4;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__CONFLICT_LO = 4;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__RSV0_HI = 15;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__RSV0_LO = 5;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__VIOLATION_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_STATUS__VIOLATION_COUNT_LO = 16;
+
   // REG-002 UROUTE_ENTRY_SELECT (0x4108) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
     logic [3:0] ENTRY;  // access=RW reset=0x0
   } dfc_reg_uroute_entry_select_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_SELECT_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_SELECT__ENTRY_HI = 3;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_SELECT__ENTRY_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_SELECT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_SELECT__RSV0_LO = 4;
 
   // REG-002 UROUTE_STAGE_SOURCE (0x410C) field layout
   typedef struct packed {
@@ -4079,12 +6639,24 @@ package dfc_registers_pkg;
   } dfc_reg_uroute_stage_source_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UROUTE_STAGE_SOURCE_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_SOURCE__SOURCE_ID_HI = 7;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_SOURCE__SOURCE_ID_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_SOURCE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_SOURCE__RSV0_LO = 8;
+
   // REG-002 UROUTE_STAGE_DEST (0x4110) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] DEST_ID;  // access=RW reset=0x00
   } dfc_reg_uroute_stage_dest_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UROUTE_STAGE_DEST_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_DEST__DEST_ID_HI = 7;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_DEST__DEST_ID_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_DEST__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_DEST__RSV0_LO = 8;
 
   // REG-002 UROUTE_STAGE_CONTROL (0x4114) field layout
   typedef struct packed {
@@ -4095,6 +6667,16 @@ package dfc_registers_pkg;
   } dfc_reg_uroute_stage_control_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL__INVERT_HI = 1;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL__INVERT_LO = 1;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL__MODE_HI = 3;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL__MODE_LO = 2;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_STAGE_CONTROL__RSV0_LO = 4;
+
   // REG-002 UROUTE_VALIDATE_COMMIT (0x4118) field layout
   typedef struct packed {
     logic [29:0] RSV0;  // access=RSV0 reset=0x00000000
@@ -4103,6 +6685,14 @@ package dfc_registers_pkg;
   } dfc_reg_uroute_validate_commit_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UROUTE_VALIDATE_COMMIT_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_VALIDATE_COMMIT__VALIDATE_COMMIT_HI = 0;
+  localparam int unsigned DFC_REG_UROUTE_VALIDATE_COMMIT__VALIDATE_COMMIT_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_VALIDATE_COMMIT__DISABLE_ENTRY_HI = 1;
+  localparam int unsigned DFC_REG_UROUTE_VALIDATE_COMMIT__DISABLE_ENTRY_LO = 1;
+  localparam int unsigned DFC_REG_UROUTE_VALIDATE_COMMIT__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_VALIDATE_COMMIT__RSV0_LO = 2;
+
   // REG-002 UROUTE_ACTIVE_SOURCE (0x411C) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
@@ -4110,12 +6700,24 @@ package dfc_registers_pkg;
   } dfc_reg_uroute_active_source_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_SOURCE_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_SOURCE__SOURCE_ID_HI = 7;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_SOURCE__SOURCE_ID_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_SOURCE__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_SOURCE__RSV0_LO = 8;
+
   // REG-002 UROUTE_ACTIVE_DEST (0x4120) field layout
   typedef struct packed {
     logic [23:0] RSV0;  // access=RSV0 reset=0x000000
     logic [7:0] DEST_ID;  // access=RO reset=0x00
   } dfc_reg_uroute_active_dest_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_DEST_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_DEST__DEST_ID_HI = 7;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_DEST__DEST_ID_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_DEST__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_DEST__RSV0_LO = 8;
 
   // REG-002 UROUTE_ENTRY_STATUS (0x4124) field layout
   typedef struct packed {
@@ -4127,6 +6729,18 @@ package dfc_registers_pkg;
   } dfc_reg_uroute_entry_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__ACTIVE_HI = 0;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__ACTIVE_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__VALID_HI = 1;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__VALID_LO = 1;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__ERROR_HI = 2;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__ERROR_LO = 2;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__RSV0_HI = 15;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__RSV0_LO = 3;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__ACTIVITY_COUNT_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_ENTRY_STATUS__ACTIVITY_COUNT_LO = 16;
+
   // REG-002 RTL023_EVT_OVERFLOW_STATUS (0x4128) field layout
   typedef struct packed {
     logic [7:0] RSV1;  // access=RSV0 reset=0x00
@@ -4136,6 +6750,16 @@ package dfc_registers_pkg;
   } dfc_reg_rtl023_evt_overflow_status_t;
   // total width: 32 bits
 
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS_WIDTH = 32;
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 0;
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 0;
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS__RSV0_HI = 7;
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS__RSV0_LO = 1;
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS__DROP_COUNT_HI = 23;
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS__DROP_COUNT_LO = 8;
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS__RSV1_HI = 31;
+  localparam int unsigned DFC_REG_RTL023_EVT_OVERFLOW_STATUS__RSV1_LO = 24;
+
   // REG-002 UROUTE_ACTIVE_CONTROL (0x412C) field layout
   typedef struct packed {
     logic [27:0] RSV0;  // access=RSV0 reset=0x0000000
@@ -4144,6 +6768,16 @@ package dfc_registers_pkg;
     logic ENABLE;  // access=RO reset=0
   } dfc_reg_uroute_active_control_t;
   // total width: 32 bits
+
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL_WIDTH = 32;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL__ENABLE_HI = 0;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL__ENABLE_LO = 0;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL__INVERT_HI = 1;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL__INVERT_LO = 1;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL__MODE_HI = 3;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL__MODE_LO = 2;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL__RSV0_HI = 31;
+  localparam int unsigned DFC_REG_UROUTE_ACTIVE_CONTROL__RSV0_LO = 4;
 
 
 endpackage : dfc_registers_pkg
