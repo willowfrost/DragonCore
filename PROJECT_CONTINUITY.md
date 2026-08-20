@@ -436,8 +436,26 @@ written in this project going forward, not just a historical note.
   correctly exempt from this project's own document-governance rules.
   This is expected, not a gap to fix.
 - **Directory structure**, confirmed and stable:
-  - `docs/` — frozen specification baseline (business/requirements/
-    architecture/rtl_specs/verification/software subfolders)
+  - `docs/` — the specification baseline (business/requirements/
+    architecture/rtl_specs/verification/software subfolders). **CORRECTED
+    characterization — read this before treating anything under `docs\`
+    as unchangeable:** these documents were audited/ratified to reach a
+    state complete and consistent enough to *begin* RTL/software work
+    from — that milestone is what "the `-002` baseline" refers to, not a
+    permanent freeze. The standing rule, confirmed directly by the
+    person after this was mischaracterized once in an earlier session:
+    if a real gap, inconsistency, or conflict is found in any of these
+    documents (exactly the kind of thing `OPEN_ISSUES.md` logs), **the
+    document gets changed, after approval, and anything downstream
+    affected by that change gets redone so the resulting design stays
+    functional.** This has already happened for real: some top-level
+    documents were revised after real gaps surfaced during RTL-spec
+    writing, and again during software-spec writing. Don't withhold a
+    real fix or ask excessive permission out of a mistaken belief that
+    `docs\` is frozen — the actual discipline is: propose the specific
+    change, get it approved, then update everything the change touches
+    for real (same standard as any other real fix in this project) —
+    not "never touch it."
   - `include/` — shared, generated `dfc_*_pkg.sv` packages (all six now
     fully generator-driven — see Section 4)
   - `rtl/<domain>/generated/` — machine-generated RTL (e.g.
@@ -943,6 +961,93 @@ written in this project going forward, not just a historical note.
     (in filename order) and pass all of them in one invocation, rather than
     hardcoding a fixed pair — a new module's field-map file is picked up
     automatically the next time it regenerates.
+- **A later fix-and-verify session (2026-08-20) closed `OPEN_ISSUES.md`
+  items 2 and 5 for real, on already-implemented RTL-002/RTL-003 — no new
+  module work was started.**
+  - **Item 2 (no way to clear `EVENT_OVERFLOW` via the register
+    interface): CLOSED.** `RCA-DFC-ARCH-002.md` was confirmed already
+    updated (directly against the real document, before any other work
+    began) with `dfc_rtl002_control_t` grown 59→60 bits and
+    `dfc_rtl003_control_t` grown 128→129 bits, each with one new
+    `rtl00N_evt_overflow_status__event_overflow` field at the struct's new
+    highest bit. `regenerate.ps1` regenerated `dfc_types_pkg.sv` from this
+    real change; every pre-existing field's `_HI`/`_LO` constant in both
+    structs was confirmed byte-identical to before (only the new field at
+    bit 59/128 is new) — the edit's placement was correct, nothing else
+    shifted. `tools/reggen/rtl002_field_map.json` and
+    `rtl003_field_map.json` each gained one new `control_registers` entry
+    mapping the register's real `EVENT_OVERFLOW` W1C bit to the new struct
+    field, same pattern as the existing RESET_STATUS/RESET_DIAGNOSTIC
+    entries — confirmed via a real `reggen.py` run that
+    `write_illegal_o` for both `RTL002_EVT_OVERFLOW_STATUS` and
+    `RTL003_EVT_OVERFLOW_STATUS` is now `1'b0` (was `1'b1`).
+    `dfc_rtl002.sv`/`dfc_rtl003.sv` each gained a real bit-slice wire off
+    the new field and real clear logic on their sticky `event_overflow_q`
+    register (gated so a genuinely new overflow event landing the same
+    cycle as the clear request wins, per REG-0044/REG-011C's own
+    documented field priority — `DROP_COUNT` itself is left untouched, per
+    REG-002's own "DROP_COUNT is read-only" side-effect text). New, real
+    checks were added to `rtl002_integration_tb.sv` and
+    `rtl003_integration_tb.sv`: each withholds its module's event
+    handshake to force a genuine (not fabricated) overflow condition,
+    confirms `event_overflow_q` sets, issues the real host clear write
+    through RTL-001's real DRI path, and confirms `event_overflow_q`
+    actually clears. (One real testbench bug was found and fixed while
+    writing RTL-003's version of this test: Part 6 of
+    `rtl003_integration_tb.sv` had already permanently set `IRQ_ENABLE`'s
+    reserved bit 24 — an RW-class field, not a one-cycle pulse, unlike
+    `IRQ_ACK`/`IRQ_CLEAR` — which kept `illegal_reserved_activity`
+    continuously high and blocked any further rising-edge event detection;
+    fixed by writing `IRQ_ENABLE` back to its legitimate value before
+    forcing the new overflow condition.)
+  - **Item 5 (`dfc_rtl002.sv` missing 4 real ARCH-002 ports): CLOSED.**
+    Added `global_irq_enable_o`, `global_event_enable_o`,
+    `event_condition_enable_i`, `irq_condition_enable_i` as real ports on
+    `dfc_rtl002.sv`. `global_event_enable_o` is driven from the exact wire
+    already used internally to gate event generation
+    (`ctl_global_event_enable`); `global_irq_enable_o` is driven from a
+    new, identically-patterned extraction wire off `control_i`
+    (RTL-002 previously had no internal use for that bit at all).
+    `event_condition_enable_i`/`irq_condition_enable_i` are tied to a
+    disclosed stub (`64'h0`) in `dfc_rtl024.sv`, consistent with
+    `OPEN_ISSUES.md` item 6, and intentionally consumed inside
+    `dfc_rtl002.sv` via an unused-port sink per RTLSTD-MOD-009 (same
+    pattern `dfc_rtl003.sv` already used). `dfc_rtl024.sv` was updated to
+    connect `RTL-003.global_irq_enable_i` to the new real
+    `global_irq_enable_o` port, **removing the workaround that read
+    `rtl002_control` directly.** `rtl002_state_tb.sv` (`.*` wildcard
+    instantiation) and `rtl002_integration_tb.sv` (explicit named ports)
+    both needed the four new ports declared/tied off, same class of fix
+    every prior port addition in this project has needed.
+  - **A real, genuine forward-reference compile bug was found and fixed
+    while wiring the EVENT_OVERFLOW clear logic, caught by a real
+    `lint.ps1` run, not by inspection:** the new `overflow_sets_this_cycle`
+    wire in both `dfc_rtl002.sv` and `dfc_rtl003.sv` was first written
+    immediately after `evt_candidate_valid`'s own declaration — textually
+    *before* `evt_pending_q` (the signal it reads) was declared further
+    down the same file. The person's real Icarus rejected this
+    ("Unable to bind wire/reg/memory `evt_pending_q`... Check for
+    declaration after use"), even though this is a different case from
+    the project's previously-documented named-port-connection
+    declaration-order finding (Section 2) — this one is a plain
+    continuous-assignment forward reference to an ordinary signal, and
+    Icarus rejected it too. Fixed by moving both wire declarations to
+    immediately after `evt_pending_q`/`event_overflow_q`/
+    `event_drop_count_q`'s own declarations, right before the `always_ff`
+    block that uses them.
+  - **Verified end-to-end, for real, on the person's own toolchain:** full
+    Icarus regression, 7/7 testbenches, **133/133 checks** (up from
+    120/120 — the new RTL-002/RTL-003 overflow-clear checks account for
+    the delta); a real `gate.ps1` run passed completely clean (`lint.ps1`
+    PASSED, `sim.ps1` 7/7, `formal.ps1` both `bmc` and `prove` genuinely
+    PASS against real RTL-001 — unaffected by this session's RTL-002/003
+    changes — coverage check ran clean at 20/353 registers referenced, up
+    from 18/353, expected given the two new EVT_OVERFLOW_STATUS registers
+    are now exercised); a real `build_ecp5.ps1` run (Build ID
+    `20260820_074244`, default invocation, no special flags) also passed
+    completely clean: **63.17 MHz PASS at 50 MHz required**, 12-13%
+    LUT / 7% DFF utilization, "Program finished normally," no
+    `--timing-allow-fail` needed.
 - **RTL-004 through RTL-023:** spec-complete (all 24 module specs,
   including RTL-001/002/003/024, exist and are citation-verified against
 
@@ -1135,10 +1240,17 @@ written in this project going forward, not just a historical note.
   market for the originally-scoped 24-module Dragon Flight/Dragon Core
   product, and is now completing this project as a **demo/portfolio tool
   for future engineering consulting work**, not as a product ship target.
-  **The specifications and everything already implemented are NOT being
-  changed** — REG-002/ARCH-002/every RTL spec stay exactly as written,
-  and RTL-001/RTL-002's real implementations are untouched by this
-  decision. What changes is the **build-out target**: after a careful,
+  **The scope-reduction decision itself does not require editing any
+  specification** — REG-002/ARCH-002/every RTL spec's *content* is
+  unaffected by choosing not to build RTL-022/023, and RTL-001/RTL-002's
+  real implementations are untouched by this decision. This is a
+  narrower claim than "specifications never change" — see Section 3's
+  corrected note on `docs\` governance: a real gap or inconsistency
+  found later (as has already happened, e.g. the `EVENT_OVERFLOW`
+  clear-path fix) still gets fixed through the normal approve-then-
+  update-everything-affected process; this scope decision just happens
+  not to be that kind of case. What changes here is the **build-out
+  target**: after a careful,
   turn-by-turn walkthrough of the actual architecture (confirmed against
   real register ownership, not assumed), the settled decision is:
   - **Build RTL-003 through RTL-021 in full**, each with the same
@@ -1252,9 +1364,10 @@ written in this project going forward, not just a historical note.
   it as the template shape for RTL-004's own task spec instead. Every item
   1-10 below was completed for real, not assumed:
   1. **Read the real spec first.** RTL-003's own spec document lives
-     under `docs\` (frozen baseline — do not guess at its contents from
-     memory or from this document's summaries). Read it before writing
-     any code.
+     under `docs\` (the specification baseline — see the corrected
+     characterization above; not unchangeable, but do not guess at its
+     contents from memory or from this document's summaries). Read it
+     before writing any code.
   2. **Implement `rtl\infrastructure\src\dfc_rtl003.sv`** following the
      confirmed `pkg::type_t` workaround pattern from Section 2 exactly
      (flat `logic [W-1:0]` ports sized via generated `dfc_types_pkg::
@@ -1433,10 +1546,12 @@ written in this project going forward, not just a historical note.
   project's actual goal to a **demo/portfolio tool for future
   engineering-consulting work**, not a product being pitched for its own
   sake. See Section 5's scope-change entry for the concrete technical
-  consequence (target module count now 21, not 24). The specifications
-  and everything already implemented are unchanged by this pivot — only
-  the eventual purpose of the finished system, and which modules get
-  built at all, are affected. If asked to help with consulting-facing
+  consequence (target module count now 21, not 24). This purpose pivot
+  itself doesn't require editing any specification — only the eventual
+  purpose of the finished system, and which modules get built at all,
+  are affected by it (specs still get updated through the normal,
+  approved process whenever a real gap is found, same as always — see
+  Section 3). If asked to help with consulting-facing
   positioning, framing, or outreach material going forward, treat that
   as the live, current objective — not the VC-investor framing further
   below, which reflects an earlier, since-superseded goal for this same

@@ -5,9 +5,9 @@
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
-  // Aggregated real RTL-002 control, replacing the prior disconnected placeholder for: RESET_CONTROL, RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_ENABLE, SYS_CONTROL
+  // Aggregated real RTL-002 control, replacing the prior disconnected placeholder for: RESET_CONTROL, RESET_DIAGNOSTIC, RESET_STATUS, RTL002_EVT_OVERFLOW_STATUS, SUBSYS_ENABLE, SYS_CONTROL
   // Aggregated real RTL-003 status, replacing individual ports for: IRQ_ACKED, IRQ_CLEAR, IRQ_PENDING, IRQ_RAW_STATUS, IRQ_VECTOR, RTL003_EVT_OVERFLOW_STATUS
-  // Aggregated real RTL-003 control, replacing the prior disconnected placeholder for: IRQ_ACK, IRQ_CLEAR, IRQ_ENABLE, TEST_IRQ_INJECT
+  // Aggregated real RTL-003 control, replacing the prior disconnected placeholder for: IRQ_ACK, IRQ_CLEAR, IRQ_ENABLE, RTL003_EVT_OVERFLOW_STATUS, TEST_IRQ_INJECT
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -188,9 +188,9 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  rtl023_evt_overflow_status_status_i,
   input  logic [31:0]  uroute_active_control_status_i,
   input  logic [111:0]  rtl002_status_i,
-  output logic [58:0] rtl002_control_o,
+  output logic [59:0] rtl002_control_o,
   input  logic [152:0]  rtl003_status_i,
-  output logic [127:0] rtl003_control_o
+  output logic [128:0] rtl003_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -281,6 +281,14 @@ module dfc_config_regbank_regs (
   always_ff @(posedge clk_i or negedge rst_ni)
     if (!rst_ni) config_error_data_q <= 32'h00000000;
 
+  // RTL002_EVT_OVERFLOW_STATUS (0x0044) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-002, real
+  //   generation per contract REG-0044, not a permanent tie.
+  logic [31:0] rtl002_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl002_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl002_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL002_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
   // RTL002_EVT_OVERFLOW_STATUS (0x0044) -- external passthrough, owner RTL-002
   wire [31:0] rtl002_evt_overflow_status_q = rtl002_evt_overflow_status_status_i;
 
@@ -369,6 +377,14 @@ module dfc_config_regbank_regs (
 
   // IRQ_VECTOR (0x0118) -- external passthrough, owner RTL-003. Reconstructed from the aggregated rtl003_status_i input (contract REG-0118), not an individual per-register port.
   wire [31:0] irq_vector_q = {rtl003_status_i[136:136], 26'h0, rtl003_status_i[135:131]};
+
+  // RTL003_EVT_OVERFLOW_STATUS (0x011C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-003, real
+  //   generation per contract REG-011C, not a permanent tie.
+  logic [31:0] rtl003_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl003_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl003_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL003_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
   // RTL003_EVT_OVERFLOW_STATUS (0x011C) -- external passthrough, owner RTL-003. Reconstructed from the aggregated rtl003_status_i input (contract REG-011C), not an individual per-register port.
   wire [31:0] rtl003_evt_overflow_status_q = {8'h0, rtl003_status_i[152:137], 7'h0, rtl003_status_i[2:2]};
@@ -1721,8 +1737,9 @@ module dfc_config_regbank_regs (
   // Every assignment below is sourced from a real stored register or a real
   // one-cycle pulse-capture register above, at the exact bit position the
   // real generated dfc_types_pkg.sv's dfc_rtl002_control_t defines --
-  // cross-checked at generation time (59/59 bits, exact match confirmed by the assert above actually running).
+  // cross-checked at generation time (60/60 bits, exact match confirmed by the assert above actually running).
   // ==========================================================================
+  assign rtl002_control_o[59] = rtl002_evt_overflow_status_pulse_q[0:0];  // RTL002_EVT_OVERFLOW_STATUS.rtl002_evt_overflow_status__event_overflow
   assign rtl002_control_o[58] = reset_diagnostic_pulse_q[1:1];  // RESET_DIAGNOSTIC.reset_status__recovery_failure
   assign rtl002_control_o[57] = reset_diagnostic_pulse_q[0:0];  // RESET_DIAGNOSTIC.reset_status__timeout
   assign rtl002_control_o[56] = reset_control_pulse_q[25:25];  // RESET_CONTROL.reset_control__safety_domain_reset
@@ -1742,8 +1759,9 @@ module dfc_config_regbank_regs (
   // Every assignment below is sourced from a real stored register or a real
   // one-cycle pulse-capture register above, at the exact bit position the
   // real generated dfc_types_pkg.sv's dfc_rtl003_control_t defines --
-  // cross-checked at generation time (128/128 bits, exact match confirmed by the assert above actually running).
+  // cross-checked at generation time (129/129 bits, exact match confirmed by the assert above actually running).
   // ==========================================================================
+  assign rtl003_control_o[128] = rtl003_evt_overflow_status_pulse_q[0:0];  // RTL003_EVT_OVERFLOW_STATUS.rtl003_evt_overflow_status__event_overflow
   assign rtl003_control_o[127:96] = test_irq_inject_pulse_q[31:0];  // TEST_IRQ_INJECT.test_irq_inject__source_mask
   assign rtl003_control_o[95:64] = irq_clear_pulse_q[31:0];  // IRQ_CLEAR.irq_clear__clear
   assign rtl003_control_o[63:32] = irq_ack_pulse_q[31:0];  // IRQ_ACK.irq_ack__ack_set
@@ -1776,7 +1794,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_CONFIG_ERROR_STATUS: begin rdata_o = config_error_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CONFIG_ERROR_ADDR: begin rdata_o = config_error_addr_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CONFIG_ERROR_DATA: begin rdata_o = config_error_data_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL002_EVT_OVERFLOW_STATUS: begin rdata_o = rtl002_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL002_EVT_OVERFLOW_STATUS: begin rdata_o = rtl002_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_RTL001_EVT_OVERFLOW_STATUS: begin rdata_o = rtl001_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CONDITION_MASK_SELECT: begin rdata_o = condition_mask_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVENT_CONDITION_MASK_LO: begin rdata_o = event_condition_mask_lo_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
@@ -1791,7 +1809,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_IRQ_ACKED: begin rdata_o = irq_acked_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_IRQ_CLEAR: begin rdata_o = irq_clear_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_IRQ_VECTOR: begin rdata_o = irq_vector_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL003_EVT_OVERFLOW_STATUS: begin rdata_o = rtl003_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL003_EVT_OVERFLOW_STATUS: begin rdata_o = rtl003_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_CONTROL: begin rdata_o = time_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_TIME_STATUS: begin rdata_o = time_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_SNAPSHOT: begin rdata_o = time_snapshot_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

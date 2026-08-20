@@ -183,6 +183,13 @@ module dfc_rtl003 (
   wire [31:0] ctl_test_inject_pulse =
     control_i[dfc_types_pkg::DFC_RTL003_CONTROL__TEST_IRQ_INJECT__SOURCE_MASK_HI:dfc_types_pkg::DFC_RTL003_CONTROL__TEST_IRQ_INJECT__SOURCE_MASK_LO];
 
+  // Real host-initiated clear-request for RTL003_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW
+  // (REG-002 0x011C, contract REG-011C) -- closes OPEN_ISSUES.md item 2. Field
+  // added to dfc_rtl003_control_t at the new highest bit (ARCH-002), same
+  // pattern as dfc_rtl002.sv's identical fix.
+  wire        ctl_clear_event_overflow =
+    control_i[dfc_types_pkg::DFC_RTL003_CONTROL__RTL003_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI];
+
   // ---- reserved-bit (24-31) defensive masking -- SS3: "Reserved bits 24
   // through 31 have RAW, LATCH, PENDING, and ACKED tied zero; writes
   // selecting them are rejected." RTL-001 does not yet enforce the
@@ -307,6 +314,12 @@ module dfc_rtl003 (
   logic                                              event_overflow_q;
   logic [15:0]                                       event_drop_count_q;
 
+  // ---- EVENT_OVERFLOW clear-vs-new-evidence priority (REG-011C's own
+  // documented simultaneous-condition priority for this field: "reset/
+  // disable, then new evidence, then clear") -- same reasoning and same
+  // algebraic restatement as dfc_rtl002.sv's identical fix.
+  wire overflow_sets_this_cycle = evt_candidate_valid && evt_pending_q && !evt_ready_i;
+
   always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
     if (!core_rst_n_i) begin
       evt_pending_q      <= 1'b0;
@@ -331,6 +344,16 @@ module dfc_rtl003 (
           if (event_drop_count_q != 16'hFFFF) event_drop_count_q <= event_drop_count_q + 16'd1;
           event_overflow_q <= 1'b1;
         end
+      end
+
+      // Real host clear-request for EVENT_OVERFLOW (REG-011C) -- closes
+      // OPEN_ISSUES.md item 2. DROP_COUNT is a separate RO field with no
+      // clear side effect of its own (REG-002's own register-level side-
+      // effect text: "DROP_COUNT is read-only"), so this clear only ever
+      // affects event_overflow_q. Gated so new overflow evidence landing
+      // this same cycle wins over a simultaneous clear attempt.
+      if (ctl_clear_event_overflow && !overflow_sets_this_cycle) begin
+        event_overflow_q <= 1'b0;
       end
     end
   end

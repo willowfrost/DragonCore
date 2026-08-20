@@ -118,8 +118,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL001_STATUS__EVENT_DROP_COUNT_HI = 18;
   localparam int unsigned DFC_RTL001_STATUS__EVENT_DROP_COUNT_LO = 3;
 
-  // ARCH-002 Appendix B dfc_rtl002_control_t (59 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl002_control_t (60 bits, rich format)
   typedef struct packed {
+    logic rtl002_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask; host-initiated clear-request for RTL002_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x0044) -- added to close a real, confirmed operational gap: this struct previously had no field carrying this clear-request from RTL-001 into RTL-002, so the host had no way to acknowledge overflow evidence once set. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged.
     logic reset_status__recovery_failure;  //  reset=0 :: W1C failure to regain required ready state
     logic reset_status__timeout;  //  reset=0 :: W1C controlled-reset timeout evidence
     logic reset_control__safety_domain_reset;  //  reset=0 :: command_pulse
@@ -134,9 +135,9 @@ package dfc_types_pkg;
     logic sys_control__observational_mode;  //  reset=1 :: control_value
     logic sys_control__operational_enable;  //  reset=0 :: control_value
   } dfc_rtl002_control_t;
-  // total width: 59 bits
+  // total width: 60 bits
 
-  localparam int unsigned DFC_RTL002_CONTROL_WIDTH = 59;
+  localparam int unsigned DFC_RTL002_CONTROL_WIDTH = 60;
   localparam int unsigned DFC_RTL002_CONTROL__SYS_CONTROL__OPERATIONAL_ENABLE_HI = 0;
   localparam int unsigned DFC_RTL002_CONTROL__SYS_CONTROL__OPERATIONAL_ENABLE_LO = 0;
   localparam int unsigned DFC_RTL002_CONTROL__SYS_CONTROL__OBSERVATIONAL_MODE_HI = 1;
@@ -163,6 +164,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL002_CONTROL__RESET_STATUS__TIMEOUT_LO = 57;
   localparam int unsigned DFC_RTL002_CONTROL__RESET_STATUS__RECOVERY_FAILURE_HI = 58;
   localparam int unsigned DFC_RTL002_CONTROL__RESET_STATUS__RECOVERY_FAILURE_LO = 58;
+  localparam int unsigned DFC_RTL002_CONTROL__RTL002_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 59;
+  localparam int unsigned DFC_RTL002_CONTROL__RTL002_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 59;
 
   // ARCH-002 Appendix B dfc_rtl002_status_t (112 bits, rich format)
   typedef struct packed {
@@ -243,16 +246,17 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL002_STATUS__RESET_STATUS__RECOVERY_FAILURE_HI = 111;
   localparam int unsigned DFC_RTL002_STATUS__RESET_STATUS__RECOVERY_FAILURE_LO = 111;
 
-  // ARCH-002 Appendix B dfc_rtl003_control_t (128 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl003_control_t (129 bits, rich format)
   typedef struct packed {
+    logic rtl003_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask; host-initiated clear-request for RTL003_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x011C, contract REG-011C) -- added to close a real, confirmed operational gap: this struct previously had no field carrying this clear-request from RTL-001 into RTL-003, so the host had no way to acknowledge overflow evidence once set. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged.
     logic [31:0] test_irq_inject__source_mask;  //  reset=0 :: command_pulse
     logic [31:0] irq_clear__clear;  //  reset=0 :: clear_mask
     logic [31:0] irq_ack__ack_set;  //  reset=0 :: command_pulse
     logic [31:0] irq_enable__enable;  //  reset=0 :: control_value
   } dfc_rtl003_control_t;
-  // total width: 128 bits
+  // total width: 129 bits
 
-  localparam int unsigned DFC_RTL003_CONTROL_WIDTH = 128;
+  localparam int unsigned DFC_RTL003_CONTROL_WIDTH = 129;
   localparam int unsigned DFC_RTL003_CONTROL__IRQ_ENABLE__ENABLE_HI = 31;
   localparam int unsigned DFC_RTL003_CONTROL__IRQ_ENABLE__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL003_CONTROL__IRQ_ACK__ACK_SET_HI = 63;
@@ -261,6 +265,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL003_CONTROL__IRQ_CLEAR__CLEAR_LO = 64;
   localparam int unsigned DFC_RTL003_CONTROL__TEST_IRQ_INJECT__SOURCE_MASK_HI = 127;
   localparam int unsigned DFC_RTL003_CONTROL__TEST_IRQ_INJECT__SOURCE_MASK_LO = 96;
+  localparam int unsigned DFC_RTL003_CONTROL__RTL003_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 128;
+  localparam int unsigned DFC_RTL003_CONTROL__RTL003_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 128;
 
   // ARCH-002 Appendix B dfc_rtl003_status_t (153 bits, rich format)
   typedef struct packed {

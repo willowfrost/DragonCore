@@ -200,7 +200,25 @@ module dfc_rtl002 (
   // then, `TEST_DEBUG` remains structurally present in the state machine
   // below but is never actually entered, since its qualifying input is
   // always driven low.
-  input  logic         test_active_i
+  input  logic         test_active_i,
+
+  // REAL ports, per the Architecture formal port catalog -- closes
+  // OPEN_ISSUES.md item 5 (this module previously had no port carrying
+  // either gate, forcing `dfc_rtl024.sv` to read `rtl002_control` directly
+  // as a workaround). `global_irq_enable_o`/`global_event_enable_o` are
+  // driven below from the same real SYS_CONTROL.GLOBAL_IRQ_ENABLE/
+  // GLOBAL_EVENT_ENABLE bits this module already extracts from control_i
+  // (the latter already used internally to gate event generation above).
+  // `event_condition_enable_i`/`irq_condition_enable_i` (Appendix F.3
+  // per-module condition masks) are real ports but have no real producer
+  // anywhere in this project yet (OPEN_ISSUES.md item 6 -- RTL-001 does
+  // not implement the underlying CONDITION_MASK storage/forwarding
+  // mechanism); tied to a disclosed stub (64'h0) in `dfc_rtl024.sv` and
+  // genuinely unused inside this module until that mechanism exists.
+  output logic         global_irq_enable_o,
+  output logic         global_event_enable_o,
+  input  logic [63:0]  event_condition_enable_i,
+  input  logic [63:0]  irq_condition_enable_i
 );
 
   // SECOND TOOLCHAIN-DRIVEN DEVIATION (real, confirmed): the person's real
@@ -250,6 +268,13 @@ module dfc_rtl002 (
   wire        ctl_degraded_ack           = control_i[dfc_types_pkg::DFC_RTL002_CONTROL__SYS_CONTROL__DEGRADED_ACK_HI];
   wire        ctl_observational_mode     = control_i[dfc_types_pkg::DFC_RTL002_CONTROL__SYS_CONTROL__OBSERVATIONAL_MODE_HI];
   wire        ctl_operational_enable     = control_i[dfc_types_pkg::DFC_RTL002_CONTROL__SYS_CONTROL__OPERATIONAL_ENABLE_HI];
+  wire        ctl_global_irq_enable      = control_i[dfc_types_pkg::DFC_RTL002_CONTROL__SYS_CONTROL__GLOBAL_IRQ_ENABLE_HI];
+
+  // Real host-initiated clear-request for RTL002_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW
+  // (REG-002 0x0044, contract REG-0044) -- closes OPEN_ISSUES.md item 2. Field
+  // added to dfc_rtl002_control_t at the new highest bit (ARCH-002), so this
+  // is the first real write path into event_overflow_q below.
+  wire        ctl_clear_event_overflow   = control_i[dfc_types_pkg::DFC_RTL002_CONTROL__RTL002_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI];
 
   // ==========================================================================
   // Fixed masks (RTL-002 spec SS5, DFC-FUNC-0010) -- Architecture-owned
@@ -728,6 +753,15 @@ module dfc_rtl002 (
 
   wire ctl_global_event_enable = control_i[dfc_types_pkg::DFC_RTL002_CONTROL__SYS_CONTROL__GLOBAL_EVENT_ENABLE_HI];
 
+  // Real global_irq_enable_o/global_event_enable_o ports (closes
+  // OPEN_ISSUES.md item 5) -- driven directly from the same real
+  // SYS_CONTROL bits extracted above/here, not a new, separately-latched
+  // copy: control_i itself already carries RTL-001's registered storage
+  // (reggen.py drives each RW field from its own stored register), so no
+  // additional registration stage is needed inside this module.
+  assign global_irq_enable_o   = ctl_global_irq_enable;
+  assign global_event_enable_o = ctl_global_event_enable;
+
   wire real_state_transition   = (state_d != state_q);
   wire degraded_ack_this_cycle = (state_q == dfc_types_pkg::DEGRADED) &&
                                   (state_d == state_q) && ctl_degraded_ack;
@@ -778,6 +812,18 @@ module dfc_rtl002 (
   logic                                              event_overflow_q;
   logic [15:0]                                       event_drop_count_q;
 
+  // ---- EVENT_OVERFLOW clear-vs-new-evidence priority (REG-0044's own
+  // documented simultaneous-condition priority for this field: "reset/
+  // disable, then new evidence, then clear") -- new overflow evidence
+  // landing the same cycle as a host clear-write dominates, matching the
+  // identical new-terminal-result-dominates-clear pattern already used for
+  // RESET_STATUS's W1C fields above. Algebraically equivalent to the
+  // overflow-setting condition inside the always_ff block below
+  // (evt_candidate_valid && ctl_global_event_enable && evt_pending_q &&
+  // !evt_ready_i), restated here as its own named wire for the clear gate.
+  wire overflow_sets_this_cycle = evt_candidate_valid && ctl_global_event_enable &&
+                                   evt_pending_q && !evt_ready_i;
+
   always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
     if (!core_rst_n_i) begin
       evt_pending_q      <= 1'b0;
@@ -806,6 +852,17 @@ module dfc_rtl002 (
       // GLOBAL_EVENT_ENABLE off: a new event is suppressed without
       // counting as overflow (RTM's own note) -- already handled by the
       // ctl_global_event_enable gate above; no separate branch needed.
+
+      // Real host clear-request for EVENT_OVERFLOW (REG-0044) -- closes
+      // OPEN_ISSUES.md item 2. DROP_COUNT is a separate RO field with no
+      // clear side effect of its own (REG-002's own register-level side-
+      // effect text: "DROP_COUNT is read-only"), so this clear only ever
+      // affects event_overflow_q. Gated so new overflow evidence landing
+      // this same cycle wins over a simultaneous clear attempt (see
+      // overflow_sets_this_cycle's own comment above).
+      if (ctl_clear_event_overflow && !overflow_sets_this_cycle) begin
+        event_overflow_q <= 1'b0;
+      end
     end
   end
 
@@ -866,5 +923,14 @@ module dfc_rtl002 (
   end
 
   assign status_o = status_comb;
+
+  // ---- unused-port sink (RTLSTD-MOD-009): event_condition_enable_i/
+  // irq_condition_enable_i are real ports per the Architecture catalog
+  // (Appendix F.3) with no functional consumer in this implementation --
+  // RTL-002 does not yet gate its own event/irq generation on a per-source
+  // condition mask (OPEN_ISSUES.md item 6). Intentionally consumed here,
+  // not silently dropped, same pattern as dfc_rtl003.sv's identical case. ----
+  logic unused_stub_sink;
+  assign unused_stub_sink = (|event_condition_enable_i) ^ (|irq_condition_enable_i);
 
 endmodule : dfc_rtl002

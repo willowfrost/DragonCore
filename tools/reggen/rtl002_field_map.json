@@ -41,6 +41,12 @@
         {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "reset_status__timeout"},
         {"reg_hi": 1, "reg_lo": 1, "class": "W1C", "struct_field": "reset_status__recovery_failure"}
       ]
+    },
+    {
+      "register": "RTL002_EVT_OVERFLOW_STATUS", "contract_id": "REG-0044",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl002_evt_overflow_status__event_overflow"}
+      ]
     }
   ],
   "status_registers": [

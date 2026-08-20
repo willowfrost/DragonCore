@@ -46,6 +46,11 @@ module rtl002_integration_tb;
   logic [dfc_types_pkg::DFC_RTL003_CONTROL_WIDTH-1:0] rtl003_control_unused;
   logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status_stub = '0;
 
+  // Real signal (not a bare literal tie) so Part 4 below can withhold the
+  // event handshake on purpose to force a genuine, real overflow condition
+  // for the new EVENT_OVERFLOW clear-path test.
+  logic rtl002_evt_ready = 1'b1;
+
   always #10 core_clk_i = ~core_clk_i;
 
   dfc_rtl001 u_rtl001 (
@@ -76,7 +81,7 @@ module rtl002_integration_tb;
     .status_o             (rtl002_status),
     .timestamp_i          (64'h0),
     .evt_valid_o          (),
-    .evt_ready_i          (1'b1),
+    .evt_ready_i          (rtl002_evt_ready),
     .evt_record_o         (),
     .irq_req_o            (),
     .module_ready_i       (24'h80F81F),  // all mandatory modules ready --
@@ -93,7 +98,14 @@ module rtl002_integration_tb;
     // targets the RTL-001<->RTL-002 register bus specifically, not
     // TEST_DEBUG entry/exit (RTL-002's own standalone testbench,
     // rtl002_state_tb.sv, covers that).
-    .test_active_i        (1'b0)
+    .test_active_i        (1'b0),
+    // Real ports this session, closing OPEN_ISSUES.md item 5 -- tied
+    // inactive/stub here since this test targets the RTL-001<->RTL-002
+    // register bus specifically, not these new gates.
+    .global_irq_enable_o       (),
+    .global_event_enable_o     (),
+    .event_condition_enable_i  (64'h0),
+    .irq_condition_enable_i    (64'h0)
   );
 
   int errors = 0, checks = 0;
@@ -243,6 +255,60 @@ module rtl002_integration_tb;
     dri_read(DFC_ADDR_RESET_STATUS, rdata, code);
     check_bit("host-readable RESET_STATUS.BUSY mirrors RTL-002's real busy state",
               rdata[0], 1'b1);
+
+    // let Part 3's reset command run to completion (RC_ASSERT + RC_WAIT_READY,
+    // well under RECOVERY_TIMEOUT_CYCLES since module_ready_i already
+    // satisfies the target mask) before starting a clean Part 4.
+    repeat (10) @(posedge core_clk_i); #1;
+
+    // ------------------------------------------------------------------
+    // Part 4 (CONTROL direction, W1C clear-request): closes OPEN_ISSUES.md
+    // item 2 -- a real host write to RTL002_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW
+    // must actually clear RTL-002's real, previously-set sticky
+    // event_overflow_q, not just report write_illegal_o=1 as it did before
+    // this session's fix. Withholding the event handshake (evt_ready) is
+    // used here specifically to force a real, genuine overflow condition to
+    // clear -- not a fabricated/injected value.
+    // ------------------------------------------------------------------
+    rtl002_evt_ready = 1'b0;
+    @(posedge core_clk_i); #1;
+
+    check_bit("event_overflow_q starts clear before any overflow is forced",
+              rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__EVENT_OVERFLOW_HI], 1'b0);
+
+    // a second real MODULE_RESET command (same target as Part 3, already
+    // within the mandatory-ready mask so it completes quickly) genuinely
+    // emits two events close together (0x0004 requested, then complete) --
+    // with the handshake withheld above, the second occupies an already-
+    // occupied pending slot, a real, counted overflow.
+    authorize_protected_write();
+    dri_write(DFC_ADDR_RESET_CONTROL, 32'h0000_0002, code);
+    check("second RESET_CONTROL write accepted (RSP_OK)", {29'h0, code}, 32'h0);
+
+    // RESET_ASSERT_MIN_CYCLES(4) + 2 ready-streak cycles to COMPLETE, plus
+    // margin -- wait past that so the real "complete" event has genuinely
+    // landed on top of the still-pending "requested" event.
+    repeat (12) @(posedge core_clk_i); #1;
+
+    check_bit({"a real, genuine overflow condition (two real events, ",
+              "handshake withheld) actually set RTL-002's sticky ",
+              "event_overflow_q -- not a fabricated value"},
+              rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__EVENT_OVERFLOW_HI], 1'b1);
+
+    // the real host clear-request path (REG-0044, previously write_illegal_o=1
+    // with no way to clear this evidence at all): a plain, unprotected write
+    // of EVENT_OVERFLOW=1 must now actually clear the real sticky bit above.
+    dri_write(DFC_ADDR_RTL002_EVT_OVERFLOW_STATUS, 32'h0000_0001, code);
+    check("RTL002_EVT_OVERFLOW_STATUS clear write accepted (RSP_OK, was write_illegal_o=1 before this fix)",
+          {29'h0, code}, 32'h0);
+    @(posedge core_clk_i); #1;
+
+    check_bit({"the real host write above actually cleared RTL-002's real, ",
+              "previously-set event_overflow_q through the register ",
+              "interface -- OPEN_ISSUES.md item 2, closed for real"},
+              rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__EVENT_OVERFLOW_HI], 1'b0);
+
+    rtl002_evt_ready = 1'b1;
 
     $display("");
     $display("rtl002_integration_tb: %0d checks, %0d failures", checks, errors);

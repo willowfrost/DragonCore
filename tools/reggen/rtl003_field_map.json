@@ -27,6 +27,12 @@
       "fields": [
         {"reg_hi": 31, "reg_lo": 0, "class": "WO-CMD", "struct_field": "test_irq_inject__source_mask"}
       ]
+    },
+    {
+      "register": "RTL003_EVT_OVERFLOW_STATUS", "contract_id": "REG-011C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl003_evt_overflow_status__event_overflow"}
+      ]
     }
   ],
   "status_registers": [

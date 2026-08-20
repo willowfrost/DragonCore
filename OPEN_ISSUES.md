@@ -24,24 +24,43 @@ incomplete, logged here rather than silently resolved or guessed.
    `RTL-003_RevA.md` is ever revised, its own port-name claim should be
    corrected to cite ARCH-002 rather than restate it (CHTR-DOC-003).
 
-2. **`dfc_rtl003_control_t` (ARCH-002 Appendix B, 128 bits, exactly 4
-   fields: `irq_enable__enable`, `irq_ack__ack_set`, `irq_clear__clear`,
-   `test_irq_inject__source_mask`) has no field for clearing
-   `RTL003_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW`** (REG-011C, a real W1C bit
-   per REG-002's own access-class table). The struct's own extractor
-   confirms its 4 fields tile the full 128 bits with nothing left over, so
-   there is no unused bit position to repurpose without ARCH-002 itself
-   growing this struct -- not something RTL-003's own implementation or
-   `tools/reggen/rtl003_field_map.json` can invent (CHTR-DOC-006). This
-   mirrors a **pre-existing, identical gap already present for RTL-002**
-   (`RTL002_EVT_OVERFLOW_STATUS` at 0x0044 is likewise absent from
-   `rtl002_field_map.json`'s `control_registers`, for the same reason:
-   `dfc_rtl002_control_t` has no such field either). Both registers
-   currently have `write_illegal_o = 1'b1` (no real write path exists),
-   which is honest given the constraint, but means the host genuinely cannot
-   clear either module's event-overflow evidence via the register interface
-   today. A real fix requires ARCH-002 to grow both control structs by (at
-   least) one bit each.
+2. **RESOLVED (2026-08-20).** `dfc_rtl003_control_t` (128 bits, exactly 4
+   fields) and `dfc_rtl002_control_t` (59 bits) each had no field for
+   clearing their respective `RTL00N_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW`
+   W1C bit (REG-0044/REG-011C). Fixed by growing ARCH-002 itself (the
+   correct fix per this item's own original text -- not something a
+   field-map could invent): `dfc_rtl002_control_t` grew from 59 to 60 bits
+   (new field `rtl002_evt_overflow_status__event_overflow` at bit 59) and
+   `dfc_rtl003_control_t` grew from 128 to 129 bits (new field
+   `rtl003_evt_overflow_status__event_overflow` at bit 128) -- each new
+   field placed at the struct's new highest bit specifically so every
+   pre-existing field keeps its exact prior bit position (confirmed
+   byte-identical via a real regeneration: every other `_HI`/`_LO`
+   constant in both structs in the regenerated `dfc_types_pkg.sv` is
+   unchanged from before this fix). `tools/reggen/rtl002_field_map.json`
+   and `rtl003_field_map.json` each gained one new `control_registers`
+   entry (the register's real EVENT_OVERFLOW bit, class W1C, mapped to the
+   new struct field) -- same pattern already used for
+   RESET_STATUS/RESET_DIAGNOSTIC. Confirmed via a real `reggen.py` run:
+   `write_illegal_o` for both `RTL002_EVT_OVERFLOW_STATUS` and
+   `RTL003_EVT_OVERFLOW_STATUS` is now `1'b0` (previously `1'b1`).
+   `dfc_rtl002.sv`/`dfc_rtl003.sv` each gained a real bit-slice wire off
+   the new control field and real clear logic on their sticky
+   `event_overflow_q` register, gated so a genuinely new overflow event
+   landing the same cycle as the clear request wins (REG-0044/REG-011C's
+   own documented field priority: "reset/disable, then new evidence, then
+   clear") -- `DROP_COUNT` itself has no defined clear side effect and is
+   left untouched by this fix, per REG-002's own register-level side-effect
+   text ("DROP_COUNT is read-only"). Proven via new, real checks added to
+   `rtl002_integration_tb.sv` and `rtl003_integration_tb.sv`: each
+   withholds its module's event handshake to force a genuine (not
+   fabricated) overflow condition, confirms `event_overflow_q` sets, issues
+   the real host clear write through RTL-001's real DRI path, and confirms
+   `event_overflow_q` actually clears. Verified end-to-end: full Icarus
+   regression (7/7 testbenches, 133/133 checks), a real `gate.ps1` run
+   (lint/sim/formal bmc+prove/coverage all clean), and a real
+   `build_ecp5.ps1` run (Build ID `20260820_074244`, **63.17 MHz PASS at
+   50 MHz required**).
 
 3. **REG-002's own text for `IRQ_CLEAR` (0x0114) is ambiguous about what
    "reads current retained value" means for a register whose write side is
@@ -76,19 +95,30 @@ incomplete, logged here rather than silently resolved or guessed.
    real, spec-correct fix belongs in RTL-001's validation path, not in each
    downstream consumer module.
 
-5. **`dfc_rtl002.sv`, as already delivered before this session, does not
-   expose several ports ARCH-002's own formal port catalog lists for
-   RTL-002**: `global_irq_enable_o`, `global_event_enable_o`,
-   `event_condition_enable_i`, `irq_condition_enable_i`. This is a
-   pre-existing gap independent of RTL-003, but RTL-003's integration
-   exposed it concretely: `dfc_rtl024.sv` cannot connect
-   `RTL-003.global_irq_enable_i` to a real `RTL-002.global_irq_enable_o` port
-   because that port does not exist. Worked around (not fixed) by reading
-   the underlying `SYS_CONTROL.GLOBAL_IRQ_ENABLE` bit directly off
-   `rtl002_control` (the real net RTL-001 already drives into RTL-002,
-   owned by `dfc_rtl024.sv` itself) -- this is real, live, host-writable
-   data, not a stub, but it bypasses the port RTL-002 should have had. A
-   real fix means adding these 4 ports to `dfc_rtl002.sv` directly.
+5. **RESOLVED (2026-08-20).** `dfc_rtl002.sv` did not expose 4 ports
+   ARCH-002's own formal port catalog lists for RTL-002: `global_irq_enable_o`,
+   `global_event_enable_o`, `event_condition_enable_i`,
+   `irq_condition_enable_i`. Fixed by adding all 4 as real ports on
+   `dfc_rtl002.sv` directly. `global_irq_enable_o`/`global_event_enable_o`
+   are driven from the same real `SYS_CONTROL.GLOBAL_IRQ_ENABLE`/
+   `GLOBAL_EVENT_ENABLE` bits this module already extracts from `control_i`
+   (`global_event_enable_o` reuses the exact wire already used internally to
+   gate event generation; `global_irq_enable_o` uses a new, identically-
+   patterned extraction wire, since RTL-002 previously had no internal use
+   for that bit at all). `dfc_rtl024.sv` was updated to connect
+   `RTL-003.global_irq_enable_i` to this new real `global_irq_enable_o`
+   port, **removing the workaround that read `rtl002_control` directly**.
+   `event_condition_enable_i`/`irq_condition_enable_i` are real ports, tied
+   to a disclosed stub (`64'h0`) in `dfc_rtl024.sv`, consistent with item 6
+   below (RTL-001 does not yet implement the underlying CONDITION_MASK
+   storage/forwarding mechanism) -- genuinely unused inside `dfc_rtl002.sv`
+   itself, intentionally consumed via an unused-port sink per
+   RTLSTD-MOD-009 (same pattern `dfc_rtl003.sv` already used for its own
+   analogous unused real ports). Verified end-to-end: full Icarus regression
+   (7/7 testbenches, 133/133 checks, including `rtl002_state_tb.sv`'s and
+   `rtl002_integration_tb.sv`'s updated instantiations for the 4 new
+   ports), a real `gate.ps1` run, and a real `build_ecp5.ps1` run (Build ID
+   `20260820_074244`, 63.17 MHz PASS at 50 MHz required).
 
 6. **`event_condition_enable_i`/`irq_condition_enable_i` (Appendix F.3
    per-module condition masks) have no real producer anywhere in this

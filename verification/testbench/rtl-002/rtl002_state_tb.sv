@@ -55,6 +55,15 @@ module rtl002_state_tb;
   // checks added below).
   logic        test_active_i = 1'b0;
 
+  // Real ports added this session, closing OPEN_ISSUES.md item 5 -- this
+  // testbench exercises the primary state machine, not these gates
+  // (rtl002_integration_tb.sv covers the real EVENT_OVERFLOW clear path
+  // and the global-enable ports' real SYS_CONTROL-bit forwarding).
+  logic        global_irq_enable_o;
+  logic        global_event_enable_o;
+  logic [63:0] event_condition_enable_i = 64'h0;
+  logic [63:0] irq_condition_enable_i   = 64'h0;
+
   always #10 core_clk_i = ~core_clk_i;  // 50 MHz CORE_CLK
 
   dfc_rtl002 dut (.*);

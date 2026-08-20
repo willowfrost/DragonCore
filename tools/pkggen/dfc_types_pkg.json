@@ -191,8 +191,8 @@
     },
     {
       "name": "dfc_rtl002_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl002_control_t (59 bits, rich format)",
-      "width": 59,
+      "trace": "ARCH-002 Appendix B dfc_rtl002_control_t (60 bits, rich format)",
+      "width": 60,
       "fields": [
         {
           "name": "sys_control__operational_enable",
@@ -310,6 +310,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "W1C failure to regain required ready state"
+        },
+        {
+          "name": "rtl002_evt_overflow_status__event_overflow",
+          "hi": 59,
+          "lo": 59,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask; host-initiated clear-request for RTL002_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x0044) -- added to close a real, confirmed operational gap: this struct previously had no field carrying this clear-request from RTL-001 into RTL-002, so the host had no way to acknowledge overflow evidence once set. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged."
         }
       ]
     },
@@ -538,8 +547,8 @@
     },
     {
       "name": "dfc_rtl003_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl003_control_t (128 bits, rich format)",
-      "width": 128,
+      "trace": "ARCH-002 Appendix B dfc_rtl003_control_t (129 bits, rich format)",
+      "width": 129,
       "fields": [
         {
           "name": "irq_enable__enable",
@@ -576,6 +585,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "command_pulse"
+        },
+        {
+          "name": "rtl003_evt_overflow_status__event_overflow",
+          "hi": 128,
+          "lo": 128,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask; host-initiated clear-request for RTL003_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x011C, contract REG-011C) -- added to close a real, confirmed operational gap: this struct previously had no field carrying this clear-request from RTL-001 into RTL-003, so the host had no way to acknowledge overflow evidence once set. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged."
         }
       ]
     },

@@ -259,6 +259,10 @@ module dfc_rtl024 (
   logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] rtl002_operating_state;
   logic        rtl002_observational_mode;
   logic        rtl002_irq_req;
+  logic        rtl002_global_irq_enable;   // real RTL-002 port, closes
+                                            // OPEN_ISSUES.md item 5 -- see
+                                            // u_rtl003's global_irq_enable_i
+                                            // connection below.
   // rtl002_status/rtl001_status/rtl002_control are now declared earlier,
   // immediately before dfc_rtl001's instantiation -- see that block's own
   // comment for why.
@@ -285,7 +289,21 @@ module dfc_rtl024 (
     // RTL-002.test_active_i), tied to a disclosed stub here since RTL-024
     // has no real production-test infrastructure yet to drive it for
     // real -- see dfc_rtl002.sv's own port header note.
-    .test_active_i        (1'b0)
+    .test_active_i        (1'b0),
+    // Real ports, added this session, closing OPEN_ISSUES.md item 5.
+    // global_irq_enable_o now feeds u_rtl003's global_irq_enable_i below
+    // directly, replacing the prior rtl002_control-read workaround.
+    // global_event_enable_o's real consumer is RTL-005 (Event Logger),
+    // which does not exist yet -- left genuinely unconsumed, same
+    // disclosed-gap pattern as evt_valid_o/evt_record_o above, not a stub
+    // on RTL-002's own side. event_condition_enable_i/irq_condition_enable_i
+    // are real ports tied to a disclosed stub (64'h0): RTL-001 does not yet
+    // implement the per-module CONDITION_MASK storage/forwarding mechanism
+    // (Appendix F.3) these would come from (OPEN_ISSUES.md item 6).
+    .global_irq_enable_o       (rtl002_global_irq_enable),
+    .global_event_enable_o     (),
+    .event_condition_enable_i  (64'h0),
+    .irq_condition_enable_i    (64'h0)
   );
 
   // ==========================================================================
@@ -308,18 +326,10 @@ module dfc_rtl024 (
   // dependency gap -- not something this integration can close until each
   // producer module is real.
   //
-  // global_irq_enable_i: ARCH-002's port catalog names RTL-002.
-  // global_irq_enable_o as this signal's real producer, but dfc_rtl002.sv
-  // (as already delivered, out of this integration's scope to modify) has
-  // no such dedicated output port -- a real, pre-existing gap in RTL-002's
-  // own port-catalog conformance, independent of RTL-003. The underlying
-  // SYS_CONTROL.GLOBAL_IRQ_ENABLE bit is nonetheless real, live data
-  // already present on `rtl002_control` (RTL-001's real aggregated output
-  // to RTL-002, a net this file already owns and connects) -- read directly
-  // from it here rather than invent a stub value for a bit that is, in
-  // fact, already real and host-writable. This is an ordinary top-level net
-  // reference, not a hierarchical dot-notation reference into another
-  // module's internals (RTLSTD-MOD-014 governs the latter, not this).
+  // global_irq_enable_i: RTL-002 now has a real, dedicated
+  // global_irq_enable_o port (added this session, closing OPEN_ISSUES.md
+  // item 5) -- connected directly below via `rtl002_global_irq_enable`,
+  // replacing the prior workaround that read `rtl002_control` directly.
   //
   // event_condition_enable_i/irq_condition_enable_i: real ports per the
   // Architecture catalog, tied to a disclosed stub (64'h0) here since
@@ -352,7 +362,7 @@ module dfc_rtl024 (
     .aggregate_pending_o      (rtl003_aggregate_pending),
     .operating_state_i        (rtl002_operating_state),
     .observational_mode_i     (rtl002_observational_mode),
-    .global_irq_enable_i      (rtl002_control[dfc_types_pkg::DFC_RTL002_CONTROL__SYS_CONTROL__GLOBAL_IRQ_ENABLE_HI]),
+    .global_irq_enable_i      (rtl002_global_irq_enable),
     .event_condition_enable_i (64'h0),
     .irq_condition_enable_i   (64'h0)
   );

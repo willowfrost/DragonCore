@@ -3,11 +3,11 @@
 # 8 register(s) with qualified (non-bare) protection -- see NOTE below and file header.
 
 # REAL cross-module forwarding to RTL-002:
-#   control (RTL-001 -> RTL-002): RESET_CONTROL, RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_ENABLE, SYS_CONTROL
+#   control (RTL-001 -> RTL-002): RESET_CONTROL, RESET_DIAGNOSTIC, RESET_STATUS, RTL002_EVT_OVERFLOW_STATUS, SUBSYS_ENABLE, SYS_CONTROL
 #   status (RTL-002 -> RTL-001): RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
 
 # REAL cross-module forwarding to RTL-003:
-#   control (RTL-001 -> RTL-003): IRQ_ACK, IRQ_CLEAR, IRQ_ENABLE, TEST_IRQ_INJECT
+#   control (RTL-001 -> RTL-003): IRQ_ACK, IRQ_CLEAR, IRQ_ENABLE, RTL003_EVT_OVERFLOW_STATUS, TEST_IRQ_INJECT
 #   status (RTL-003 -> RTL-001): IRQ_ACKED, IRQ_CLEAR, IRQ_PENDING, IRQ_RAW_STATUS, IRQ_VECTOR, RTL003_EVT_OVERFLOW_STATUS
 
 0x0000  DFC_DEVICE_ID                readback=const              owner=RTL-001         access=CONST                protection=No
