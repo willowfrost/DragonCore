@@ -3,6 +3,7 @@
 // Cross-module forwarding: RTL-002 (see tools/reggen/rtl002_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-003 (see tools/reggen/rtl003_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-004 (see tools/reggen/rtl004_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-005 (see tools/reggen/rtl005_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -11,6 +12,8 @@
   // Aggregated real RTL-003 control, replacing the prior disconnected placeholder for: IRQ_ACK, IRQ_CLEAR, IRQ_ENABLE, RTL003_EVT_OVERFLOW_STATUS, TEST_IRQ_INJECT
   // Aggregated real RTL-004 status, replacing individual ports for: RTL004_EVT_OVERFLOW_STATUS, TIME_ACTIVE_OFFSET_HI, TIME_ACTIVE_OFFSET_LO, TIME_RAW_HI, TIME_RAW_LO, TIME_STATUS, TIME_SYNC_STATUS
   // Aggregated real RTL-004 control, replacing the prior disconnected placeholder for: RTL004_EVT_OVERFLOW_STATUS, TIME_CONTROL, TIME_SNAPSHOT, TIME_STATUS, TIME_SYNC_COMMIT, TIME_SYNC_OFFSET_HI, TIME_SYNC_OFFSET_LO
+  // Aggregated real RTL-005 status, replacing individual ports for: EVT_ARB_STATUS, EVT_COUNT, EVT_DATA0, EVT_DATA1, EVT_DATA2, EVT_DATA3, EVT_DROP_SOURCE, EVT_OVERFLOW_COUNT, EVT_POP_ERROR_COUNT, EVT_STATUS
+  // Aggregated real RTL-005 control, replacing the prior disconnected placeholder for: EVT_CLEAR, EVT_CONTROL, EVT_DROP_SOURCE, EVT_OVERFLOW_COUNT, EVT_POP, EVT_POP_ERROR_COUNT, EVT_SNAPSHOT, EVT_SOURCE_ENABLE, EVT_STATUS
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -23,16 +26,6 @@ module dfc_config_regbank_regs (
   output logic         protected_o,
   input  logic [31:0]  protect_status_status_i,
   input  logic [31:0]  rtl002_evt_overflow_status_status_i,
-  input  logic [31:0]  evt_status_status_i,
-  input  logic [31:0]  evt_count_status_i,
-  input  logic [31:0]  evt_overflow_count_status_i,
-  input  logic [31:0]  evt_data0_status_i,
-  input  logic [31:0]  evt_data1_status_i,
-  input  logic [31:0]  evt_data2_status_i,
-  input  logic [31:0]  evt_data3_status_i,
-  input  logic [31:0]  evt_drop_source_status_i,
-  input  logic [31:0]  evt_arb_status_status_i,
-  input  logic [31:0]  evt_pop_error_count_status_i,
   input  logic [31:0]  gpio_raw_in_status_i,
   input  logic [31:0]  gpio_sync_in_status_i,
   input  logic [31:0]  gpio_qual_in_status_i,
@@ -188,7 +181,9 @@ module dfc_config_regbank_regs (
   input  logic [152:0]  rtl003_status_i,
   output logic [128:0] rtl003_control_o,
   input  logic [168:0]  rtl004_status_i,
-  output logic [72:0] rtl004_control_o
+  output logic [72:0] rtl004_control_o,
+  input  logic [267:0]  rtl005_status_i,
+  output logic [128:0] rtl005_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -470,14 +465,30 @@ module dfc_config_regbank_regs (
     if (!rst_ni) evt_control_q <= 32'h00000003;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_CONTROL)) evt_control_q <= wdata_i;
 
-  // EVT_STATUS (0x0304) -- external passthrough, owner RTL-005
-  wire [31:0] evt_status_q = evt_status_status_i;
+  // EVT_STATUS (0x0304) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-005, real
+  //   generation per contract REG-0304, not a permanent tie.
+  logic [31:0] evt_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) evt_status_pulse_q <= 32'h0;
+    else evt_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_STATUS)) ? wdata_i : 32'h0;
 
-  // EVT_COUNT (0x0308) -- external passthrough, owner RTL-005
-  wire [31:0] evt_count_q = evt_count_status_i;
+  // EVT_STATUS (0x0304) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-0304), not an individual per-register port.
+  wire [31:0] evt_status_q = {25'h0, rtl005_status_i[9:9], rtl005_status_i[8:8], rtl005_status_i[7:7], rtl005_status_i[6:6], rtl005_status_i[5:5], rtl005_status_i[4:4], rtl005_status_i[3:3]};
 
-  // EVT_OVERFLOW_COUNT (0x030C) -- external passthrough, owner RTL-005
-  wire [31:0] evt_overflow_count_q = evt_overflow_count_status_i;
+  // EVT_COUNT (0x0308) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-0308), not an individual per-register port.
+  wire [31:0] evt_count_q = {25'h0, rtl005_status_i[16:10]};
+
+  // EVT_OVERFLOW_COUNT (0x030C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-005, real
+  //   generation per contract REG-030C, not a permanent tie.
+  logic [31:0] evt_overflow_count_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) evt_overflow_count_pulse_q <= 32'h0;
+    else evt_overflow_count_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_OVERFLOW_COUNT)) ? wdata_i : 32'h0;
+
+  // EVT_OVERFLOW_COUNT (0x030C) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-030C), not an individual per-register port.
+  wire [31:0] evt_overflow_count_q = {rtl005_status_i[48:17]};
 
   // EVT_SOURCE_ENABLE (0x0310) -- Mixed: RW, RSV0, owner RTL-005
   logic [31:0] evt_source_enable_q;
@@ -485,35 +496,75 @@ module dfc_config_regbank_regs (
     if (!rst_ni) evt_source_enable_q <= 32'h00FFFFFF;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_SOURCE_ENABLE)) evt_source_enable_q <= wdata_i;
 
-  // EVT_SNAPSHOT (0x0314) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_SNAPSHOT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // EVT_SNAPSHOT (0x0314) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-005, real
+  //   generation per contract REG-0314, not a permanent tie.
+  logic [31:0] evt_snapshot_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) evt_snapshot_pulse_q <= 32'h0;
+    else evt_snapshot_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_SNAPSHOT)) ? wdata_i : 32'h0;
+
+  // EVT_SNAPSHOT (0x0314) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-005 via evt_snapshot_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] evt_snapshot_q = 32'h00000000;
 
-  // EVT_DATA0 (0x0318) -- external passthrough, owner RTL-005
-  wire [31:0] evt_data0_q = evt_data0_status_i;
+  // EVT_DATA0 (0x0318) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-0318), not an individual per-register port.
+  wire [31:0] evt_data0_q = {rtl005_status_i[80:49]};
 
-  // EVT_DATA1 (0x031C) -- external passthrough, owner RTL-005
-  wire [31:0] evt_data1_q = evt_data1_status_i;
+  // EVT_DATA1 (0x031C) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-031C), not an individual per-register port.
+  wire [31:0] evt_data1_q = {rtl005_status_i[112:81]};
 
-  // EVT_DATA2 (0x0320) -- external passthrough, owner RTL-005
-  wire [31:0] evt_data2_q = evt_data2_status_i;
+  // EVT_DATA2 (0x0320) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-0320), not an individual per-register port.
+  wire [31:0] evt_data2_q = {rtl005_status_i[144:137], rtl005_status_i[136:129], rtl005_status_i[128:113]};
 
-  // EVT_DATA3 (0x0324) -- external passthrough, owner RTL-005
-  wire [31:0] evt_data3_q = evt_data3_status_i;
+  // EVT_DATA3 (0x0324) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-0324), not an individual per-register port.
+  wire [31:0] evt_data3_q = {rtl005_status_i[176:145]};
 
-  // EVT_POP (0x0328) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_POP)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // EVT_POP (0x0328) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-005, real
+  //   generation per contract REG-0328, not a permanent tie.
+  logic [31:0] evt_pop_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) evt_pop_pulse_q <= 32'h0;
+    else evt_pop_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_POP)) ? wdata_i : 32'h0;
+
+  // EVT_POP (0x0328) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-005 via evt_pop_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] evt_pop_q = 32'h00000000;
 
-  // EVT_CLEAR (0x032C) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_CLEAR)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // EVT_CLEAR (0x032C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-005, real
+  //   generation per contract REG-032C, not a permanent tie.
+  logic [31:0] evt_clear_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) evt_clear_pulse_q <= 32'h0;
+    else evt_clear_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_CLEAR)) ? wdata_i : 32'h0;
+
+  // EVT_CLEAR (0x032C) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-005 via evt_clear_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] evt_clear_q = 32'h00000000;
 
-  // EVT_DROP_SOURCE (0x0330) -- external passthrough, owner RTL-005
-  wire [31:0] evt_drop_source_q = evt_drop_source_status_i;
+  // EVT_DROP_SOURCE (0x0330) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-005, real
+  //   generation per contract REG-0330, not a permanent tie.
+  logic [31:0] evt_drop_source_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) evt_drop_source_pulse_q <= 32'h0;
+    else evt_drop_source_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_DROP_SOURCE)) ? wdata_i : 32'h0;
 
-  // EVT_ARB_STATUS (0x0334) -- external passthrough, owner RTL-005
-  wire [31:0] evt_arb_status_q = evt_arb_status_status_i;
+  // EVT_DROP_SOURCE (0x0330) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-0330), not an individual per-register port.
+  wire [31:0] evt_drop_source_q = {rtl005_status_i[208:177]};
 
-  // EVT_POP_ERROR_COUNT (0x0338) -- external passthrough, owner RTL-005
-  wire [31:0] evt_pop_error_count_q = evt_pop_error_count_status_i;
+  // EVT_ARB_STATUS (0x0334) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-0334), not an individual per-register port.
+  wire [31:0] evt_arb_status_q = {21'h0, rtl005_status_i[219:219], rtl005_status_i[218:214], rtl005_status_i[213:209]};
+
+  // EVT_POP_ERROR_COUNT (0x0338) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-005, real
+  //   generation per contract REG-0338, not a permanent tie.
+  logic [31:0] evt_pop_error_count_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) evt_pop_error_count_pulse_q <= 32'h0;
+    else evt_pop_error_count_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_EVT_POP_ERROR_COUNT)) ? wdata_i : 32'h0;
+
+  // EVT_POP_ERROR_COUNT (0x0338) -- external passthrough, owner RTL-005. Reconstructed from the aggregated rtl005_status_i input (contract REG-0338), not an individual per-register port.
+  wire [31:0] evt_pop_error_count_q = {rtl005_status_i[267:236]};
 
   // GPIO_CONTROL (0x0400) -- Mixed: RW, RSV0, owner RTL-006
   logic [31:0] gpio_control_q;
@@ -1816,6 +1867,27 @@ module dfc_config_regbank_regs (
   assign rtl004_control_o[1] = time_control_q[1:1];  // TIME_CONTROL.time_control__correlation_enable
   assign rtl004_control_o[0] = time_control_q[0:0];  // TIME_CONTROL.time_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl005_control_o -- real forwarding to RTL-005, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl005_control_t defines --
+  // cross-checked at generation time (129/129 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl005_control_o[128] = evt_status_pulse_q[2:2];  // EVT_STATUS.evt_status__snapshot_valid
+  assign rtl005_control_o[127:96] = evt_pop_error_count_pulse_q[31:0];  // EVT_POP_ERROR_COUNT.evt_pop_error_count__count
+  assign rtl005_control_o[95:64] = evt_drop_source_pulse_q[31:0];  // EVT_DROP_SOURCE.evt_drop_source__source_drop
+  assign rtl005_control_o[63] = evt_clear_pulse_q[0:0];  // EVT_CLEAR.evt_clear__clear_all
+  assign rtl005_control_o[62] = evt_pop_pulse_q[0:0];  // EVT_POP.evt_pop__pop
+  assign rtl005_control_o[61] = evt_snapshot_pulse_q[0:0];  // EVT_SNAPSHOT.evt_snapshot__capture_oldest
+  assign rtl005_control_o[60:37] = evt_source_enable_q[23:0];  // EVT_SOURCE_ENABLE.evt_source_enable__source_enable
+  assign rtl005_control_o[36:5] = evt_overflow_count_pulse_q[31:0];  // EVT_OVERFLOW_COUNT.evt_overflow_count__count
+  assign rtl005_control_o[4] = evt_status_pulse_q[6:6];  // EVT_STATUS.evt_status__clear_complete
+  assign rtl005_control_o[3] = evt_status_pulse_q[5:5];  // EVT_STATUS.evt_status__pop_error
+  assign rtl005_control_o[2] = evt_status_pulse_q[4:4];  // EVT_STATUS.evt_status__source_drop
+  assign rtl005_control_o[1] = evt_status_pulse_q[3:3];  // EVT_STATUS.evt_status__overflow
+  assign rtl005_control_o[0] = evt_control_q[0:0];  // EVT_CONTROL.evt_control__logger_enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -1872,9 +1944,9 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_TIME_ACTIVE_OFFSET_LO: begin rdata_o = time_active_offset_lo_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_ACTIVE_OFFSET_HI: begin rdata_o = time_active_offset_hi_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_CONTROL: begin rdata_o = evt_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_EVT_STATUS: begin rdata_o = evt_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_EVT_STATUS: begin rdata_o = evt_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_COUNT: begin rdata_o = evt_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_EVT_OVERFLOW_COUNT: begin rdata_o = evt_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_EVT_OVERFLOW_COUNT: begin rdata_o = evt_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_SOURCE_ENABLE: begin rdata_o = evt_source_enable_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_SNAPSHOT: begin rdata_o = evt_snapshot_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_DATA0: begin rdata_o = evt_data0_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
@@ -1883,9 +1955,9 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_EVT_DATA3: begin rdata_o = evt_data3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_POP: begin rdata_o = evt_pop_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_CLEAR: begin rdata_o = evt_clear_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_EVT_DROP_SOURCE: begin rdata_o = evt_drop_source_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_EVT_DROP_SOURCE: begin rdata_o = evt_drop_source_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_ARB_STATUS: begin rdata_o = evt_arb_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_EVT_POP_ERROR_COUNT: begin rdata_o = evt_pop_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_EVT_POP_ERROR_COUNT: begin rdata_o = evt_pop_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_GPIO_CONTROL: begin rdata_o = gpio_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_GPIO_DIR: begin rdata_o = gpio_dir_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_GPIO_OUT: begin rdata_o = gpio_out_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

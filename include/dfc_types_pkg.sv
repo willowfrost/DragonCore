@@ -397,8 +397,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL004_STATUS__TIME_ACTIVE_OFFSET_HI__OFFSET_HI_HI = 168;
   localparam int unsigned DFC_RTL004_STATUS__TIME_ACTIVE_OFFSET_HI__OFFSET_HI_LO = 137;
 
-  // ARCH-002 Appendix B dfc_rtl005_control_t (128 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl005_control_t (129 bits, rich format)
   typedef struct packed {
+    logic evt_status__snapshot_valid;  //  reset=0 :: clear_mask; added to close a real, confirmed gap: this struct previously had no field for clearing EVT_STATUS.SNAPSHOT_VALID (REG-002 0x0304 bit 2, a real W1C field per REG-002's own text), identical in kind to the OVERFLOW/SOURCE_DROP/POP_ERROR/CLEAR_COMPLETE clear fields already present. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged.
     logic [31:0] evt_pop_error_count__count;  //  reset=0 :: whole-counter clear for rejected empty POP operations
     logic [31:0] evt_drop_source__source_drop;  //  reset=0 :: clear_mask
     logic evt_clear__clear_all;  //  reset=0 :: command_pulse
@@ -412,9 +413,9 @@ package dfc_types_pkg;
     logic evt_status__overflow;  //  reset=0 :: clear_mask
     logic evt_control__logger_enable;  //  reset=1 :: control_value
   } dfc_rtl005_control_t;
-  // total width: 128 bits
+  // total width: 129 bits
 
-  localparam int unsigned DFC_RTL005_CONTROL_WIDTH = 128;
+  localparam int unsigned DFC_RTL005_CONTROL_WIDTH = 129;
   localparam int unsigned DFC_RTL005_CONTROL__EVT_CONTROL__LOGGER_ENABLE_HI = 0;
   localparam int unsigned DFC_RTL005_CONTROL__EVT_CONTROL__LOGGER_ENABLE_LO = 0;
   localparam int unsigned DFC_RTL005_CONTROL__EVT_STATUS__OVERFLOW_HI = 1;
@@ -439,6 +440,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL005_CONTROL__EVT_DROP_SOURCE__SOURCE_DROP_LO = 64;
   localparam int unsigned DFC_RTL005_CONTROL__EVT_POP_ERROR_COUNT__COUNT_HI = 127;
   localparam int unsigned DFC_RTL005_CONTROL__EVT_POP_ERROR_COUNT__COUNT_LO = 96;
+  localparam int unsigned DFC_RTL005_CONTROL__EVT_STATUS__SNAPSHOT_VALID_HI = 128;
+  localparam int unsigned DFC_RTL005_CONTROL__EVT_STATUS__SNAPSHOT_VALID_LO = 128;
 
   // ARCH-002 Appendix B dfc_rtl005_status_t (268 bits, rich format)
   typedef struct packed {

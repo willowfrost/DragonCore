@@ -216,9 +216,119 @@ incomplete, logged here rather than silently resolved or guessed.
     REG-002 per CHTR-DOC-003; `dfc_rtl004.sv` implements and forwards all
     12.
 
+## RTL-005 (Event Logger) integration
+
+12. **RESOLVED (2026-08-20), approved before implementation.** `dfc_rtl005_control_t`
+    (128 bits, exactly full with no spare bits) had no clear-request field for
+    EVT_STATUS.SNAPSHOT_VALID (REG-002 0x0304 bit 2, a real W1C field: "One
+    requests clear; zero has no effect ... Requests clear of selected sticky
+    evidence only") -- identical in kind to the OVERFLOW/SOURCE_DROP/
+    POP_ERROR/CLEAR_COMPLETE clear fields the struct already had, and the
+    fourth real instance of this exact gap class (items 2/7/8 above were the
+    first three, for RTL-002/003's EVT_OVERFLOW_STATUS and RTL-004's
+    SNAPSHOT_VALID/SYNC_VALID). Fixed, with explicit approval: ARCH-002 grew
+    the struct 128->129 bits, adding `evt_status__snapshot_valid` at the new
+    highest bit (128) -- every pre-existing field's bit position confirmed
+    unchanged via a real `regenerate.ps1` run. `tools/reggen/rtl005_field_map.json`
+    gained the corresponding `control_registers` entry. Proven via a real,
+    new check in `rtl005_integration_tb.sv` (Part 5): a real capture sets
+    SNAPSHOT_VALID, and the real host clear write using this session's new
+    field genuinely clears it.
+
+13. **Resolved without an edit, same reasoning as items 1/10/11.** REG-002's
+    own top-level block-summary table lists RTL-005's Event Logger block as
+    15 registers; `RTL-005_RevA.md` SS4 says "14 registers" without listing
+    them. Resolved in favor of REG-002 (the owning document, CHTR-DOC-003)
+    -- `dfc_rtl005.sv` implements and forwards all 15 (`EVT_CONTROL`,
+    `EVT_STATUS`, `EVT_COUNT`, `EVT_OVERFLOW_COUNT`, `EVT_SOURCE_ENABLE`,
+    `EVT_SNAPSHOT`, `EVT_DATA0`-`3`, `EVT_POP`, `EVT_CLEAR`,
+    `EVT_DROP_SOURCE`, `EVT_ARB_STATUS`, `EVT_POP_ERROR_COUNT`).
+
+14. **Genuine, disclosed gap -- not fixed this session, logged for a future
+    decision.** Unlike RTL-002/003/004, REG-002 owns no
+    `RTL005_EVT_OVERFLOW_STATUS`-equivalent register for RTL-005's own
+    *generic* `status_o.event_overflow`/`event_drop_count` pair (the fields
+    every module's Appendix B struct template carries for "did my own
+    one-deep event-generation register drop a candidate because the
+    downstream consumer hadn't accepted the previous one yet"). This pair is
+    real and reachable in `dfc_rtl005.sv` (confirmed via a real, forced test
+    in `rtl005_integration_tb.sv` Part 6 -- two real CLEAR_ALL-triggered
+    self-events with the handshake withheld genuinely set it), but has
+    **no REG-002 address at all**, so the host can neither read nor clear it
+    -- a real, permanent-until-fixed gap, not something a field-map can
+    invent. This is distinct from `EVT_DROP_SOURCE[4]`/`EVT_STATUS.
+    SOURCE_DROP` (the ARBITER's own, separately real and host-visible
+    per-producer-slot-4 evidence -- see `dfc_rtl005.sv`'s own header for why
+    these are two non-redundant layers). Proposed fix, not yet applied or
+    approved: a 16th RTL-005-owned register (e.g. `EVT_SELF_OVERFLOW_STATUS`
+    at 0x033C) exposing `EVENT_OVERFLOW` (W1C) and `DROP_COUNT` (RO),
+    mirroring the RTL0NN_EVT_OVERFLOW_STATUS shape already used for
+    RTL-002/003/004.
+
+15. **Real, pre-existing testbench gap found and fixed while checking for
+    breakage from RTL-005's own new `dfc_rtl001.sv` ports (rule 8/task item
+    9).** `rtl002_integration_tb.sv` and `rtl003_integration_tb.sv` were
+    each missing `rtl004_control_o`/`rtl004_status_i` from their
+    `dfc_rtl001` instantiation ENTIRELY (not merely stub-tied) -- left as
+    floating/undriven inputs since RTL-004's own integration session added
+    those ports to `dfc_rtl001.sv` without updating either file (that
+    session's own account only mentions checking `dri_transaction_tb.sv`/
+    `regbank_smoke_tb.sv`). Found only because this session added a fifth
+    pair (`rtl005_control_o`/`rtl005_status_i`) and checked every existing
+    `dfc_rtl001` instantiation site directly rather than assuming the
+    RTL-004 session's own account was exhaustive. Fixed: both files now
+    wire disclosed stubs for both the RTL-004 and RTL-005 pairs, same
+    pattern already used for RTL-002/RTL-003 in whichever file isolates a
+    different module.
+
 ## Toolchain findings
 
-12. **A real, transient `nextpnr-ecp5` internal router assertion crash was
+17. **RESOLVED (2026-08-20), two real false starts before the actual fix --
+    kept here as a genuine lesson, not smoothed over.** RTL-005's round-
+    robin arbiter caused a real `build_ecp5.ps1` timing failure: the first
+    `nextpnr-ecp5` run reported **Max frequency 44.21 MHz (FAIL at 50.00
+    MHz required)**, with the real critical-path report naming
+    `dfc_rtl005.sv:348` -- the per-candidate rotated-index computation --
+    directly. Root cause, confirmed from the report: the original code
+    computed each of 24 candidates' rotated index (a conditional-subtract,
+    i.e. an adder/comparator) INSIDE the same loop that also accumulated
+    the priority decision (`if (!push_valid_comb && ...)`), so each
+    iteration depended on every earlier one -- 24 sequentially chained
+    adder+compare+select stages.
+    - **First attempted fix (WRONG, made it WORSE, 38.14 MHz):** split the
+      loop into computing all 24 candidates' indices in parallel
+      (independent adders, no cross-iteration dependency) followed by a
+      separate priority encode. This removed the sequential coupling but
+      NOT the real cost: 24 real 5-bit adders (each a chain of CCU2C carry
+      cells) is expensive regardless of whether they're chained or
+      parallel, and the real, subsequent `build_ecp5.ps1` run proved this
+      empirically (a WORSE result), not a fluke -- the same
+      `dfc_rtl005.sv` line was still named in the new critical-path report.
+    - **Real fix:** replaced per-candidate ARITHMETIC with a REGISTERED
+      PRIORITY MASK (`rr_mask_q`), the standard round-robin-arbiter
+      technique. Each cycle's arbitration reads only the already-
+      registered mask -- two static bitwise ANDs
+      (`slot_valid_q & rr_mask_q` / `& ~rr_mask_q`) and two STATIC priority
+      encoders (fixed bit positions, no per-candidate dynamic index
+      arithmetic) -- genuinely cheap, log-depth boolean logic. The mask
+      for the NEXT cycle updates via a single 5-bit increment
+      (`ordinary_idx + 1`) feeding one barrel SHIFT
+      (`24'hFFFFFF << next_ptr`, muxes, not carry chains) -- one adder and
+      one shifter total per cycle, not 24. Confirmed working via a real,
+      subsequent `build_ecp5.ps1` run: **62.70 MHz PASS at 50 MHz
+      required** (Build ID `20260820_200244`), TRELLIS_COMB 19%/
+      TRELLIS_FF 15% utilization. Reconfirmed via a full Icarus regression
+      after each of the three code states (9/9 testbenches, 205/205
+      checks, unchanged throughout -- this was purely a timing-closure
+      issue, never a functional/simulation one). **Lesson for RTL-006
+      onward: "parallelize the per-candidate work" is not automatically a
+      timing fix if the per-candidate work is itself genuinely expensive
+      (real arithmetic) -- check whether the operation can be replaced
+      with a cheaper one (here, a registered mask + shift instead of 24
+      runtime modular adds) rather than just changing how N expensive
+      operations are scheduled.**
+
+18. **A real, transient `nextpnr-ecp5` internal router assertion crash was
     observed once during this session's `build_ecp5.ps1` runs**:
     `ERROR: Assert 'valid_arcs.count(arc)' failed in
     .../nextpnr/common/route/router1.cc:360` followed by

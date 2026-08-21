@@ -52,6 +52,10 @@ module rtl004_integration_tb;
   // rtl003_integration_tb.sv for whichever sibling module isn't under test.
   logic [dfc_types_pkg::DFC_RTL003_CONTROL_WIDTH-1:0] rtl003_control_unused;
   logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status_stub = '0;
+  // RTL-005 is likewise out of this test's scope -- added during RTL-005's
+  // own integration session, same disclosed-stub pattern as RTL-003 above.
+  logic [dfc_types_pkg::DFC_RTL005_CONTROL_WIDTH-1:0] rtl005_control_unused;
+  logic [dfc_types_pkg::DFC_RTL005_STATUS_WIDTH-1:0]  rtl005_status_stub = '0;
 
   // Real RTL-004 timestamp broadcast -- the actual connection under test in
   // Part 5 below.
@@ -92,6 +96,8 @@ module rtl004_integration_tb;
     .rtl003_status_i        (rtl003_status_stub),
     .rtl004_control_o       (rtl004_control),
     .rtl004_status_i        (rtl004_status),
+    .rtl005_control_o       (rtl005_control_unused),
+    .rtl005_status_i        (rtl005_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

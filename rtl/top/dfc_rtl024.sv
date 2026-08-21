@@ -41,22 +41,32 @@
 //     three real ARCH-002 struct-growth fixes made before this module was
 //     implemented and the resolved-without-an-edit self-referencing
 //     `timestamp_i` port-catalog discrepancy.
-//   - RTL-005 through RTL-023 are LABELED STUBS -- see STUB block below.
+//   - RTL-005 instantiation is REAL (dfc_rtl005.sv, Event Logger): RTL-005
+//     is simultaneously the arbiter/store for all 24 producers' diagnostic
+//     events AND its own 25th conceptual producer (self-looped through
+//     evt_valid_i[4]/evt_ready_o[4]/evt_record_i[4] -- see that file's own
+//     header for the full account). RTL-002/003/004's own evt_valid_o/
+//     evt_ready_i/evt_record_o (previously genuinely unconsumed, tied to
+//     `()`/1'b1/`()`) now genuinely reach RTL-005's real evt_valid_i[1:3]/
+//     evt_ready_o[1:3]/evt_record_i[1:3]; RTL-002's real
+//     global_event_enable_o now genuinely reaches RTL-005's real
+//     global_event_enable_i.
+//   - RTL-006 through RTL-023 are LABELED STUBS -- see STUB block below.
 //     Each stub's own status/ready/fault contribution to RTL-002's
 //     module_ready_i/module_fault_i fan-in is a fixed "not ready, no
 //     fault" value. This is NOT real behavior; it exists only so this
-//     file elaborates and RTL-001/RTL-002/RTL-003/RTL-004 can be exercised
-//     on real ECP5 hardware before their sibling modules are written. Do
+//     file elaborates and RTL-001 through RTL-005 can be exercised on
+//     real ECP5 hardware before their sibling modules are written. Do
 //     not treat a stub's fixed output as evidence of anything about the
 //     real module's behavior. NOTE: because RTL-002 requires every
 //     SUBSYS_ENABLE mandatory-mask module to report ready before leaving
-//     STARTUP, and several mandatory bits (0x80F81F) belong to still-
-//     stubbed modules (e.g. RTL-005, RTL-012 through RTL-016, RTL-019),
-//     this skeleton's RTL-002 instance will run to its 499,000-cycle
-//     mandatory-init timeout and enter FAULTED every time, not NORMAL --
-//     that is the real, disclosed consequence of the stub topology, not a
-//     bug in RTL-002 itself. It will read NORMAL/DEGRADED correctly only
-//     once enough mandatory-mask modules are real.
+//     STARTUP, and several mandatory bits (0x80F81F) still belong to
+//     not-yet-real modules (e.g. RTL-012 through RTL-016), this skeleton's
+//     RTL-002 instance will run to its 499,000-cycle mandatory-init
+//     timeout and enter FAULTED every time, not NORMAL -- that is the
+//     real, disclosed consequence of the stub topology, not a bug in
+//     RTL-002 itself. It will read NORMAL/DEGRADED correctly only once
+//     enough mandatory-mask modules are real.
 //   - RTL-024's OWN derivation contract (ARCH-RTL024-001: ready requires
 //     reset/host mailboxes/DRI/shared buffer/test controller initialized;
 //     fault from host timeout/internal/shared-buffer/clock-reset-
@@ -189,12 +199,37 @@ module dfc_rtl024 (
   logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status;
   logic [dfc_types_pkg::DFC_RTL004_CONTROL_WIDTH-1:0] rtl004_control;
   logic [dfc_types_pkg::DFC_RTL004_STATUS_WIDTH-1:0]  rtl004_status;
+  logic [dfc_types_pkg::DFC_RTL005_CONTROL_WIDTH-1:0] rtl005_control;
+  logic [dfc_types_pkg::DFC_RTL005_STATUS_WIDTH-1:0]  rtl005_status;
   // Real RTL-004 timestamp broadcast -- declared here, before u_rtl002's own
   // use of it below, per this file's own established declaration-before-use
   // discipline (see the comment block just above this one). Driven by
   // u_rtl004's real timestamp_o further down this file; the signal only
   // needs to be DECLARED before first use, not yet driven.
   logic [63:0] rtl004_timestamp;
+  logic        rtl002_global_event_enable;
+
+  // ==========================================================================
+  // RTL-005 (Event Logger) event-bus wiring -- declared here, before any of
+  // RTL-002/003/004's own instantiations below reference their real
+  // evt_valid_o/evt_ready_i/evt_record_o (previously genuinely unconsumed,
+  // tied to `()`/1'b1/`()` with an explicit "no RTL-005 exists yet"
+  // comment -- see u_rtl005's own instantiation further down for how this
+  // gap closes for real). evt_record_i is a flat 3072-bit vector (24 x
+  // 128-bit dfc_event_record_t) -- same TOOLCHAIN-DRIVEN DEVIATION as every
+  // other package-scoped-type port in this project.
+  // ==========================================================================
+  logic         rtl002_evt_valid, rtl002_evt_ready;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl002_evt_record;
+  logic         rtl003_evt_valid, rtl003_evt_ready;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl003_evt_record;
+  logic         rtl004_evt_valid, rtl004_evt_ready;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl004_evt_record;
+  logic         rtl005_evt_valid, rtl005_evt_ready;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl005_evt_record;
+  logic         rtl005_irq_req;
+  logic [23:0]  rtl005_evt_valid_i, rtl005_evt_ready_o;
+  logic [24*dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl005_evt_record_i;
 
   dfc_rtl001 u_rtl001 (
     .core_clk_i      (core_clk_i),
@@ -223,6 +258,10 @@ module dfc_rtl024 (
     // generated by reggen.py v4 from tools/reggen/rtl004_field_map.json.
     .rtl004_control_o (rtl004_control),
     .rtl004_status_i  (rtl004_status),
+    // REAL cross-module register bus to RTL-005 -- same treatment,
+    // generated by reggen.py v4 from tools/reggen/rtl005_field_map.json.
+    .rtl005_control_o (rtl005_control),
+    .rtl005_status_i  (rtl005_status),
     // RTL-001's own real status_o -- closes the previously-disclosed gap
     // where module_ready_i[0]/module_fault_i[0] were tied to a permanent
     // placeholder regardless of RTL-001's real condition.
@@ -295,11 +334,13 @@ module dfc_rtl024 (
     .control_i            (rtl002_control),
     .status_o             (rtl002_status),
     .timestamp_i          (rtl004_timestamp),  // real RTL-004 broadcast
-    .evt_valid_o          (),        // no RTL-005 exists yet to accept RTL-002's
-                                     // now-real events -- output genuinely
-                                     // unconsumed, not a stub on RTL-002's side
-    .evt_ready_i          (1'b1),
-    .evt_record_o         (),
+    // REAL as of RTL-005's own integration: RTL-002's own event output now
+    // genuinely reaches RTL-005's real evt_valid_i[1]/evt_ready_o[1]/
+    // evt_record_i[1] below -- closes the previously-disclosed "no RTL-005
+    // exists yet" gap.
+    .evt_valid_o          (rtl002_evt_valid),
+    .evt_ready_i          (rtl002_evt_ready),
+    .evt_record_o         (rtl002_evt_record),
     .irq_req_o            (rtl002_irq_req),
     .module_ready_i       (module_ready),
     .module_fault_i       (module_fault),
@@ -314,15 +355,15 @@ module dfc_rtl024 (
     // Real ports, added this session, closing OPEN_ISSUES.md item 5.
     // global_irq_enable_o now feeds u_rtl003's global_irq_enable_i below
     // directly, replacing the prior rtl002_control-read workaround.
-    // global_event_enable_o's real consumer is RTL-005 (Event Logger),
-    // which does not exist yet -- left genuinely unconsumed, same
-    // disclosed-gap pattern as evt_valid_o/evt_record_o above, not a stub
-    // on RTL-002's own side. event_condition_enable_i/irq_condition_enable_i
-    // are real ports tied to a disclosed stub (64'h0): RTL-001 does not yet
-    // implement the per-module CONDITION_MASK storage/forwarding mechanism
-    // (Appendix F.3) these would come from (OPEN_ISSUES.md item 6).
+    // global_event_enable_o now genuinely reaches RTL-005's real
+    // global_event_enable_i below -- closes the previously-disclosed "no
+    // RTL-005 exists yet" gap. event_condition_enable_i/
+    // irq_condition_enable_i are real ports tied to a disclosed stub
+    // (64'h0): RTL-001 does not yet implement the per-module
+    // CONDITION_MASK storage/forwarding mechanism (Appendix F.3) these
+    // would come from (OPEN_ISSUES.md item 6).
     .global_irq_enable_o       (rtl002_global_irq_enable),
-    .global_event_enable_o     (),
+    .global_event_enable_o     (rtl002_global_event_enable),
     .event_condition_enable_i  (64'h0),
     .irq_condition_enable_i    (64'h0)
   );
@@ -365,7 +406,9 @@ module dfc_rtl024 (
   logic [31:0] rtl003_irq_source;
   logic        rtl003_aggregate_pending;
 
-  assign rtl003_irq_source = {8'h0, rtl002_irq_req};
+  // Bit 1 (Event Logger) is now REAL: RTL-005's own irq_req_o. Bit 0
+  // (System Control) is RTL-002's real irq_req_o, as before.
+  assign rtl003_irq_source = {8'h0, 6'h0, rtl005_irq_req, rtl002_irq_req};
 
   dfc_rtl003 u_rtl003 (
     .core_clk_i               (core_clk_i),
@@ -374,11 +417,11 @@ module dfc_rtl024 (
     .control_i                (rtl003_control),
     .status_o                 (rtl003_status),
     .timestamp_i              (rtl004_timestamp),  // real RTL-004 broadcast
-    .evt_valid_o              (),       // no RTL-005 exists yet to accept RTL-003's
-                                        // now-real diagnostic event -- output
-                                        // genuinely unconsumed, not a stub
-    .evt_ready_i              (1'b1),
-    .evt_record_o             (),
+    // REAL as of RTL-005's own integration -- see u_rtl002's identical note
+    // above.
+    .evt_valid_o              (rtl003_evt_valid),
+    .evt_ready_i              (rtl003_evt_ready),
+    .evt_record_o             (rtl003_evt_record),
     .irq_source_i             (rtl003_irq_source),
     .aggregate_pending_o      (rtl003_aggregate_pending),
     .operating_state_i        (rtl002_operating_state),
@@ -415,12 +458,93 @@ module dfc_rtl024 (
     .module_reset_i           (module_reset[3]),
     .control_i                (rtl004_control),
     .status_o                 (rtl004_status),
-    .evt_valid_o              (),
-    .evt_ready_i              (1'b1),
-    .evt_record_o             (),
+    // REAL as of RTL-005's own integration -- see u_rtl002's identical note
+    // above.
+    .evt_valid_o              (rtl004_evt_valid),
+    .evt_ready_i              (rtl004_evt_ready),
+    .evt_record_o             (rtl004_evt_record),
     .timestamp_o              (rtl004_timestamp),
     .operating_state_i        (rtl002_operating_state),
     .observational_mode_i     (rtl002_observational_mode),
+    .event_condition_enable_i (64'h0),
+    .irq_condition_enable_i   (64'h0)
+  );
+
+  // ==========================================================================
+  // RTL-005: REAL instantiation (dfc_rtl005.sv, Event Logger). See that
+  // file's own header for its full disclosed scope (one real ARCH-002
+  // struct-growth fix made and approved before this module was
+  // implemented, plus the resolved-without-an-edit 14-vs-15-register
+  // discrepancy).
+  //
+  // THE REAL, CONFIRMED EVENT-BUS GAP IS CLOSED: RTL-002/003/004's own
+  // evt_valid_o/evt_ready_i/evt_record_o (previously tied to `()`/1'b1/`()`
+  // with an explicit "no RTL-005 exists yet" comment) now genuinely reach
+  // RTL-005's real evt_valid_i[1]/[2]/[3], evt_ready_o[1]/[2]/[3], and
+  // evt_record_i[1]/[2]/[3]. RTL-002's real global_event_enable_o now
+  // genuinely reaches RTL-005's real global_event_enable_i (previously
+  // tied to `()`).
+  //
+  // evt_valid_i[23:0] per ARCH-002's fixed index i <-> RTL-(i+1) allocation:
+  //   [0]  RTL-001  -- disclosed stub-zero: dfc_rtl001.sv has no evt_valid_o
+  //        port of its own yet (RTL-001's own event generation is not
+  //        implemented -- a pre-existing, disclosed gap, same class as its
+  //        incomplete `fault` signal).
+  //   [1]  RTL-002  -- REAL (rtl002_evt_valid/rtl002_evt_ready/rtl002_evt_record).
+  //   [2]  RTL-003  -- REAL.
+  //   [3]  RTL-004  -- REAL.
+  //   [4]  RTL-005  -- REAL, the self-loop ARCH-002's own port catalog
+  //        specifies (RTL-005.evt_valid_o -> RTL-005.evt_valid_i[4] -- see
+  //        dfc_rtl005.sv's own header for why this is a genuine design, not
+  //        a table-generation artifact like RTL-004's timestamp_i case).
+  //   [5..22]/[23] RTL-006 through RTL-023/RTL-024 -- disclosed stub-zero;
+  //        none of these modules (or RTL-024's own event generation, which
+  //        does not exist) are real yet.
+  //
+  // irq_req_o now genuinely reaches RTL-003's real irq_source_i[1] (see
+  // rtl003_irq_source above). fault_req_o has no real consumer yet (its
+  // architected destination, RTL-013.fault_source_i[5], does not exist) --
+  // genuinely unconsumed, same disclosed-gap pattern as every other
+  // not-yet-connected inter-module port in this integration, left
+  // unconnected below rather than stubbed.
+  // ==========================================================================
+  assign rtl005_evt_valid_i = {1'b0,                    // [23] RTL-024 (no self-event)
+                               18'h0,                    // [22:5] RTL-006..023 (not real)
+                               rtl005_evt_valid,          // [4] RTL-005 self-loop
+                               rtl004_evt_valid,          // [3] RTL-004
+                               rtl003_evt_valid,          // [2] RTL-003
+                               rtl002_evt_valid,          // [1] RTL-002
+                               1'b0};                     // [0] RTL-001 (no evt_valid_o yet)
+  assign rtl002_evt_ready = rtl005_evt_ready_o[1];
+  assign rtl003_evt_ready = rtl005_evt_ready_o[2];
+  assign rtl004_evt_ready = rtl005_evt_ready_o[3];
+  assign rtl005_evt_ready = rtl005_evt_ready_o[4];
+  assign rtl005_evt_record_i =
+    {2432'h0,             // [23:5] RTL-006..024 (19 x 128 zero -- not real)
+     rtl005_evt_record,   // [4]
+     rtl004_evt_record,   // [3]
+     rtl003_evt_record,   // [2]
+     rtl002_evt_record,   // [1]
+     128'h0};             // [0] RTL-001 (no evt_record_o yet)
+
+  dfc_rtl005 u_rtl005 (
+    .core_clk_i               (core_clk_i),
+    .core_rst_n_i             (core_rst_n),
+    .module_reset_i           (module_reset[4]),
+    .control_i                (rtl005_control),
+    .status_o                 (rtl005_status),
+    .evt_valid_o              (rtl005_evt_valid),
+    .evt_ready_i              (rtl005_evt_ready),
+    .evt_record_o             (rtl005_evt_record),
+    .timestamp_i              (rtl004_timestamp),  // real RTL-004 broadcast
+    .irq_req_o                (rtl005_irq_req),
+    .fault_req_o              (),  // no real consumer yet -- RTL-013 does not exist
+    .evt_valid_i              (rtl005_evt_valid_i),
+    .evt_ready_o              (rtl005_evt_ready_o),
+    .evt_record_i             (rtl005_evt_record_i),
+    .operating_state_i        (rtl002_operating_state),
+    .observational_mode_i     (rtl002_observational_mode),
+    .global_event_enable_i    (rtl002_global_event_enable),
     .event_condition_enable_i (64'h0),
     .irq_condition_enable_i   (64'h0)
   );
@@ -461,6 +585,7 @@ module dfc_rtl024 (
   logic rtl002_ready_self_q, rtl002_fault_self_q;
   logic rtl003_ready_self_q, rtl003_fault_self_q;
   logic rtl004_ready_self_q, rtl004_fault_self_q;
+  logic rtl005_ready_self_q, rtl005_fault_self_q;
   always_ff @(posedge core_clk_i or negedge core_rst_n) begin
     if (!core_rst_n) begin
       rtl002_ready_self_q <= 1'b0;
@@ -469,6 +594,8 @@ module dfc_rtl024 (
       rtl003_fault_self_q <= 1'b0;
       rtl004_ready_self_q <= 1'b0;
       rtl004_fault_self_q <= 1'b0;
+      rtl005_ready_self_q <= 1'b0;
+      rtl005_fault_self_q <= 1'b0;
     end else begin
       rtl002_ready_self_q <= rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__READY_HI];
       rtl002_fault_self_q <= rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__FAULT_HI];
@@ -476,18 +603,20 @@ module dfc_rtl024 (
       rtl003_fault_self_q <= rtl003_status[dfc_types_pkg::DFC_RTL003_STATUS__FAULT_HI];
       rtl004_ready_self_q <= rtl004_status[dfc_types_pkg::DFC_RTL004_STATUS__READY_HI];
       rtl004_fault_self_q <= rtl004_status[dfc_types_pkg::DFC_RTL004_STATUS__FAULT_HI];
+      rtl005_ready_self_q <= rtl005_status[dfc_types_pkg::DFC_RTL005_STATUS__READY_HI];
+      rtl005_fault_self_q <= rtl005_status[dfc_types_pkg::DFC_RTL005_STATUS__FAULT_HI];
     end
   end
 
-  assign module_ready = {20'h0, rtl004_ready_self_q, rtl003_ready_self_q, rtl002_ready_self_q,
+  assign module_ready = {19'h0, rtl005_ready_self_q, rtl004_ready_self_q, rtl003_ready_self_q, rtl002_ready_self_q,
                           rtl001_status[dfc_types_pkg::DFC_RTL001_STATUS__READY_HI]};
-  assign module_fault = {20'h0, rtl004_fault_self_q, rtl003_fault_self_q, rtl002_fault_self_q,
+  assign module_fault = {19'h0, rtl005_fault_self_q, rtl004_fault_self_q, rtl003_fault_self_q, rtl002_fault_self_q,
                           rtl001_status[dfc_types_pkg::DFC_RTL001_STATUS__FAULT_HI]};
 
   // ==========================================================================
-  // STUB BLOCK -- RTL-005 through RTL-023 do not exist yet in this
+  // STUB BLOCK -- RTL-006 through RTL-023 do not exist yet in this
   // repository. Each entry below is a labeled placeholder: it consumes no
-  // real signal from RTL-001/RTL-002/RTL-003/RTL-004 (module control/status
+  // real signal from RTL-001 through RTL-005 (module control/status
   // wiring per ARCH-CONN-003 is not connected) and produces no real
   // behavior. This block exists so this file elaborates for ECP5 synthesis
   // and simulation; it is NOT a model of any child module's behavior.
@@ -495,7 +624,7 @@ module dfc_rtl024 (
   // implemented -- do not extend the stub pattern into real logic.
   //
   // Modules stubbed (per RTLSTD-MOD-011, all must eventually be
-  // instantiated exactly once): RTL-005 through RTL-023.
+  // instantiated exactly once): RTL-006 through RTL-023.
   // ==========================================================================
 
   // Aggregate host_irq_n_o: per ARCH-002 Appendix A, high in reset or with
@@ -561,11 +690,12 @@ module dfc_rtl024 (
                             engine_i ^ pulse_i[0] ^ health_i[0] ^ user_i[0] ^
                             test_enable_i ^ test_clock_i ^ test_data_i ^
                             (^rtl002_operating_state) ^ rtl002_observational_mode ^
-                            (|module_reset[23:4]);
+                            (|module_reset[23:5]);
                             // rtl002_irq_req is no longer unused -- it is
                             // now a real input to RTL-003's irq_source_i[0]
-                            // above. module_reset[2]/module_reset[3] are no
-                            // longer unused either -- they are now
-                            // RTL-003's/RTL-004's real module_reset_i.
+                            // above. module_reset[2]/module_reset[3]/
+                            // module_reset[4] are no longer unused either --
+                            // they are now RTL-003's/RTL-004's/RTL-005's
+                            // real module_reset_i.
 
 endmodule : dfc_rtl024

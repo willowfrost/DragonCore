@@ -944,8 +944,8 @@
     },
     {
       "name": "dfc_rtl005_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl005_control_t (128 bits, rich format)",
-      "width": 128,
+      "trace": "ARCH-002 Appendix B dfc_rtl005_control_t (129 bits, rich format)",
+      "width": 129,
       "fields": [
         {
           "name": "evt_control__logger_enable",
@@ -1054,6 +1054,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "whole-counter clear for rejected empty POP operations"
+        },
+        {
+          "name": "evt_status__snapshot_valid",
+          "hi": 128,
+          "lo": 128,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask; added to close a real, confirmed gap: this struct previously had no field for clearing EVT_STATUS.SNAPSHOT_VALID (REG-002 0x0304 bit 2, a real W1C field per REG-002's own text), identical in kind to the OVERFLOW/SOURCE_DROP/POP_ERROR/CLEAR_COMPLETE clear fields already present. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged."
         }
       ]
     },

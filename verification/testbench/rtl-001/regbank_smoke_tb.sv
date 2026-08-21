@@ -71,15 +71,13 @@ module regbank_smoke_tb;
   // rtl004_evt_overflow_status_status_i no longer exist as individual ports.
   logic [dfc_types_pkg::DFC_RTL004_STATUS_WIDTH-1:0]  rtl004_status_i;
   logic [dfc_types_pkg::DFC_RTL004_CONTROL_WIDTH-1:0] rtl004_control_o;
-  logic [31:0] evt_status_status_i;
-  logic [31:0] evt_count_status_i;
-  logic [31:0] evt_overflow_count_status_i;
-  logic [31:0] evt_data0_status_i;
-  logic [31:0] evt_data1_status_i;
-  logic [31:0] evt_data2_status_i;
-  logic [31:0] evt_data3_status_i;
-  logic [31:0] evt_drop_source_status_i;
-  logic [31:0] evt_arb_status_status_i;
+  // Replaced by the aggregated real RTL-005 bus this session (same
+  // treatment as RTL-002/RTL-003/RTL-004 above) -- evt_status_status_i,
+  // evt_count_status_i, evt_overflow_count_status_i, evt_data0-3_status_i,
+  // evt_drop_source_status_i, evt_arb_status_status_i, and
+  // evt_pop_error_count_status_i no longer exist as individual ports.
+  logic [dfc_types_pkg::DFC_RTL005_STATUS_WIDTH-1:0]  rtl005_status_i;
+  logic [dfc_types_pkg::DFC_RTL005_CONTROL_WIDTH-1:0] rtl005_control_o;
   logic [31:0] gpio_raw_in_status_i;
   logic [31:0] gpio_sync_in_status_i;
   logic [31:0] gpio_qual_in_status_i;
@@ -239,15 +237,8 @@ module regbank_smoke_tb;
     .rtl003_control_o(rtl003_control_o),
     .rtl004_status_i(rtl004_status_i),
     .rtl004_control_o(rtl004_control_o),
-    .evt_status_status_i(evt_status_status_i),
-    .evt_count_status_i(evt_count_status_i),
-    .evt_overflow_count_status_i(evt_overflow_count_status_i),
-    .evt_data0_status_i(evt_data0_status_i),
-    .evt_data1_status_i(evt_data1_status_i),
-    .evt_data2_status_i(evt_data2_status_i),
-    .evt_data3_status_i(evt_data3_status_i),
-    .evt_drop_source_status_i(evt_drop_source_status_i),
-    .evt_arb_status_status_i(evt_arb_status_status_i),
+    .rtl005_status_i(rtl005_status_i),
+    .rtl005_control_o(rtl005_control_o),
     .gpio_raw_in_status_i(gpio_raw_in_status_i),
     .gpio_sync_in_status_i(gpio_sync_in_status_i),
     .gpio_qual_in_status_i(gpio_qual_in_status_i),
@@ -375,15 +366,7 @@ module regbank_smoke_tb;
     rtl002_evt_overflow_status_status_i = 32'h0;
     rtl003_status_i = '0;
     rtl004_status_i = '0;
-    evt_status_status_i = 32'h0;
-    evt_count_status_i = 32'h0;
-    evt_overflow_count_status_i = 32'h0;
-    evt_data0_status_i = 32'h0;
-    evt_data1_status_i = 32'h0;
-    evt_data2_status_i = 32'h0;
-    evt_data3_status_i = 32'h0;
-    evt_drop_source_status_i = 32'h0;
-    evt_arb_status_status_i = 32'h0;
+    rtl005_status_i = '0;
     gpio_raw_in_status_i = 32'h0;
     gpio_sync_in_status_i = 32'h0;
     gpio_qual_in_status_i = 32'h0;
@@ -525,22 +508,22 @@ module regbank_smoke_tb;
 
     // ---- Check 3: external field mirrors status_i combinationally ----
     // Redirected from SYS_STATUS to IRQ_RAW_STATUS (RTL-002 integration),
-    // then to TIME_STATUS (RTL-003 integration), then redirected a third
-    // time this session to EVT_STATUS: TIME_STATUS's own status_i is no
-    // longer an individual port either (it's now aggregated into
-    // rtl004_status_i, real cross-module wiring covered by
-    // rtl004_integration_tb.sv instead). EVT_STATUS (RTL-005, not yet real)
-    // is untouched by that change and still uses the original generic
-    // per-register status_i mechanism this check is actually meant to
-    // exercise.
-    evt_status_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_EVT_STATUS;
+    // then to TIME_STATUS (RTL-003 integration), then to EVT_STATUS
+    // (RTL-004 integration), then redirected a fourth time this session to
+    // GPIO_RAW_IN: EVT_STATUS's own status_i is no longer an individual
+    // port either (it's now aggregated into rtl005_status_i, real
+    // cross-module wiring covered by rtl005_integration_tb.sv instead).
+    // GPIO_RAW_IN (RTL-006, not yet real) is untouched by that change and
+    // still uses the original generic per-register status_i mechanism
+    // this check is actually meant to exercise.
+    gpio_raw_in_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_GPIO_RAW_IN;
     #1;
-    check("EVT_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("EVT_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    evt_status_status_i = 32'h0000_0041;
+    check("GPIO_RAW_IN mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("GPIO_RAW_IN write_illegal (external)", write_illegal_o, 1'b1);
+    gpio_raw_in_status_i = 32'h0000_0041;
     #1;
-    check("EVT_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("GPIO_RAW_IN tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

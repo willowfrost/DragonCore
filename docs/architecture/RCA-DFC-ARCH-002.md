@@ -1452,7 +1452,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 136:105 | time_active_offset_lo__offset_lo | 32 | unsigned | 0 | readback_value; added to close a real, confirmed gap: this struct previously had no field carrying the real active (committed) correlation offset back to TIME_ACTIVE_OFFSET_LO (REG-002 0x0228), an external-readback register with no other real data source. Placed at the new highest bits specifically so every other field in this struct keeps its existing bit position unchanged. |
 | 168:137 | time_active_offset_hi__offset_hi | 32 | unsigned | 0 | readback_value; same real, confirmed gap and same fix shape as the field immediately above, for TIME_ACTIVE_OFFSET_HI (REG-002 0x022C). |
 
-### dfc_rtl005_control_t — 128 bits
+### dfc_rtl005_control_t — 129 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1468,6 +1468,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 63 | evt_clear__clear_all | 1 | unsigned | 0 | command_pulse |
 | 95:64 | evt_drop_source__source_drop | 32 | unsigned | 0 | clear_mask |
 | 127:96 | evt_pop_error_count__count | 32 | unsigned | 0 | whole-counter clear for rejected empty POP operations |
+| 128 | evt_status__snapshot_valid | 1 | unsigned | 0 | clear_mask; added to close a real, confirmed gap: this struct previously had no field for clearing EVT_STATUS.SNAPSHOT_VALID (REG-002 0x0304 bit 2, a real W1C field per REG-002's own text), identical in kind to the OVERFLOW/SOURCE_DROP/POP_ERROR/CLEAR_COMPLETE clear fields already present. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged. |
 
 ### dfc_rtl005_status_t — 268 bits
 

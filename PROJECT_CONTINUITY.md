@@ -1169,8 +1169,122 @@ written in this project going forward, not just a historical note.
     of the design") rather than silently synthesizing a stale design.
     Fixed by adding it in both places, immediately after `dfc_rtl003.sv`,
     matching the existing pattern exactly.
-- **RTL-005 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001/002/003/004/024, exist and are citation-verified
+- **RTL-005 (Event Logger): real, implemented and integrated into
+  `dfc_rtl024.sv`.** Implements ARCH-002 SS8.3's full ARCH-EVT-001 through
+  008 contract: 24 independent one-deep producer pending slots (one per
+  producer, index 4 self-looped to RTL-005's own diagnostic-event
+  generation per ARCH-002's own port catalog -- a genuine design, not a
+  table-generation artifact like RTL-004's `timestamp_i` case), a real
+  64x128-bit register-array event store (head/tail/level pointers, not
+  aliased to the shared-buffer service), real overwrite-oldest-while-full
+  behavior with a genuine nonrecursive exception for internally generated
+  0x007E/0x007F diagnostic records, real CAPTURE_OLDEST/POP/CLEAR_ALL
+  command handling (POP invalidates the snapshot per REG-002's own text;
+  CLEAR_ALL has priority over POP and ordinary push and touches only
+  head/tail/level, not producer slots or other sticky evidence), and real,
+  counted own-diagnostic-event generation (event IDs 0x000A/0x007E/0x007F,
+  source index 4) with its own one-deep pending layer identical in shape to
+  every other module's own event generation. Real cross-module register
+  forwarding for all 15 REG-002 0x0300-0x0338 registers (`EVT_CONTROL`,
+  `EVT_STATUS`, `EVT_COUNT`, `EVT_OVERFLOW_COUNT`, `EVT_SOURCE_ENABLE`,
+  `EVT_SNAPSHOT`, `EVT_DATA0`-`3`, `EVT_POP`, `EVT_CLEAR`,
+  `EVT_DROP_SOURCE`, `EVT_ARB_STATUS`, `EVT_POP_ERROR_COUNT`) via
+  `reggen.py` v4 and `tools/reggen/rtl005_field_map.json`.
+  - **THE REAL, CONFIRMED EVENT-BUS GAP IS CLOSED:** RTL-002/003/004's own
+    `evt_valid_o`/`evt_ready_i`/`evt_record_o` (previously genuinely
+    unconsumed, tied to `()`/`1'b1`/`()` with an explicit "no RTL-005
+    exists yet" comment) now genuinely reach RTL-005's real
+    `evt_valid_i[1]`/`[2]`/`[3]`, and RTL-002's real `global_event_enable_o`
+    now genuinely reaches RTL-005's real `global_event_enable_i`.
+  - **One real ARCH-002 gap was found and fixed, with explicit approval,
+    before this module was implemented** (OPEN_ISSUES.md item 12):
+    `dfc_rtl005_control_t` had no clear-request field for
+    `EVT_STATUS.SNAPSHOT_VALID` -- grown 128->129 bits, same
+    growth-at-new-highest-bit pattern already established for items 2/7/8.
+  - **One genuine, disclosed gap logged but NOT fixed this session**
+    (OPEN_ISSUES.md item 14): REG-002 owns no
+    `RTL005_EVT_OVERFLOW_STATUS`-equivalent register for RTL-005's own
+    generic `status_o.event_overflow`/`event_drop_count` pair -- real and
+    reachable internally (confirmed via a real, forced test), but with no
+    REG-002 address, so the host can neither read nor clear it. Proposed
+    fix (a 16th RTL-005-owned register) logged for a future decision, not
+    silently invented.
+  - **A real, pre-existing testbench gap was found and fixed** while
+    checking every existing `dfc_rtl001` instantiation site for breakage,
+    not just the ones RTL-004's own session mentioned (OPEN_ISSUES.md item
+    15): `rtl002_integration_tb.sv`/`rtl003_integration_tb.sv` were each
+    missing `rtl004_control_o`/`rtl004_status_i` from their `dfc_rtl001`
+    instantiation entirely (floating/undriven inputs, not merely
+    stub-tied) since RTL-004's own integration session added those ports
+    without updating either file.
+  - **Proven via a new, real integration testbench**,
+    `rtl005_integration_tb.sv` (37/37 checks): a real host write via
+    RTL-001's real DRI path genuinely changes RTL-005's real behavior
+    (EVT_SOURCE_ENABLE, EVT_SNAPSHOT, EVT_POP, EVT_CLEAR), and RTL-005's
+    real internal state genuinely reaches back to a host register read
+    (EVT_STATUS, EVT_COUNT, EVT_DATA0-3, EVT_POP_ERROR_COUNT) -- including
+    a real RTL-004 SNAPSHOT-complete event (0x0009) genuinely arriving in
+    RTL-005's real store and being genuinely host-readable via
+    EVT_DATA0-3/EVT_POP (not a fabricated or injected value), the new
+    SNAPSHOT_VALID clear-path fix, and RTL-005's own self-generation
+    overflow layer. **Additionally proven inside the actual RTL-024
+    top-level integration**: `rtl024_skeleton_tb.sv` was updated with a
+    real SPI read of SUBSYS_READY confirming bit 4 (RTL-005) reflects
+    RTL-005's real readiness, and a real check that RTL-002's own real,
+    autonomous FAULTED-triggered event genuinely reached RTL-005's real
+    store (EVT_STATUS.NOT_EMPTY/EVT_COUNT) through the real event-bus
+    wiring, not a hierarchical force.
+  - Every other existing testbench was checked for breakage from RTL-005's
+    two new `dfc_rtl001.sv` ports (`rtl005_control_o`/`rtl005_status_i`,
+    replacing 9 individual stub-tied status ports): `regbank_smoke_tb.sv`
+    needed its Check 3 ("external field mirrors status_i combinationally")
+    redirected a fourth time (SYS_STATUS -> IRQ_RAW_STATUS -> TIME_STATUS
+    -> EVT_STATUS -> now GPIO_RAW_IN, since EVT_STATUS is aggregated too as
+    of this session); `dri_transaction_tb.sv` (`.*` wildcard instantiation)
+    and `rtl002/003/004_integration_tb.sv` (explicit named ports) all
+    needed the new ports declared/tied off. All confirmed via a real,
+    individual `iverilog`/`vvp` run before the full regression.
+  - **CONFIRMED, end-to-end, on the person's real machine -- a real
+    `gate.ps1` run passed completely clean**: `lint.ps1` PASSED, `sim.ps1`
+    9/9 testbenches (**205/205 checks** -- verified by adding up each
+    testbench's own individually-reported count from the real output:
+    12+12+16+28+30+24+37+33+13=205, not restated from memory), `formal.ps1`
+    both `bmc` and `prove` tasks genuinely PASS (real k-induction against
+    real RTL-001, unaffected by the RTL-005 changes), coverage check ran
+    clean (42/353 registers textually referenced, up from 32/353, expected
+    given RTL-005's own 15 registers are now exercised). A real
+    `build_ecp5.ps1` run (Build ID `20260820_200244`, default invocation,
+    no special flags) also passed completely clean: **62.70 MHz PASS at
+    50 MHz required**, TRELLIS_COMB 19% / TRELLIS_FF 15% utilization
+    (up from 12-13%/7-8% for prior modules, expected given the real
+    64x128-bit event store plus 24x128-bit producer-slot array this module
+    adds — roughly 11,000 additional flip-flops), "Program finished
+    normally," no `--timing-allow-fail` needed.
+  - **A real, genuine timing-closure bug was found and fixed getting this
+    clean build — not a synthesis-tool artifact, and not fixed on the
+    first attempt.** The round-robin arbiter's original code computed each
+    of 24 candidates' rotated index via a conditional-subtract (an
+    adder/comparator) chained together with the priority decision, 24
+    deep — a real `nextpnr-ecp5` run confirmed this directly (Max
+    frequency 44.21 MHz, FAIL at 50 MHz, critical path naming
+    `dfc_rtl005.sv:348`). **A first fix attempt (parallelizing the 24
+    per-candidate adders, still 24 real adders just no longer chained)
+    made timing WORSE (38.14 MHz)** — confirmed via a real, subsequent
+    build, not assumed; 24 real carry-chain (CCU2C) cells is expensive
+    regardless of scheduling. **The real fix**: replaced per-candidate
+    arithmetic entirely with the standard round-robin-arbiter technique —
+    a REGISTERED priority mask (`rr_mask_q`), updated via one 5-bit
+    increment feeding one barrel shift (`24'hFFFFFF << next_ptr`, muxes
+    not carry chains), with arbitration itself reduced to two static
+    bitwise ANDs and two fixed-position priority encoders (no runtime
+    index arithmetic at all). This is what produced the clean 62.70 MHz
+    closure above. Full detail, including the "why the first fix was
+    wrong" lesson for RTL-006 onward, in `OPEN_ISSUES.md` item 17. All
+    three code states were reconfirmed via a full Icarus regression
+    (9/9 testbenches, 205/205 checks, unchanged throughout) — this was
+    purely a timing-closure issue, never a functional/simulation one.
+- **RTL-006 through RTL-023:** spec-complete (all 24 module specs,
+  including RTL-001/002/003/004/005/024, exist and are citation-verified
   against the `-002` baseline) but **not yet implemented as real RTL.**
   This is the actual next phase of work — see Section 5.
 - **Full regression across every real testbench in the project, run for
@@ -1425,20 +1539,47 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002, RTL-003, and RTL-004 are now all real and implemented — the
-  next real step is RTL-005 (Event Logger)**, then RTL-006 (GPIO) to finish
-  the Infrastructure batch, one module at a time, using the exact same
-  real-verification discipline as RTL-001/002/003/004 (compile, simulate,
-  and only then trust — never claim something works without actually
-  running it). Then Monitoring, Safety, Databus, in that order
-  (Programmable is now out of scope entirely — see the scope-change entry
-  directly above). **RTL-005 is a real, direct consumer of RTL-004's own
-  real output**: it is `evt_valid_o`/`evt_record_o`'s real destination for
-  every module implemented so far (RTL-002/003/004 all currently have
-  these left genuinely unconsumed, disclosed, not stubbed) — expect
-  RTL-005's own implementation session to also wire up all three modules'
-  existing event outputs for real, not just add a new isolated module.
-  **Before writing RTL-005's port list (or any module after it): read
+- **RTL-002 through RTL-005 are now all real and implemented — the next
+  real step is RTL-006 (GPIO)** to finish the Infrastructure batch, one
+  module at a time, using the exact same real-verification discipline as
+  RTL-001/002/003/004/005 (compile, simulate, and only then trust — never
+  claim something works without actually running it). Then Monitoring,
+  Safety, Databus, in that order (Programmable is now out of scope
+  entirely — see the scope-change entry directly above). **RTL-005's own
+  implementation session already closed the real, previously-disclosed
+  event-bus gap for RTL-002/003/004's own `evt_valid_o`/`evt_record_o`**
+  (see Section 4's RTL-005 entry) — RTL-006 onward should wire its own
+  event output into RTL-005's real `evt_valid_i[5]` (and so on for each
+  subsequent module's own index) as part of that module's own integration,
+  the same discipline already established.
+  **RTL-005's own real, additional lessons for RTL-006 onward:** (1) **a
+  module that is simultaneously an arbiter/store AND its own producer
+  needs a genuine two-layer design, not one** — a generation-side one-deep
+  pending register (mirroring every other module's own event-generation
+  shape) feeding, via the INTEGRATOR's own external wiring (not internal
+  self-reference), into the SAME producer-slot mechanism used for every
+  other source; collapsing these into one layer either creates a
+  tautological self-reference or loses the ability to represent "a new
+  candidate while the previous one is still pending" at all — check this
+  before assuming a self-referencing port-catalog row is a table-generation
+  artifact (RTL-005's was real; RTL-004's `timestamp_i` self-reference
+  was not — see `dfc_rtl005.sv`'s own header for the full distinguishing
+  reasoning); (2) **a generic per-module struct field (e.g. the common
+  `event_overflow`/`event_drop_count` pair every Appendix B struct
+  carries) is not guaranteed to have a corresponding REG-002 register** —
+  RTL-005 is the first module where this generic pair has genuinely no
+  host-visible address at all (`OPEN_ISSUES.md` item 14); don't assume a
+  struct's generic fields are automatically host-reachable just because
+  every module's struct includes them mechanically; (3) **check every
+  EXISTING `dfc_rtl001` instantiation site directly for missing ports
+  before trusting a prior session's own "testbenches checked" account** —
+  RTL-004's own session only checked `dri_transaction_tb.sv`/
+  `regbank_smoke_tb.sv` and missed that `rtl002_integration_tb.sv`/
+  `rtl003_integration_tb.sv` were left with `rtl004_control_o`/
+  `rtl004_status_i` entirely unconnected (`OPEN_ISSUES.md` item 15) — this
+  was only found this session by checking every site, not by trusting the
+  prior session's stated scope.
+  **Before writing RTL-006's port list (or any module after it): read
   Section 2's standing rule on `pkg::type_t` first.** Every module's own
   spec defines its `control_i`/`status_o` ports as a package-scoped struct
   type — writing them that way, as the spec literally shows, will very
@@ -1514,6 +1655,19 @@ written in this project going forward, not just a historical note.
   synthesis `.ys` script's read order, immediately after the previous
   module) is now a checklist item for every module going forward, not
   something to rediscover fresh each time.
+- **RTL-005 (Event Logger): COMPLETE TASK SPECIFICATION — STATUS: DONE,
+  verified for real (see the RTL-005 entry in Section 4 above for the
+  actual `gate.ps1`/`build_ecp5.ps1` results: 9/9 testbenches, 205/205
+  checks, lint/formal/coverage all clean; Build ID `20260820_200244`,
+  **62.70 MHz PASS at 50 MHz required**, TRELLIS_COMB 19%/TRELLIS_FF 15%
+  utilization — reached only after finding and fixing a real timing-
+  closure bug in the round-robin arbiter, see OPEN_ISSUES.md item 17).**
+  Followed the RTL-003 task-spec template below (items 1-10, substituting
+  RTL-005's own module/registers/ports throughout) plus the one ARCH-002
+  struct-growth fix and the one genuine, disclosed-not-fixed register gap
+  described above — do not re-execute this for RTL-005 again; use the
+  RTL-003
+  template below as the shape for RTL-006's own task spec instead.
 - **RTL-004 (Timestamp Engine): COMPLETE TASK SPECIFICATION — STATUS:
   DONE, verified for real (see the RTL-004 entry in Section 4 above for the
   actual `gate.ps1`/`build_ecp5.ps1` results: Build ID `20260820_133515`,
@@ -1521,9 +1675,7 @@ written in this project going forward, not just a historical note.
   the RTL-003 task-spec template below (items 1-10, substituting RTL-004's
   own module/registers/ports throughout) plus the three ARCH-002
   struct-growth fixes described above — do not re-execute this for RTL-004
-  again; use the RTL-003 template below as the shape for RTL-005's own task
-  spec instead, adjusted for RTL-005 being the real event-store destination
-  for every prior module's own event output (see the plan entry above).
+  again.
 - **RTL-003 (Interrupt Controller): COMPLETE TASK SPECIFICATION — STATUS:
   DONE, verified for real (see the RTL-003 entry in Section 4 above for the
   actual `gate.ps1`/`build_ecp5.ps1` results: Build ID `20260819_210250`,

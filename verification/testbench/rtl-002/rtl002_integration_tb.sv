@@ -45,6 +45,16 @@ module rtl002_integration_tb;
   // dri_transaction_tb.sv.
   logic [dfc_types_pkg::DFC_RTL003_CONTROL_WIDTH-1:0] rtl003_control_unused;
   logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status_stub = '0;
+  // RTL-004/RTL-005 are likewise out of this test's scope -- REAL, GENUINE
+  // GAP FOUND AND FIXED during RTL-005's own integration session: these two
+  // ports were missing from u_rtl001's instantiation entirely (not merely
+  // stub-tied), left as floating/undriven inputs since RTL-004's own
+  // integration session added them to dfc_rtl001.sv without updating this
+  // file. Closed here, same disclosed-stub pattern as RTL-003 above.
+  logic [dfc_types_pkg::DFC_RTL004_CONTROL_WIDTH-1:0] rtl004_control_unused;
+  logic [dfc_types_pkg::DFC_RTL004_STATUS_WIDTH-1:0]  rtl004_status_stub = '0;
+  logic [dfc_types_pkg::DFC_RTL005_CONTROL_WIDTH-1:0] rtl005_control_unused;
+  logic [dfc_types_pkg::DFC_RTL005_STATUS_WIDTH-1:0]  rtl005_status_stub = '0;
 
   // Real signal (not a bare literal tie) so Part 4 below can withhold the
   // event handshake on purpose to force a genuine, real overflow condition
@@ -70,6 +80,11 @@ module rtl002_integration_tb;
     .rtl002_status_i        (rtl002_status),
     .rtl003_control_o       (rtl003_control_unused),
     .rtl003_status_i        (rtl003_status_stub),
+    .rtl004_control_o       (rtl004_control_unused),
+    .rtl004_status_i        (rtl004_status_stub),
+    .rtl005_control_o       (rtl005_control_unused),
+    .rtl005_status_i        (rtl005_status_stub),
+    .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );
 

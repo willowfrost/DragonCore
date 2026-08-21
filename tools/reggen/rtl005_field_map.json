@@ -1,0 +1,138 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x0300-0x0338), cited by contract ID below -- same disclosed scope/rationale as rtl002_field_map.json's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). EVT_OVERFLOW_COUNT/EVT_POP_ERROR_COUNT are REG-002 access class COUNTER-CLR (read 0x00000000-0xFFFFFFFF; writes only 0x00000000 or 0xFFFFFFFF, 0xFFFFFFFF emits one clear pulse, every other word is ACCESS_ERROR) -- reggen.py v4 has no dedicated COUNTER-CLR pulse-capture path, so these two fields are mapped with class \"W1C\" here to reuse its existing one-cycle raw-wdata_i pulse-capture logic (identical mechanism, a real one-cycle pulse of whatever was written). dfc_rtl005.sv itself checks the pulse value is exactly 32'hFFFFFFFF before treating it as an accepted clear (0 is naturally a no-op; any other value is neither a legal COUNTER-CLR write nor validated/rejected as ACCESS_ERROR, since RTL-001 has no per-field write-value validation yet -- OPEN_ISSUES.md item 4, a pre-existing gap this does not worsen).",
+  "consumer_module": "RTL-005",
+  "control_struct": "dfc_rtl005_control_t",
+  "status_struct": "dfc_rtl005_status_t",
+  "control_registers": [
+    {
+      "register": "EVT_CONTROL", "contract_id": "REG-0300",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "evt_control__logger_enable"}
+      ]
+    },
+    {
+      "register": "EVT_STATUS", "contract_id": "REG-0304",
+      "fields": [
+        {"reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "evt_status__snapshot_valid"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "evt_status__overflow"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "evt_status__source_drop"},
+        {"reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "evt_status__pop_error"},
+        {"reg_hi": 6, "reg_lo": 6, "class": "W1C", "struct_field": "evt_status__clear_complete"}
+      ]
+    },
+    {
+      "register": "EVT_OVERFLOW_COUNT", "contract_id": "REG-030C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "W1C", "struct_field": "evt_overflow_count__count"}
+      ]
+    },
+    {
+      "register": "EVT_SOURCE_ENABLE", "contract_id": "REG-0310",
+      "fields": [
+        {"reg_hi": 23, "reg_lo": 0, "class": "RW", "struct_field": "evt_source_enable__source_enable"}
+      ]
+    },
+    {
+      "register": "EVT_SNAPSHOT", "contract_id": "REG-0314",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "evt_snapshot__capture_oldest"}
+      ]
+    },
+    {
+      "register": "EVT_POP", "contract_id": "REG-0328",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "evt_pop__pop"}
+      ]
+    },
+    {
+      "register": "EVT_CLEAR", "contract_id": "REG-032C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "evt_clear__clear_all"}
+      ]
+    },
+    {
+      "register": "EVT_DROP_SOURCE", "contract_id": "REG-0330",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "W1C", "struct_field": "evt_drop_source__source_drop"}
+      ]
+    },
+    {
+      "register": "EVT_POP_ERROR_COUNT", "contract_id": "REG-0338",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "W1C", "struct_field": "evt_pop_error_count__count"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "EVT_STATUS", "contract_id": "REG-0304",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "evt_status__not_empty"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "evt_status__full"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "evt_status__snapshot_valid"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "evt_status__overflow"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "evt_status__source_drop"},
+        {"reg_hi": 5, "reg_lo": 5, "struct_field": "evt_status__pop_error"},
+        {"reg_hi": 6, "reg_lo": 6, "struct_field": "evt_status__clear_complete"}
+      ]
+    },
+    {
+      "register": "EVT_COUNT", "contract_id": "REG-0308",
+      "fields": [
+        {"reg_hi": 6, "reg_lo": 0, "struct_field": "evt_count__count"}
+      ]
+    },
+    {
+      "register": "EVT_OVERFLOW_COUNT", "contract_id": "REG-030C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "evt_overflow_count__count"}
+      ]
+    },
+    {
+      "register": "EVT_DATA0", "contract_id": "REG-0318",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "evt_data0__timestamp_lo"}
+      ]
+    },
+    {
+      "register": "EVT_DATA1", "contract_id": "REG-031C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "evt_data1__timestamp_hi"}
+      ]
+    },
+    {
+      "register": "EVT_DATA2", "contract_id": "REG-0320",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "struct_field": "evt_data2__event_id"},
+        {"reg_hi": 23, "reg_lo": 16, "struct_field": "evt_data2__source_id"},
+        {"reg_hi": 31, "reg_lo": 24, "struct_field": "evt_data2__flags"}
+      ]
+    },
+    {
+      "register": "EVT_DATA3", "contract_id": "REG-0324",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "evt_data3__event_data"}
+      ]
+    },
+    {
+      "register": "EVT_DROP_SOURCE", "contract_id": "REG-0330",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "evt_drop_source__source_drop"}
+      ]
+    },
+    {
+      "register": "EVT_ARB_STATUS", "contract_id": "REG-0334",
+      "fields": [
+        {"reg_hi": 4, "reg_lo": 0, "struct_field": "evt_arb_status__last_source"},
+        {"reg_hi": 9, "reg_lo": 5, "struct_field": "evt_arb_status__next_source"},
+        {"reg_hi": 10, "reg_lo": 10, "struct_field": "evt_arb_status__arb_active"}
+      ]
+    },
+    {
+      "register": "EVT_POP_ERROR_COUNT", "contract_id": "REG-0338",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "evt_pop_error_count__count"}
+      ]
+    }
+  ]
+}
