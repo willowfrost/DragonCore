@@ -85,6 +85,13 @@ module regbank_smoke_tb;
   // gpio_status_status_i no longer exist as individual ports.
   logic [dfc_types_pkg::DFC_RTL006_STATUS_WIDTH-1:0]  rtl006_status_i;
   logic [dfc_types_pkg::DFC_RTL006_CONTROL_WIDTH-1:0] rtl006_control_o;
+  // Replaced by the aggregated real RTL-007 bus this session (same
+  // treatment as RTL-002 through RTL-006 above) -- rotor_status_status_i,
+  // rotor_rpm_status_i, rotor_period_ticks_status_i, and
+  // rtl007_evt_overflow_status_status_i no longer exist as individual
+  // ports.
+  logic [dfc_types_pkg::DFC_RTL007_STATUS_WIDTH-1:0]  rtl007_status_i;
+  logic [dfc_types_pkg::DFC_RTL007_CONTROL_WIDTH-1:0] rtl007_control_o;
   logic [31:0] host_status_status_i;
   logic [31:0] host_last_result_status_i;
   logic [31:0] host_last_address_status_i;
@@ -136,10 +143,6 @@ module regbank_smoke_tb;
   logic [31:0] route_active_filter_mask_status_i;
   logic [31:0] route_entry_status_status_i;
   logic [31:0] rtl021_evt_overflow_status_status_i;
-  logic [31:0] rotor_status_status_i;
-  logic [31:0] rotor_rpm_status_i;
-  logic [31:0] rotor_period_ticks_status_i;
-  logic [31:0] rtl007_evt_overflow_status_status_i;
   logic [31:0] engine_status_status_i;
   logic [31:0] engine_rpm_status_i;
   logic [31:0] engine_period_ticks_status_i;
@@ -294,10 +297,8 @@ module regbank_smoke_tb;
     .route_active_filter_mask_status_i(route_active_filter_mask_status_i),
     .route_entry_status_status_i(route_entry_status_status_i),
     .rtl021_evt_overflow_status_status_i(rtl021_evt_overflow_status_status_i),
-    .rotor_status_status_i(rotor_status_status_i),
-    .rotor_rpm_status_i(rotor_rpm_status_i),
-    .rotor_period_ticks_status_i(rotor_period_ticks_status_i),
-    .rtl007_evt_overflow_status_status_i(rtl007_evt_overflow_status_status_i),
+    .rtl007_status_i(rtl007_status_i),
+    .rtl007_control_o(rtl007_control_o),
     .engine_status_status_i(engine_status_status_i),
     .engine_rpm_status_i(engine_rpm_status_i),
     .engine_period_ticks_status_i(engine_period_ticks_status_i),
@@ -418,10 +419,7 @@ module regbank_smoke_tb;
     route_active_filter_mask_status_i = 32'h0;
     route_entry_status_status_i = 32'h0;
     rtl021_evt_overflow_status_status_i = 32'h0;
-    rotor_status_status_i = 32'h0;
-    rotor_rpm_status_i = 32'h0;
-    rotor_period_ticks_status_i = 32'h0;
-    rtl007_evt_overflow_status_status_i = 32'h0;
+    rtl007_status_i = '0;
     engine_status_status_i = 32'h0;
     engine_rpm_status_i = 32'h0;
     engine_period_ticks_status_i = 32'h0;
@@ -504,22 +502,23 @@ module regbank_smoke_tb;
     // ---- Check 3: external field mirrors status_i combinationally ----
     // Redirected from SYS_STATUS to IRQ_RAW_STATUS (RTL-002 integration),
     // then to TIME_STATUS (RTL-003 integration), then to EVT_STATUS
-    // (RTL-004 integration), then to GPIO_RAW_IN (RTL-005 integration), and
-    // now redirected a fifth time this session to ROTOR_STATUS: GPIO_RAW_IN's
-    // own status_i is no longer an individual port either (it's now
-    // aggregated into rtl006_status_i, real cross-module wiring covered by
-    // rtl006_integration_tb.sv instead). ROTOR_STATUS (RTL-007, not yet
+    // (RTL-004 integration), then to GPIO_RAW_IN (RTL-005 integration), then
+    // to ROTOR_STATUS (RTL-006 integration), and now redirected a sixth time
+    // this session to ENGINE_STATUS: ROTOR_STATUS's own status_i is no
+    // longer an individual port either (it's now aggregated into
+    // rtl007_status_i, real cross-module wiring covered by
+    // rtl007_integration_tb.sv instead). ENGINE_STATUS (RTL-008, not yet
     // real) is untouched by that change and still uses the original generic
     // per-register status_i mechanism this check is actually meant to
     // exercise.
-    rotor_status_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_ROTOR_STATUS;
+    engine_status_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_ENGINE_STATUS;
     #1;
-    check("ROTOR_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("ROTOR_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    rotor_status_status_i = 32'h0000_0041;
+    check("ENGINE_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("ENGINE_STATUS write_illegal (external)", write_illegal_o, 1'b1);
+    engine_status_status_i = 32'h0000_0041;
     #1;
-    check("ROTOR_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("ENGINE_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

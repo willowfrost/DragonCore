@@ -375,6 +375,78 @@ module rtl024_skeleton_tb;
     gpio_i[1] = 1'b0;
     repeat (3) @(posedge core_clk_i); #1;
 
+    // ------------------------------------------------------------------
+    // RTL-007 integration checks -- real, added this session, over the
+    // real physical SPI pins and this skeleton's own real, external
+    // rotor_i top-level testbench port (the same port ulx3s_dfc_top.sv
+    // wires to the real gp27/J2-27 ECP5 pad on hardware). RTL-007's own
+    // real status_o.ready (legal configuration, no illegal threshold/PPR/
+    // timeout value written) genuinely reaches the host-visible
+    // SUBSYS_READY aggregate (bit 6, ARCH-002 Appendix C module index 6)
+    // through RTL-002's real module_ready_i[6]. rtl007_integration_tb.sv
+    // already covers the RTL-001<->RTL-007 register bus and the real
+    // bit-serial RPM divider directly; this proves the same readiness
+    // fact holds inside the actual RTL-024 top-level integration, plus a
+    // real, external rotor_i pad-level round trip through this file's own
+    // top-level port (not a hierarchical force) all the way to a real
+    // host-readable ROTOR_RPM value.
+    //
+    // Unlike RTL-006 (whose GPIO_SYNC_IN readback needs no module_enable_i
+    // at all), RTL-007's entire measurement pipeline is genuinely gated by
+    // `active` (ctl_enable && module_enable_i, dfc_rtl007.sv's own header)
+    // -- SUBSYS_ENABLE bit 6 defaults to 0 (REG-0018's own reset value,
+    // 0x0080F81F, enables only the mandatory mask) and must be genuinely,
+    // explicitly enabled via a real protected host write before any real
+    // measurement can occur, unlike the RTL-006 section above which never
+    // needed to touch SUBSYS_ENABLE at all.
+    // ------------------------------------------------------------------
+    check("rtl007 status_o.ready is real (legal configuration, reset-default thresholds)",
+          dut.rtl007_status[dfc_types_pkg::DFC_RTL007_STATUS__READY_HI], 1'b1);
+    check("rtl007 status_o.fault is real (clear, no illegal configuration forced)",
+          dut.rtl007_status[dfc_types_pkg::DFC_RTL007_STATUS__FAULT_HI], 1'b0);
+
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check("host-readable SUBSYS_READY bit 6 (RTL-007) reflects RTL-007's real readiness",
+          rd_data[6], 1'b1);
+
+    // Real, protected SUBSYS_ENABLE write (REG-0018, "Protection: Yes for
+    // configurable bits") -- genuinely enables the optional RTL-007
+    // module bit (6) on top of the fixed mandatory mask, over a real
+    // re-armed PROTECT_KEY sequence, the same real host discipline every
+    // other protected write in this file already uses.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SUBSYS_ENABLE) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SUBSYS_ENABLE) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SUBSYS_ENABLE, 32'h0080_F85F, wr_status);  // mandatory mask | bit 6
+    check("SUBSYS_ENABLE SPI write (RTL-007 bit 6 enabled) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_ROTOR_PULSES_PER_REV, 32'd2000, wr_status);  // unprotected
+    check("ROTOR_PULSES_PER_REV SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ROTOR_CONTROL, 32'h0000_0003, wr_status);  // ENABLE=1, RISING_EDGE=1
+    check("ROTOR_CONTROL SPI write (ENABLE=1) accepted", |wr_status, 1'b0);
+
+    // Two real rising edges on this file's own external rotor_i pin, 3000
+    // CORE_CLK cycles apart, must genuinely produce RPM = 3,000,000,000 /
+    // (3000 * 2000) = 500 through RTL-007's real bit-serial divider (see
+    // dfc_rtl007.sv's own header) -- proven here through the real
+    // physical pin and the real SPI read path, not a hierarchical force.
+    rotor_i = 1'b1;
+    @(posedge core_clk_i); #1;
+    rotor_i = 1'b0;
+    repeat (2999) @(posedge core_clk_i);
+    rotor_i = 1'b1;
+    @(posedge core_clk_i); #1;
+    rotor_i = 1'b0;
+    repeat (100) @(posedge core_clk_i); #1;  // real divider latency margin
+
+    spi_read32(DFC_ADDR_ROTOR_RPM, rd_data, rd_status);
+    check("ROTOR_RPM SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable ROTOR_RPM genuinely reflects the real 3000-cycle pulse ",
+           "gap on this file's own external rotor_i pin (RPM=500)"},
+          (rd_data == 32'd500), 1'b1);
+
     // The stub topology's remaining mandatory-mask modules (RTL-012
     // through RTL-016, etc.) never report ready, so RTL-002 is expected to
     // run out its full 499,000-cycle mandatory-init timeout and land in

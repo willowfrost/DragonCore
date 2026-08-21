@@ -53,6 +53,14 @@ IOBUF PORT "gp24" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gp25" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gp26" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 
+# ---- Rotor RPM Monitor (RTL-007): J2 gp27, tachometer/RPM pulse input.
+# Real board file, "GPIO repeated as individual signals" section. This is
+# the last remaining single-ended-only position (see
+# ULX3S_CONNECTION_MAP.md's own Section 4/6 for the exhaustion note) --
+# any future module needing a pin must use the differential-capable range.
+LOCATE COMP "gp27" SITE "D13";
+IOBUF PORT "gp27" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

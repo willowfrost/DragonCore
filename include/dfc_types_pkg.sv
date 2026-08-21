@@ -626,8 +626,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL006_STATUS__GPIO_STATUS__QUALIFICATION_IN_PROGRESS_HI = 82;
   localparam int unsigned DFC_RTL006_STATUS__GPIO_STATUS__QUALIFICATION_IN_PROGRESS_LO = 75;
 
-  // ARCH-002 Appendix B dfc_rtl007_control_t (135 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl007_control_t (136 bits, rich format)
   typedef struct packed {
+    logic rtl007_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask; added to close a real, confirmed gap: this struct previously had no field for clearing RTL007_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x2024 bit 0, a real W1C field), identical in kind to the analogous fix already made for dfc_rtl002/003/004/005/006_control_t. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged.
     logic [15:0] rotor_hysteresis__hysteresis;  //  reset=0 :: control_value
     logic [31:0] rotor_edge_filter__min_edge_cycles;  //  reset=0 :: control_value
     logic [31:0] rotor_timeout_us__timeout_us;  //  reset=100000 :: control_value
@@ -642,9 +643,9 @@ package dfc_types_pkg;
     logic rotor_control__rising_edge;  //  reset=1 :: control_value
     logic rotor_control__enable;  //  reset=0 :: control_value
   } dfc_rtl007_control_t;
-  // total width: 135 bits
+  // total width: 136 bits
 
-  localparam int unsigned DFC_RTL007_CONTROL_WIDTH = 135;
+  localparam int unsigned DFC_RTL007_CONTROL_WIDTH = 136;
   localparam int unsigned DFC_RTL007_CONTROL__ROTOR_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL007_CONTROL__ROTOR_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL007_CONTROL__ROTOR_CONTROL__RISING_EDGE_HI = 1;
@@ -671,6 +672,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL007_CONTROL__ROTOR_EDGE_FILTER__MIN_EDGE_CYCLES_LO = 87;
   localparam int unsigned DFC_RTL007_CONTROL__ROTOR_HYSTERESIS__HYSTERESIS_HI = 134;
   localparam int unsigned DFC_RTL007_CONTROL__ROTOR_HYSTERESIS__HYSTERESIS_LO = 119;
+  localparam int unsigned DFC_RTL007_CONTROL__RTL007_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 135;
+  localparam int unsigned DFC_RTL007_CONTROL__RTL007_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 135;
 
   // ARCH-002 Appendix B dfc_rtl007_status_t (73 bits, rich format)
   typedef struct packed {

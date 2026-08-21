@@ -106,38 +106,39 @@ section to this document the same way Section 1 was built: transcribe
 the real `.lpf` addition, confirm the J1/J2 position against the real
 board, and cite the source for each fact rather than assume it.
 
-Positions still open on the GPIO headers for this purpose: **`gp27`
-(J2-27)** — the one remaining single-ended-only position, see Section 5
-below for where the other 8 went — and **J1-8 through J1-13** plus
-**J2-14 through J2-21** (outer and inner rows both, differential-capable).
-None of these are committed to any specific future signal yet; do not
-treat any position number here as a preassigned plan. **Corrected,
-complete picture of the real electrical distinction (an earlier draft of
-this section was incomplete — verified directly against ULX3S's own
-official manual, not just the schematic excerpt used before):**
+Positions still open on the GPIO headers for this purpose: **J1-8 through
+J1-13** plus **J2-14 through J2-21** (outer and inner rows both,
+differential-capable) — see Section 6 below for where the last
+single-ended-only position (`gp27`/J2-27) went. None of the remaining
+differential-capable positions are committed to any specific future signal
+yet; do not treat any position number here as a preassigned plan.
+**Corrected, complete picture of the real electrical distinction (an
+earlier draft of this section was incomplete — verified directly against
+ULX3S's own official manual, not just the schematic excerpt used
+before):**
 - **J1-5 through J1-7 and J2-22 through J2-27 are single-ended-ONLY**
-  (9 positions total; 8 now committed to RTL-006's GPIO channels per
-  Section 5, `gp27` still open) — the natural first choice for any future
-  ordinary single-ended interface (every remaining module's real spec --
-  ARINC, CAN, UART, monitoring inputs — uses ordinary single-ended
-  signals, none need differential).
+  (9 positions total; 8 committed to RTL-006's GPIO channels per Section 5,
+  the 9th and last — `gp27` — committed to RTL-007's `rotor_i` per
+  Section 6). **This single-ended-only range is now fully exhausted** —
+  any future module needing a pin (RTL-008 onward) must use the
+  differential-capable range below.
 - **J1-8 through J1-13 and J2-14 through J2-21 are differential-capable**
   (14 positions) — but per ULX3S's own manual, "differential pairs can be
-  used also as single-ended pins," so these remain a real fallback if the
-  single-ended-only positions above are ever exhausted, not a hard
-  no-go — just the less-preferred choice when a genuinely single-ended
-  position is available instead.
+  used also as single-ended pins," so these remain a real fallback now
+  that the single-ended-only positions above are exhausted, not a hard
+  no-go — just the less-preferred choice that is now the ONLY choice for
+  every remaining ordinary single-ended interface.
 
-Logical signals awaiting a physical assignment: `rotor_i` (RTL-007),
-`engine_i` (RTL-008), `pulse_i[1:0]` (RTL-009), `arinc_rx_i`/
+Logical signals awaiting a physical assignment: `engine_i` (RTL-008),
+`pulse_i[1:0]` (RTL-009), `arinc_rx_i`/
 `arinc_tx_ctrl_o`/`arinc_rx_adapter_error_i`/`arinc_tx_adapter_error_i`
 (RTL-017/018), `can_rx_i`/`can_tx_o`/`can_transceiver_error_i` (RTL-019),
 `uart_rx_i`/`uart_tx_o` (RTL-020), `health_i[7:0]` (RTL-011),
 `safety_out_o[3:0]` (RTL-016), `user_i`/`o`/`oe[3:0]` (out of scope --
 RTL-022/023 dropped from this build per the demo-scope decision, see
 `PROJECT_CONTINUITY.md` Section 5). `gpio_i`/`gpio_o`/`gpio_oe_o`
-(RTL-006) is no longer in this list — see Section 5, its physical
-assignment is now real.
+(RTL-006) and `rotor_i` (RTL-007) are no longer in this list — see
+Sections 5 and 6, their physical assignments are now real.
 
 ---
 
@@ -187,3 +188,50 @@ source Section 1's SPI mapping was fetched from), confirmed via a direct
 summarizing pass. The `gp<N>` → "J1/J2, position N" correspondence follows
 the same silkscreen-position convention already established and confirmed
 in Section 1.
+
+---
+
+## 6. Rotor RPM Monitor (RTL-007) — J2 gp27, 1 channel
+
+RTL-007 is the first module in the Monitoring domain with a real, physical
+interface — a single asynchronous tachometer/RPM pulse input
+(`rotor_i`), one physical pin.
+
+| Signal | `gp<N>` | J1/J2 position | Row | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|---|
+| `rotor_i` | `gp27` | J2-27 | Outer (`+` / GP) | D13 | Input |
+
+**Choice rationale:** per Section 4's own note, positions **J1-5 through
+J1-7 and J2-22 through J2-27 are single-ended-only** (9 positions total).
+RTL-006's GPIO channels used the first 8 (`gp5`/`gp6`/`gp7`/`gp22`-`gp26`,
+Section 5), leaving `gp27` (J2-27) as the one remaining open
+single-ended-only position — confirmed directly against
+`ULX3S_CONNECTION_MAP.md`'s own Section 4 before choosing it, per this
+project's standing rule to exhaust the single-ended-only range before
+reaching into the differential-capable range. A single pulse input fits
+this one remaining position exactly. **This exhausts the single-ended-only
+positions entirely** — RTL-008 (Engine RPM Monitor, the next module
+needing a physical pin, per `PROJECT_CONTINUITY.md`'s own build order) will
+have to use the differential-capable range (J1-8–13 / J2-14–21) instead,
+per Section 4's own updated note above.
+
+The corresponding `gn27` inner-row pin is, as with every other position in
+this project's real interfaces, a genuinely independent single-ended pin
+this design does not use — not "the wasted other half" of a differential
+pair (positions 22-27 are single-ended-only per the real schematic, same
+as Section 1's `gn0`-`gn4` and Section 5's `gn5`-`gn7`/`gn22`-`gn26`).
+
+`rotor_i` is a plain single-ended input (no tristate/output logic needed,
+unlike Section 1's SPI MISO or Section 5's bidirectional GPIO channels) —
+`ulx3s_dfc_top.sv` reads the pad directly into `dfc_rtl024.sv`'s own
+`rotor_i` port, which `dfc_rtl007.sv` then synchronizes with its own
+two-flop CDC-PULSE synchronizer (RTLSTD-CDC-008) before any use.
+
+**Provenance:** the `gp27` → FPGA site mapping (D13) is fetched directly
+from the real board constraint file (`emard/ulx3s`,
+`doc/constraints/ulx3s_v20.lpf` — the same source Sections 1 and 5's own
+mappings were fetched from), confirmed via a direct `curl`+`grep` of the
+raw file content against the exact `LOCATE COMP "gp27"` line, not recalled
+from memory or accepted from a single summarizing pass. The `gp27` →
+"J2, position 27" correspondence follows the same silkscreen-position
+convention already established and confirmed in Section 1.

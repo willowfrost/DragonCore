@@ -38,12 +38,18 @@
 //   - Debug LEDs: PLL-locked and POR-released status only, using signals
 //     this wrapper itself generates -- no hierarchical reference into
 //     dfc_rtl024's internals.
+//   - Rotor RPM Monitor (RTL-007): mapped to J2 gp27, the last remaining
+//     single-ended-only position (confirmed free per the real board
+//     constraint file -- see ULX3S_CONNECTION_MAP.md's own new Section 6
+//     for exactly how the site was confirmed). A plain single-ended input
+//     -- no tristate needed, unlike gp3/the GPIO channels above --
+//     dfc_rtl007.sv itself owns the real CDC-PULSE synchronizer.
 //
 // NOT WIRED (tied safe, matching dfc_rtl024's own disclosed skeleton
-// scope -- RTL-007 through RTL-023 don't exist yet):
-//   ARINC, CAN, UART, rotor/engine/pulse/health monitoring inputs, user
-//   I/O, production-test pins, safety outputs. See dfc_rtl024.sv's own
-//   header for exactly what's stubbed and why.
+// scope -- RTL-008 through RTL-023 don't exist yet):
+//   ARINC, CAN, UART, engine/pulse/health monitoring inputs, user I/O,
+//   production-test pins, safety outputs. See dfc_rtl024.sv's own header
+//   for exactly what's stubbed and why.
 // ============================================================================
 
 module ulx3s_dfc_top (
@@ -61,6 +67,7 @@ module ulx3s_dfc_top (
   inout  wire  gp24,  // GPIO channel 5
   inout  wire  gp25,  // GPIO channel 6
   inout  wire  gp26,  // GPIO channel 7
+  input  logic gp27,  // Rotor RPM tachometer pulse input (RTL-007)
   output logic [7:0] led
 );
 
@@ -153,7 +160,7 @@ module ulx3s_dfc_top (
     .uart_rx_i (1'b1),  // idle high
     .uart_tx_o (),
 
-    .rotor_i   (1'b0),
+    .rotor_i   (gp27),
     .engine_i  (1'b0),
     .pulse_i   (2'b00),
     .health_i  (8'h00),

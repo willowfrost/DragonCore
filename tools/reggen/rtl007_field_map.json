@@ -1,0 +1,99 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x2000-0x2028), cited by contract ID below -- same disclosed scope/rationale as every prior field-map file's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). RTL007_EVT_OVERFLOW_STATUS's status_registers entry below (EVENT_OVERFLOW/DROP_COUNT mapped to the generic status_o.event_overflow/event_drop_count fields every dfc_rtlNNN_status_t struct already carries) closes the readback gap from the start, the same discipline rtl006_field_map.json established (OPEN_ISSUES.md item 21 -- RTL-002/003/004's own field-maps still lack this, out of scope for this session, not reproduced here). ROTOR_STATUS appears in BOTH control_registers (its 3 real W1C clear-request fields) AND status_registers (its 6 real RO/W1C-readback fields) -- same dual-appearance pattern already used for RTL-006's own GPIO_EVENT_STATUS, confirmed safe by reggen.py's own per-register readback == \"external\" gating (dfc_registers_pkg.json confirms ROTOR_STATUS/ROTOR_RPM/ROTOR_PERIOD_TICKS/RTL007_EVT_OVERFLOW_STATUS are all readback=external; ROTOR_CONTROL/ROTOR_THRESH_LOW/ROTOR_THRESH_HIGH/ROTOR_PULSES_PER_REV/ROTOR_TIMEOUT_US/ROTOR_EDGE_FILTER/ROTOR_HYSTERESIS are all readback=internal_reg, confirmed directly, not assumed).",
+  "consumer_module": "RTL-007",
+  "control_struct": "dfc_rtl007_control_t",
+  "status_struct": "dfc_rtl007_status_t",
+  "control_registers": [
+    {
+      "register": "ROTOR_CONTROL", "contract_id": "REG-2000",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "rotor_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "rotor_control__rising_edge"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "rotor_control__event_enable"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "rotor_control__irq_enable"}
+      ]
+    },
+    {
+      "register": "ROTOR_STATUS", "contract_id": "REG-2004",
+      "fields": [
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "rotor_status__timeout"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "rotor_status__range_error"},
+        {"reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "rotor_status__updated"}
+      ]
+    },
+    {
+      "register": "ROTOR_THRESH_LOW", "contract_id": "REG-2010",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "class": "RW", "struct_field": "rotor_thresh_low__threshold"}
+      ]
+    },
+    {
+      "register": "ROTOR_THRESH_HIGH", "contract_id": "REG-2014",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "class": "RW", "struct_field": "rotor_thresh_high__threshold"}
+      ]
+    },
+    {
+      "register": "ROTOR_PULSES_PER_REV", "contract_id": "REG-2018",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "class": "RW", "struct_field": "rotor_pulses_per_rev__ppr"}
+      ]
+    },
+    {
+      "register": "ROTOR_TIMEOUT_US", "contract_id": "REG-201C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "rotor_timeout_us__timeout_us"}
+      ]
+    },
+    {
+      "register": "ROTOR_EDGE_FILTER", "contract_id": "REG-2020",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "rotor_edge_filter__min_edge_cycles"}
+      ]
+    },
+    {
+      "register": "RTL007_EVT_OVERFLOW_STATUS", "contract_id": "REG-2024",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl007_evt_overflow_status__event_overflow"}
+      ]
+    },
+    {
+      "register": "ROTOR_HYSTERESIS", "contract_id": "REG-2028",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "class": "RW", "struct_field": "rotor_hysteresis__hysteresis"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "ROTOR_STATUS", "contract_id": "REG-2004",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "rotor_status__valid"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "rotor_status__low"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "rotor_status__high"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "rotor_status__timeout"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "rotor_status__range_error"},
+        {"reg_hi": 5, "reg_lo": 5, "struct_field": "rotor_status__updated"}
+      ]
+    },
+    {
+      "register": "ROTOR_RPM", "contract_id": "REG-2008",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "struct_field": "rotor_rpm__rpm"}
+      ]
+    },
+    {
+      "register": "ROTOR_PERIOD_TICKS", "contract_id": "REG-200C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "rotor_period_ticks__period_ticks"}
+      ]
+    },
+    {
+      "register": "RTL007_EVT_OVERFLOW_STATUS", "contract_id": "REG-2024",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    }
+  ]
+}

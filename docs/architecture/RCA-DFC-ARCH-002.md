@@ -1539,7 +1539,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 74:67 | gpio_status__direction | 8 | unsigned | 0 | active per-channel direction readback |
 | 82:75 | gpio_status__qualification_in_progress | 8 | unsigned | 0 | current per-channel qualification-in-progress state |
 
-### `dfc_rtl007_control_t` — 135 bits
+### `dfc_rtl007_control_t` — 136 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1556,6 +1556,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 86:55 | rotor_timeout_us__timeout_us | 32 | unsigned | 100000 | control_value |
 | 118:87 | rotor_edge_filter__min_edge_cycles | 32 | unsigned | 0 | control_value |
 | 134:119 | rotor_hysteresis__hysteresis | 16 | unsigned | 0 | control_value |
+| 135 | rtl007_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask; added to close a real, confirmed gap: this struct previously had no field for clearing RTL007_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x2024 bit 0, a real W1C field), identical in kind to the analogous fix already made for dfc_rtl002/003/004/005/006_control_t. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged. |
 
 ### dfc_rtl007_status_t — 73 bits
 

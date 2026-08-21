@@ -5,6 +5,7 @@
 // Cross-module forwarding: RTL-004 (see tools/reggen/rtl004_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-005 (see tools/reggen/rtl005_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-006 (see tools/reggen/rtl006_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-007 (see tools/reggen/rtl007_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -17,6 +18,8 @@
   // Aggregated real RTL-005 control, replacing the prior disconnected placeholder for: EVT_CLEAR, EVT_CONTROL, EVT_DROP_SOURCE, EVT_OVERFLOW_COUNT, EVT_POP, EVT_POP_ERROR_COUNT, EVT_SNAPSHOT, EVT_SOURCE_ENABLE, EVT_STATUS
   // Aggregated real RTL-006 status, replacing individual ports for: GPIO_EVENT_STATUS, GPIO_QUAL_IN, GPIO_RAW_IN, GPIO_STATUS, GPIO_SYNC_IN, RTL006_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-006 control, replacing the prior disconnected placeholder for: GPIO_CONTROL, GPIO_DIR, GPIO_EVENT_ENABLE, GPIO_EVENT_STATUS, GPIO_FALL_ENABLE, GPIO_IRQ_ENABLE, GPIO_OUT, GPIO_QUAL_0_3, GPIO_QUAL_4_7, GPIO_RISE_ENABLE, RTL006_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-007 status, replacing individual ports for: ROTOR_PERIOD_TICKS, ROTOR_RPM, ROTOR_STATUS, RTL007_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-007 control, replacing the prior disconnected placeholder for: ROTOR_CONTROL, ROTOR_EDGE_FILTER, ROTOR_HYSTERESIS, ROTOR_PULSES_PER_REV, ROTOR_STATUS, ROTOR_THRESH_HIGH, ROTOR_THRESH_LOW, ROTOR_TIMEOUT_US, RTL007_EVT_OVERFLOW_STATUS
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -102,10 +105,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  route_destination_drop_count_2_3_status_i,
   input  logic [31:0]  route_destination_drop_count_4_status_i,
   input  logic [31:0]  route_active_control_status_i,
-  input  logic [31:0]  rotor_status_status_i,
-  input  logic [31:0]  rotor_rpm_status_i,
-  input  logic [31:0]  rotor_period_ticks_status_i,
-  input  logic [31:0]  rtl007_evt_overflow_status_status_i,
   input  logic [31:0]  engine_status_status_i,
   input  logic [31:0]  engine_rpm_status_i,
   input  logic [31:0]  engine_period_ticks_status_i,
@@ -182,7 +181,9 @@ module dfc_config_regbank_regs (
   input  logic [267:0]  rtl005_status_i,
   output logic [128:0] rtl005_control_o,
   input  logic [82:0]  rtl006_status_i,
-  output logic [122:0] rtl006_control_o
+  output logic [122:0] rtl006_control_o,
+  input  logic [72:0]  rtl007_status_i,
+  output logic [135:0] rtl007_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -1075,14 +1076,22 @@ module dfc_config_regbank_regs (
     if (!rst_ni) rotor_control_q <= 32'h00000002;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROTOR_CONTROL)) rotor_control_q <= wdata_i;
 
-  // ROTOR_STATUS (0x2004) -- external passthrough, owner RTL-007
-  wire [31:0] rotor_status_q = rotor_status_status_i;
+  // ROTOR_STATUS (0x2004) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-007, real
+  //   generation per contract REG-2004, not a permanent tie.
+  logic [31:0] rotor_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rotor_status_pulse_q <= 32'h0;
+    else rotor_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROTOR_STATUS)) ? wdata_i : 32'h0;
 
-  // ROTOR_RPM (0x2008) -- external passthrough, owner RTL-007
-  wire [31:0] rotor_rpm_q = rotor_rpm_status_i;
+  // ROTOR_STATUS (0x2004) -- external passthrough, owner RTL-007. Reconstructed from the aggregated rtl007_status_i input (contract REG-2004), not an individual per-register port.
+  wire [31:0] rotor_status_q = {26'h0, rtl007_status_i[8:8], rtl007_status_i[7:7], rtl007_status_i[6:6], rtl007_status_i[5:5], rtl007_status_i[4:4], rtl007_status_i[3:3]};
 
-  // ROTOR_PERIOD_TICKS (0x200C) -- external passthrough, owner RTL-007
-  wire [31:0] rotor_period_ticks_q = rotor_period_ticks_status_i;
+  // ROTOR_RPM (0x2008) -- external passthrough, owner RTL-007. Reconstructed from the aggregated rtl007_status_i input (contract REG-2008), not an individual per-register port.
+  wire [31:0] rotor_rpm_q = {16'h0, rtl007_status_i[24:9]};
+
+  // ROTOR_PERIOD_TICKS (0x200C) -- external passthrough, owner RTL-007. Reconstructed from the aggregated rtl007_status_i input (contract REG-200C), not an individual per-register port.
+  wire [31:0] rotor_period_ticks_q = {rtl007_status_i[56:25]};
 
   // ROTOR_THRESH_LOW (0x2010) -- Mixed: RW, RSV0, owner RTL-007
   logic [31:0] rotor_thresh_low_q;
@@ -1114,8 +1123,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) rotor_edge_filter_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROTOR_EDGE_FILTER)) rotor_edge_filter_q <= wdata_i;
 
-  // RTL007_EVT_OVERFLOW_STATUS (0x2024) -- external passthrough, owner RTL-007
-  wire [31:0] rtl007_evt_overflow_status_q = rtl007_evt_overflow_status_status_i;
+  // RTL007_EVT_OVERFLOW_STATUS (0x2024) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-007, real
+  //   generation per contract REG-2024, not a permanent tie.
+  logic [31:0] rtl007_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl007_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl007_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL007_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
+  // RTL007_EVT_OVERFLOW_STATUS (0x2024) -- external passthrough, owner RTL-007. Reconstructed from the aggregated rtl007_status_i input (contract REG-2024), not an individual per-register port.
+  wire [31:0] rtl007_evt_overflow_status_q = {8'h0, rtl007_status_i[72:57], 7'h0, rtl007_status_i[2:2]};
 
   // ROTOR_HYSTERESIS (0x2028) -- Mixed: RW, RSV0, owner RTL-007
   logic [31:0] rotor_hysteresis_q;
@@ -1929,6 +1946,28 @@ module dfc_config_regbank_regs (
   assign rtl006_control_o[1] = gpio_control_q[1:1];  // GPIO_CONTROL.gpio_control__qualification_enable
   assign rtl006_control_o[0] = gpio_control_q[0:0];  // GPIO_CONTROL.gpio_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl007_control_o -- real forwarding to RTL-007, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl007_control_t defines --
+  // cross-checked at generation time (136/136 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl007_control_o[135] = rtl007_evt_overflow_status_pulse_q[0:0];  // RTL007_EVT_OVERFLOW_STATUS.rtl007_evt_overflow_status__event_overflow
+  assign rtl007_control_o[134:119] = rotor_hysteresis_q[15:0];  // ROTOR_HYSTERESIS.rotor_hysteresis__hysteresis
+  assign rtl007_control_o[118:87] = rotor_edge_filter_q[31:0];  // ROTOR_EDGE_FILTER.rotor_edge_filter__min_edge_cycles
+  assign rtl007_control_o[86:55] = rotor_timeout_us_q[31:0];  // ROTOR_TIMEOUT_US.rotor_timeout_us__timeout_us
+  assign rtl007_control_o[54:39] = rotor_pulses_per_rev_q[15:0];  // ROTOR_PULSES_PER_REV.rotor_pulses_per_rev__ppr
+  assign rtl007_control_o[38:23] = rotor_thresh_high_q[15:0];  // ROTOR_THRESH_HIGH.rotor_thresh_high__threshold
+  assign rtl007_control_o[22:7] = rotor_thresh_low_q[15:0];  // ROTOR_THRESH_LOW.rotor_thresh_low__threshold
+  assign rtl007_control_o[6] = rotor_status_pulse_q[5:5];  // ROTOR_STATUS.rotor_status__updated
+  assign rtl007_control_o[5] = rotor_status_pulse_q[4:4];  // ROTOR_STATUS.rotor_status__range_error
+  assign rtl007_control_o[4] = rotor_status_pulse_q[3:3];  // ROTOR_STATUS.rotor_status__timeout
+  assign rtl007_control_o[3] = rotor_control_q[3:3];  // ROTOR_CONTROL.rotor_control__irq_enable
+  assign rtl007_control_o[2] = rotor_control_q[2:2];  // ROTOR_CONTROL.rotor_control__event_enable
+  assign rtl007_control_o[1] = rotor_control_q[1:1];  // ROTOR_CONTROL.rotor_control__rising_edge
+  assign rtl007_control_o[0] = rotor_control_q[0:0];  // ROTOR_CONTROL.rotor_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -2126,7 +2165,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_4: begin rdata_o = route_destination_drop_count_4_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_ACTIVE_CONTROL: begin rdata_o = route_active_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_CONTROL: begin rdata_o = rotor_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ROTOR_STATUS: begin rdata_o = rotor_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROTOR_STATUS: begin rdata_o = rotor_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_RPM: begin rdata_o = rotor_rpm_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_PERIOD_TICKS: begin rdata_o = rotor_period_ticks_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_THRESH_LOW: begin rdata_o = rotor_thresh_low_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
@@ -2134,7 +2173,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ROTOR_PULSES_PER_REV: begin rdata_o = rotor_pulses_per_rev_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_TIMEOUT_US: begin rdata_o = rotor_timeout_us_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_EDGE_FILTER: begin rdata_o = rotor_edge_filter_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL007_EVT_OVERFLOW_STATUS: begin rdata_o = rtl007_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL007_EVT_OVERFLOW_STATUS: begin rdata_o = rtl007_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_HYSTERESIS: begin rdata_o = rotor_hysteresis_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_CONTROL: begin rdata_o = engine_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_STATUS: begin rdata_o = engine_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end

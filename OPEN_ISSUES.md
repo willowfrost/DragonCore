@@ -448,3 +448,100 @@ incomplete, logged here rather than silently resolved or guessed.
     out-of-scope future work: find and fix the compound-owner parsing case
     in `extract_registers.py`, then re-run `regenerate.ps1` and confirm
     `GPIO_DIR`'s owner field reads `RTL-001 / RTL-006` for real.
+
+## RTL-007 (Rotor RPM Monitor) integration
+
+24. **RESOLVED (2026-08-21), approved before implementation, same pattern
+    as items 2/7/8/12/20 (the sixth real instance of this exact gap class).**
+    `dfc_rtl007_control_t` (135 bits) had no clear-request field for
+    `RTL007_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-002 0x2024 bit 0, a
+    real W1C field). Fixed: ARCH-002 grew the struct 135->136 bits, adding
+    `rtl007_evt_overflow_status__event_overflow` at the new highest bit
+    (135) -- every pre-existing field's bit position confirmed unchanged
+    via a real `regenerate.ps1` run. `tools/reggen/rtl007_field_map.json`
+    carries the corresponding `control_registers` entry, and its
+    `status_registers` section closes the RTL-002/003/004-style readback
+    gap (item 21) for RTL-007 from the start, same discipline already
+    established for RTL-006.
+
+25. **Real, disclosed spec ambiguity -- no functional consequence, not
+    fixed (nothing to fix: no field exists to attach a meaning to).**
+    `ARCH-VAL-007` (RTL-007's own validation contract) reads "`0 ≤ LOW ≤
+    HIGH ≤ 1000`, `HYST ≤ HIGH-LOW`, PPR 1–65535 when enabled, qualification
+    0–100 ms, and nonzero timeout when enabled." Every clause maps onto a
+    real RTL-007 field except "qualification 0-100 ms" -- confirmed
+    directly against `RTL-007_RevA.md` and REG-002's own Rotor RPM block
+    (0x2000-0x2028): `ROTOR_EDGE_FILTER.MIN_EDGE_CYCLES` is a raw CORE_CLK-
+    cycle count (0-0xFFFFFFFF), not a millisecond value, and no other
+    "qualification" concept exists anywhere in this module's real register
+    set. Almost certainly carried forward from `ARCH-VAL-006`'s own
+    GPIO-specific qualification-time clause (RTL-006's real, distinct
+    `GPIO_QUAL_0_3`/`GPIO_QUAL_4_7` millisecond fields) rather than an
+    intentional RTL-007 constraint. `dfc_rtl007.sv` implements every other
+    clause as a real, live `illegal_config` check and disclaims this one
+    specifically in its own header, rather than inventing a meaning for it.
+
+26. **Real, hard-won testbench-authoring lesson, kept here for RTL-008/009
+    (Engine RPM Monitor, Pulse/Frequency Monitor) -- both share
+    `ARCH-MON-002`'s identical edge-to-edge period measurement, so both
+    will need the identical testbench discipline this module's own
+    bring-up got wrong twice before getting right.** A testbench helper
+    that "produces one rising edge, then waits N more cycles before
+    returning" (the natural, obvious way to write a reusable pulse-
+    generator task) makes the edge fire on the task's OWN first clock edge
+    -- the `N` argument controls the gap to the NEXT edge, not the gap FROM
+    whatever edge preceded this call. Calling such a task only ONCE after
+    unrelated code (a DRI/SPI transaction, a register write) does NOT
+    produce a known, exact inter-edge period -- the real period is
+    whatever time has genuinely elapsed since the true previous edge,
+    which depends on unrelated transaction timing the test author did not
+    account for. Confirmed via two real, distinct simulation failures
+    during `rtl007_integration_tb.sv`'s own bring-up: (1) a single such
+    call produced a measured RPM wildly different from the intended value
+    (a genuinely different period than assumed, not a DUT bug -- traced
+    directly to this exact mechanism); (2) even after separating "exact
+    back-to-back pairs" (correct for Parts 3-5's precise threshold checks)
+    from "one-off single calls" (Parts 7-8's event/irq checks), the
+    single-call design still inherited a large, un-budgeted trailing wait
+    left over from the PRECEDING pair's own second call (which does not
+    return until its full own gap has elapsed AFTER producing its edge),
+    making the intended "short gap" edge measure thousands of cycles
+    instead. The real fix: a second, distinct helper task
+    (`rotor_edge_after`, waits an explicit N cycles, THEN produces the
+    edge, THEN returns immediately with no trailing wait) for every
+    "one-off, explicit gap from whatever came before" use, keeping the
+    original back-to-back-pair task only for "two edges spaced exactly N
+    apart, precision required" use. Any future module needing a real,
+    simulated periodic/edge-based external input for its own integration
+    testbench should design both task shapes from the start, not
+    rediscover this the same way twice.
+
+27. **Real, hard-won RTL lesson, kept here for RTL-008/009 for the same
+    reason as item 26.** A measurement's "just-completed interval" must be
+    read as the LIVE value of whatever free-running counter tracks it,
+    never through a registered intermediate copy updated in the same
+    always_ff, in the same clock edge, that other logic then reads
+    combinationally that same cycle -- the registered copy's own update is
+    a nonblocking assignment, not yet visible, so a same-cycle
+    combinational reader sees the STALE value one full measurement behind.
+    Confirmed via a real simulation failure during this module's own
+    bring-up (`dfc_rtl007.sv`'s original `period_ticks_q` register, whose
+    very first real use produced a genuine divide-by-zero substitute
+    result -- ROTOR_RPM saturated to 0xFFFF -- because the divisor read
+    still-zero reset state one full cycle before the real 3000-tick period
+    it was supposed to carry ever became visible). Separately, and for the
+    same underlying reason: an "accepted-edge" counter that resets to 0 on
+    acceptance, then increments once per cycle thereafter, under-reports
+    the true elapsed-cycle count by exactly one when read combinationally
+    at the moment of the NEXT acceptance (the counter's own "+1 for this
+    cycle" is superseded by that cycle's reset before it can apply) --
+    resetting to 1 instead of 0 (i.e. "cycles elapsed including this one")
+    is the real, confirmed fix, needed with no further per-use-site
+    correction anywhere else. Any future module measuring elapsed time
+    between two edges/events (RTL-008/009's own period measurement,
+    RTL-012's Lost Link elapsed-time tracking, RTL-015's own analogous
+    counters) should read the live free-running counter directly wherever
+    a "just-elapsed" value is needed, and should audit whether its own
+    accepted-event counter needs the same 0-vs-1 reset-value treatment,
+    rather than re-deriving this the hard way via a real simulation
+    failure.

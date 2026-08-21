@@ -1458,8 +1458,164 @@ written in this project going forward, not just a historical note.
     given RTL-006's own per-channel synchronizer/qualification/edge-
     detection logic), "Program finished normally," no
     `--timing-allow-fail` needed.
-- **RTL-007 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001/002/003/004/005/006/024, exist and are
+- **RTL-007 (Rotor RPM Monitor): real, implemented and integrated into
+  `dfc_rtl024.sv`.** The first Monitoring-domain module. Implements
+  ARCH-002 SS9's ARCH-MON-002/003/005 contract: a two-flop CDC-PULSE
+  synchronizer on the real `rotor_i` pad, edge qualification against a
+  real, live (not registered-and-lagged — see below) elapsed-cycle
+  counter, hysteretic automatic period-mode/count-mode switching (2
+  consecutive sub-1,000-cycle periods to enter count mode, 2 consecutive
+  periods over 1,250 cycles to return), a real bit-serial 64-iteration
+  shift-subtract RPM divider (ties round up via an explicit remainder
+  test, real defended division-by-zero for PPR=0), real saturating
+  16-bit RPM (never wraps), real LOW/HIGH hysteretic threshold latches,
+  real no-edge TIMEOUT detection, and real, counted own-diagnostic-event
+  generation (event ID 0x0030, source index 6, subtypes low/high/timeout/
+  updated/saturation/recovery/configuration-reject per ARCH-002 Appendix
+  C.7's own row for this ID). Real cross-module register forwarding for
+  all 11 REG-002 0x2000-0x2028 registers (`ROTOR_CONTROL`/
+  `ROTOR_THRESH_LOW`/`ROTOR_THRESH_HIGH`/`ROTOR_PULSES_PER_REV`/
+  `ROTOR_TIMEOUT_US`/`ROTOR_EDGE_FILTER`/`ROTOR_HYSTERESIS`/
+  `RTL007_EVT_OVERFLOW_STATUS` control forwarding; `ROTOR_STATUS`/
+  `ROTOR_RPM`/`ROTOR_PERIOD_TICKS`/`RTL007_EVT_OVERFLOW_STATUS` status
+  forwarding) via `reggen.py` v4 and `tools/reggen/rtl007_field_map.json`.
+  - **THE REAL, CONFIRMED ROTOR PHYSICAL-PIN GAP IS CLOSED:** `rotor_i`
+    (previously hard-tied `1'b0` in `dfc_rtl024.sv`) now genuinely reaches
+    the real external `gp27`/J2-27 pad (the last remaining single-ended-
+    only board position — see `ULX3S_CONNECTION_MAP.md`'s new Section 6
+    for the fetched-not-memorized site confirmation, D13). RTL-007's own
+    `irq_req_o` now genuinely reaches RTL-003's real `irq_source_i[8]`,
+    and its `evt_valid_o`/`evt_record_o` now genuinely reach RTL-005's
+    real `evt_valid_i[6]`/`evt_record_i[6]`. `fault_req_o` is a real
+    output left genuinely unconsumed (RTL-013 does not exist yet), same
+    disclosed pattern as RTL-005's own `fault_req_o`.
+  - **One real ARCH-002 gap, found and fixed before this module was
+    implemented, explicitly anticipated by this session's own task
+    instructions** (the sixth real instance of this exact gap class):
+    `dfc_rtl007_control_t` (135 bits) had no clear-request field for
+    `RTL007_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` — grown 135->136 bits,
+    same growth-at-new-highest-bit pattern already established.
+    `rtl007_field_map.json`'s own `status_registers` section also closes
+    the RTL-002/003/004-style host-READ gap (`OPEN_ISSUES.md` item 21)
+    for RTL-007 from the start, same discipline RTL-006 already
+    established.
+  - **Two real, hard-won RTL/testbench lessons found and fixed during this
+    module's own bring-up — kept in detail in `OPEN_ISSUES.md` items 26-27
+    since both recur identically for RTL-008/009 (Engine RPM Monitor,
+    Pulse/Frequency Monitor), which share ARCH-MON-002's identical
+    edge-to-edge period measurement:**
+    1. A same-cycle registered-copy read (the original `period_ticks_q`)
+       lags one full measurement behind a live free-running counter read
+       combinationally the same cycle — confirmed via a real simulation
+       failure (ROTOR_RPM saturated to 0xFFFF, a real divide-by-zero
+       substitute, because the divisor read a still-zero value one cycle
+       before the real period ever became visible). Fixed by reading the
+       live `cycles_since_accepted_q` counter directly everywhere a
+       "just-completed period" value was needed, never through a
+       registered intermediate.
+    2. That same counter, reset to 0 on edge acceptance, under-reports the
+       true elapsed-cycle count by exactly one when read combinationally
+       at the moment of the NEXT acceptance. Fixed by resetting to 1
+       instead (a "cycles elapsed including this one" counter), confirmed
+       via a real, subsequent simulation showing an exact, bit-for-bit
+       match against a testbench-driven 3000-cycle gap.
+    3. (Testbench-side, not an RTL bug) a reusable "produce one edge, wait
+       N more cycles" pulse-generator task's `N` argument controls the
+       gap to the NEXT edge it produces, not the gap FROM whatever edge
+       preceded the call — confirmed via two real, distinct simulation
+       failures before landing on the fix: a second, distinct task
+       (`rotor_edge_after`) that waits explicit N cycles THEN produces one
+       edge THEN returns immediately, for every "one-off gap from
+       whatever came before" use, keeping the original back-to-back-pair
+       task only for exact, two-edges-spaced-exactly-N-apart use.
+  - **A real, genuine Yosys `PROC_DFF` failure ("Multiple edge sensitive
+    events found for this signal!") was found and fixed getting a clean
+    `build_ecp5.ps1` run** — the exact same standing, project-wide
+    compound-reset-condition rule already documented in this section
+    (first found on `dfc_rtl002.sv`) was violated throughout
+    `dfc_rtl007.sv`'s own first draft (`if (!core_rst_n_i || module_reset_i
+    || !active) ...` in ten separate `always_ff` blocks) — every one
+    restructured into the correct shape (the real async reset checked in
+    its own, standalone top-level `if`, `module_reset_i`/`!active` in a
+    subsequent `else if`), reconfirmed via a real, unchanged-behavior
+    `sim.ps1` re-run (44/44 checks) before retrying the real build.
+  - **Disclosed, real scope limits, not silent gaps:** `module_enable_i`
+    (this module's own optional-mask port) gates all measurement/event/
+    irq/fault activity together with `ROTOR_CONTROL.ENABLE` via a single
+    derived `active` signal — the most conservative reading of the port's
+    own documented "disabled module contributes no degraded/fault
+    request" semantic; `operating_state_i`/`observational_mode_i` are
+    real, structurally-required ports with no functional use (RTL-007's
+    own spec never names either in an equation, unlike RTL-006's explicit
+    OE contract); `ARCH-VAL-007`'s own "qualification 0-100 ms" clause has
+    no corresponding real field anywhere in this module (disclosed,
+    `OPEN_ISSUES.md` item 25, no functional consequence either way).
+  - **Proven via a new, real integration testbench**,
+    `rtl007_integration_tb.sv` (44/44 checks): a real host write via
+    RTL-001's real DRI path genuinely changes RTL-007's real behavior
+    (PPR/thresholds/hysteresis/timeout/edge-filter), and a real,
+    testbench-driven pulse train on `rotor_i` (exact, known inter-edge
+    gaps) genuinely produces a real, bit-exact RPM/period-ticks value
+    through the real divider — including real LOW/HIGH enter/exit,
+    real saturation/RANGE_ERROR, real no-edge TIMEOUT, real LOW-threshold
+    event generation (0x0030, decoded exactly, not a fabricated value),
+    real HIGH-threshold IRQ generation (captured over the real one-cycle-
+    pulse window, not a delayed sample that would miss it), the real
+    RTL007_EVT_OVERFLOW_STATUS host-read-and-clear round trip, and real
+    illegal-configuration-to-fault detection. **Additionally proven inside
+    the actual RTL-024 top-level integration**: `rtl024_skeleton_tb.sv`
+    was updated with a real SPI read of SUBSYS_READY confirming bit 6
+    (RTL-007) reflects RTL-007's real readiness, a real, protected
+    SUBSYS_ENABLE write genuinely enabling the optional module-6 bit
+    (RTL-007's entire measurement pipeline is gated by `module_enable_i`,
+    unlike RTL-006's GPIO_SYNC_IN readback, which needs no such
+    enable), and a real transition on this file's own external `rotor_i`
+    top-level pin genuinely reaching a real host SPI READ of ROTOR_RPM
+    (RPM=500, exact) — the concrete, physical-pad-level proof the gap is
+    closed, not merely a port-boundary-level one.
+  - Every other existing testbench was checked for breakage from
+    RTL-007's two new `dfc_rtl001.sv` ports (`rtl007_control_o`/
+    `rtl007_status_i`, replacing 4 individual stub-tied status ports):
+    `regbank_smoke_tb.sv` needed its Check 3 ("external field mirrors
+    status_i combinationally") redirected a sixth time (SYS_STATUS ->
+    IRQ_RAW_STATUS -> TIME_STATUS -> EVT_STATUS -> GPIO_RAW_IN ->
+    ROTOR_STATUS -> now ENGINE_STATUS, since ROTOR_STATUS is aggregated
+    too as of this session); `dri_transaction_tb.sv` (`.*` wildcard
+    instantiation) and `rtl002/003/004/005/006_integration_tb.sv`
+    (explicit named ports) all needed the new ports declared/tied off.
+    All confirmed via a real, individual `iverilog`/`vvp` run before the
+    full regression.
+  - **CONFIRMED, end-to-end, on the person's real machine — a real
+    `gate.ps1` run passed completely clean**: `lint.ps1` PASSED, `sim.ps1`
+    11/11 testbenches (**309/309 checks** — verified by adding up each
+    testbench's own individually-reported count from the real output:
+    12+12+16+28+30+24+37+35+44+58+13=309, not restated from memory),
+    `formal.ps1` both `bmc` and `prove` tasks genuinely PASS (real
+    k-induction against real RTL-001, unaffected by the RTL-007 changes),
+    coverage check ran clean (68/353 registers textually referenced, up
+    from 57/353, expected given RTL-007's own 11 registers are now
+    exercised). A real `build_ecp5.ps1` run (Build ID `20260821_132952`,
+    default invocation, no special flags) also passed completely clean:
+    **52.87 MHz PASS at 50 MHz required**, real critical path 2.18 ns
+    logic + 12.22 ns routing = 14.40 ns, **TRELLIS_COMB 20% / TRELLIS_FF
+    17%** utilization (comparable to RTL-006's 20%/16%, plus 2 real
+    MULT18X18D hard blocks — 2/156, 1% — inferred for the bit-serial
+    divider's period/count-mode dividend multiplies), "Program finished
+    normally," no `--timing-allow-fail` needed. Real margin over the 50
+    MHz requirement is narrower than prior modules (2.87 MHz vs. RTL-006's
+    12.21 MHz) — expected given the real 64-iteration divider's own
+    64-bit subtract/compare critical path is genuinely deeper than any
+    prior module's own per-cycle arithmetic; worth a closer look if
+    RTL-008/009's own, architecturally-identical dividers compound this
+    further. `nextpnr-ecp5`'s own internal placement retry (a real,
+    unprompted re-placement after an initial failed 48.71 MHz attempt,
+    confirmed in the real log, not a script-level retry) is what produced
+    the final, passing placement — the same real, evidenced
+    nextpnr-internal-retry behavior this project has seen before (see
+    `OPEN_ISSUES.md` item 18's own nextpnr-robustness note), not a
+    concerning sign on its own.
+- **RTL-008 through RTL-023:** spec-complete (all 24 module specs,
+  including RTL-001/002/003/004/005/006/007/024, exist and are
   citation-verified against the `-002` baseline) but **not yet
   implemented as real RTL.** This is the actual next phase of work — see
   Section 5.
@@ -1715,13 +1871,20 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-006 are now all real and implemented — the next
-  real step is RTL-007 (Rotor RPM)** to finish the Infrastructure batch,
+- **RTL-002 through RTL-007 are now all real and implemented — RTL-007
+  completes the Infrastructure batch and is also the first Monitoring-
+  domain module; the next real step is RTL-008 (Engine RPM Monitor)**,
   one module at a time, using the exact same real-verification discipline
-  as RTL-001/002/003/004/005/006 (compile, simulate, and only then trust —
-  never claim something works without actually running it). Then Monitoring,
-  Safety, Databus, in that order (Programmable is now out of scope
-  entirely — see the scope-change entry directly above). **RTL-005's own
+  as RTL-001 through RTL-007 (compile, simulate, and only then trust —
+  never claim something works without actually running it). RTL-008
+  shares ARCH-MON-002's identical edge-to-edge period-measurement
+  architecture with RTL-007 — **read `OPEN_ISSUES.md` items 26-27 before
+  writing any of RTL-008's own RTL or testbench**, not after hitting the
+  same two real bugs a second time. Then RTL-009 (Pulse/Frequency
+  Monitor, the last Monitoring-domain module using this same
+  architecture), then Safety, Databus, in that order (Programmable is now
+  out of scope entirely — see the scope-change entry directly above).
+  **RTL-005's own
   implementation session already closed the real, previously-disclosed
   event-bus gap for RTL-002/003/004's own `evt_valid_o`/`evt_record_o`**
   (see Section 4's RTL-005 entry) — RTL-006 onward should wire its own
@@ -1831,6 +1994,26 @@ written in this project going forward, not just a historical note.
   synthesis `.ys` script's read order, immediately after the previous
   module) is now a checklist item for every module going forward, not
   something to rediscover fresh each time.
+- **RTL-007 (Rotor RPM Monitor): COMPLETE TASK SPECIFICATION — STATUS:
+  DONE, verified for real (see the RTL-007 entry in Section 4 above for
+  the actual `gate.ps1`/`build_ecp5.ps1` results: 11/11 testbenches,
+  309/309 checks, lint/formal/coverage all clean; the first
+  Monitoring-domain module, and the module that exhausted the board's
+  single-ended-only pin range, per `ULX3S_CONNECTION_MAP.md`'s own new
+  Section 6 — RTL-008 onward must use the differential-capable range).**
+  Followed the RTL-003 task-spec template below (items 1-10, substituting
+  RTL-007's own module/registers/ports throughout) plus the one ARCH-002
+  struct-growth fix (the sixth real instance of the EVENT_OVERFLOW-clear
+  gap class), the real physical pin assignment, and two real, hard-won
+  RTL/testbench lessons found and fixed during this module's own
+  bring-up — a same-cycle registered-copy-vs-live-counter read lag, and a
+  reset-to-0-vs-1 off-by-one on an elapsed-cycle counter, both detailed in
+  `OPEN_ISSUES.md` items 26-27 specifically because they recur identically
+  for RTL-008/009's own, architecturally-identical period measurement —
+  do not re-execute this for RTL-007 again; use the RTL-003 template below
+  as the shape for RTL-008's own task spec instead, and read
+  `OPEN_ISSUES.md` items 26-27 BEFORE writing RTL-008/009's own RTL or
+  testbench.
 - **RTL-006 (GPIO Controller): COMPLETE TASK SPECIFICATION — STATUS: DONE,
   verified for real (see the RTL-006 entry in Section 4 above for the
   actual `gate.ps1`/`build_ecp5.ps1` results: 10/10 testbenches, 254/254
@@ -1846,7 +2029,7 @@ written in this project going forward, not just a historical note.
   fixed gaps described above (RTL-002/003/004's own EVT_OVERFLOW_STATUS
   readback, `extract_registers.py`'s compound-owner parsing) — do not
   re-execute this for RTL-006 again; use the RTL-003 template below as
-  the shape for RTL-007's own task spec instead.
+  the shape used for RTL-007's own task spec above.
 - **RTL-005 (Event Logger): COMPLETE TASK SPECIFICATION — STATUS: DONE,
   verified for real (see the RTL-005 entry in Section 4 above for the
   actual `gate.ps1`/`build_ecp5.ps1` results: 9/9 testbenches, 205/205

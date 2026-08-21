@@ -86,6 +86,12 @@ module rtl006_integration_tb;
   logic [63:0] tb_event_condition_enable = 64'h0;
   logic [63:0] tb_irq_condition_enable   = 64'h0;
 
+  // RTL-007 is not part of this test's scope (it targets RTL-006
+  // specifically, see file header) -- same disclosed-stub pattern, added
+  // during RTL-007's own integration session.
+  logic [dfc_types_pkg::DFC_RTL007_CONTROL_WIDTH-1:0] rtl007_control_unused;
+  logic [dfc_types_pkg::DFC_RTL007_STATUS_WIDTH-1:0]  rtl007_status_stub = '0;
+
   always #10 core_clk_i = ~core_clk_i;
 
   dfc_rtl001 u_rtl001 (
@@ -111,6 +117,8 @@ module rtl006_integration_tb;
     .rtl005_status_i        (rtl005_status_stub),
     .rtl006_control_o       (rtl006_control),
     .rtl006_status_i        (rtl006_status),
+    .rtl007_control_o       (rtl007_control_unused),
+    .rtl007_status_i        (rtl007_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

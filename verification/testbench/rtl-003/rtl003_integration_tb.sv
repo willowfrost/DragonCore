@@ -56,6 +56,10 @@ module rtl003_integration_tb;
   // pattern, added during RTL-006's own integration session.
   logic [dfc_types_pkg::DFC_RTL006_CONTROL_WIDTH-1:0] rtl006_control_unused;
   logic [dfc_types_pkg::DFC_RTL006_STATUS_WIDTH-1:0]  rtl006_status_stub = '0;
+  // RTL-007 likewise out of this test's scope -- same disclosed-stub
+  // pattern, added during RTL-007's own integration session.
+  logic [dfc_types_pkg::DFC_RTL007_CONTROL_WIDTH-1:0] rtl007_control_unused;
+  logic [dfc_types_pkg::DFC_RTL007_STATUS_WIDTH-1:0]  rtl007_status_stub = '0;
 
   logic [31:0] irq_source;
   logic        aggregate_pending;
@@ -96,6 +100,8 @@ module rtl003_integration_tb;
     .rtl005_status_i        (rtl005_status_stub),
     .rtl006_control_o       (rtl006_control_unused),
     .rtl006_status_i        (rtl006_status_stub),
+    .rtl007_control_o       (rtl007_control_unused),
+    .rtl007_status_i        (rtl007_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );
