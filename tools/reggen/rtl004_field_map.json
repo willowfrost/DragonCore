@@ -1,0 +1,104 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md SS9's real per-field bit tables (0x0200-0x022C), cited by contract ID below -- same disclosed scope/rationale as rtl002_field_map.json's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide).",
+  "consumer_module": "RTL-004",
+  "control_struct": "dfc_rtl004_control_t",
+  "status_struct": "dfc_rtl004_status_t",
+  "control_registers": [
+    {
+      "register": "TIME_CONTROL", "contract_id": "REG-0200",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "time_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "time_control__correlation_enable"}
+      ]
+    },
+    {
+      "register": "TIME_STATUS", "contract_id": "REG-0204",
+      "fields": [
+        {"reg_hi": 1, "reg_lo": 1, "class": "W1C", "struct_field": "time_status__snapshot_valid"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "time_status__sync_valid"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "time_status__sync_updated"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "time_status__error"}
+      ]
+    },
+    {
+      "register": "TIME_SNAPSHOT", "contract_id": "REG-0208",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "time_snapshot__capture"}
+      ]
+    },
+    {
+      "register": "TIME_SYNC_OFFSET_LO", "contract_id": "REG-0214",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "time_sync_offset_lo__offset_lo"}
+      ]
+    },
+    {
+      "register": "TIME_SYNC_OFFSET_HI", "contract_id": "REG-0218",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "time_sync_offset_hi__offset_hi"}
+      ]
+    },
+    {
+      "register": "TIME_SYNC_COMMIT", "contract_id": "REG-021C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "time_sync_commit__commit"}
+      ]
+    },
+    {
+      "register": "RTL004_EVT_OVERFLOW_STATUS", "contract_id": "REG-0224",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl004_evt_overflow_status__event_overflow"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "TIME_STATUS", "contract_id": "REG-0204",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "time_status__running"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "time_status__snapshot_valid"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "time_status__sync_valid"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "time_status__sync_updated"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "time_status__error"}
+      ]
+    },
+    {
+      "register": "TIME_RAW_LO", "contract_id": "REG-020C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "time_raw_lo__raw_lo"}
+      ]
+    },
+    {
+      "register": "TIME_RAW_HI", "contract_id": "REG-0210",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "time_raw_hi__raw_hi"}
+      ]
+    },
+    {
+      "register": "TIME_SYNC_STATUS", "contract_id": "REG-0220",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "struct_field": "time_sync_status__update_sequence"},
+        {"reg_hi": 16, "reg_lo": 16, "struct_field": "time_sync_status__active_valid"}
+      ]
+    },
+    {
+      "register": "RTL004_EVT_OVERFLOW_STATUS", "contract_id": "REG-0224",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    },
+    {
+      "register": "TIME_ACTIVE_OFFSET_LO", "contract_id": "REG-0228",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "time_active_offset_lo__offset_lo"}
+      ]
+    },
+    {
+      "register": "TIME_ACTIVE_OFFSET_HI", "contract_id": "REG-022C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "time_active_offset_hi__offset_hi"}
+      ]
+    }
+  ]
+}

@@ -65,11 +65,12 @@ module regbank_smoke_tb;
   // ports.
   logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status_i;
   logic [dfc_types_pkg::DFC_RTL003_CONTROL_WIDTH-1:0] rtl003_control_o;
-  logic [31:0] time_status_status_i;
-  logic [31:0] time_raw_lo_status_i;
-  logic [31:0] time_raw_hi_status_i;
-  logic [31:0] time_sync_status_status_i;
-  logic [31:0] rtl004_evt_overflow_status_status_i;
+  // Replaced by the aggregated real RTL-004 bus this session (same
+  // treatment as RTL-002/RTL-003 above) -- time_status_status_i, time_raw_lo_
+  // status_i, time_raw_hi_status_i, time_sync_status_status_i, and
+  // rtl004_evt_overflow_status_status_i no longer exist as individual ports.
+  logic [dfc_types_pkg::DFC_RTL004_STATUS_WIDTH-1:0]  rtl004_status_i;
+  logic [dfc_types_pkg::DFC_RTL004_CONTROL_WIDTH-1:0] rtl004_control_o;
   logic [31:0] evt_status_status_i;
   logic [31:0] evt_count_status_i;
   logic [31:0] evt_overflow_count_status_i;
@@ -236,11 +237,8 @@ module regbank_smoke_tb;
     .rtl002_evt_overflow_status_status_i(rtl002_evt_overflow_status_status_i),
     .rtl003_status_i(rtl003_status_i),
     .rtl003_control_o(rtl003_control_o),
-    .time_status_status_i(time_status_status_i),
-    .time_raw_lo_status_i(time_raw_lo_status_i),
-    .time_raw_hi_status_i(time_raw_hi_status_i),
-    .time_sync_status_status_i(time_sync_status_status_i),
-    .rtl004_evt_overflow_status_status_i(rtl004_evt_overflow_status_status_i),
+    .rtl004_status_i(rtl004_status_i),
+    .rtl004_control_o(rtl004_control_o),
     .evt_status_status_i(evt_status_status_i),
     .evt_count_status_i(evt_count_status_i),
     .evt_overflow_count_status_i(evt_overflow_count_status_i),
@@ -376,11 +374,7 @@ module regbank_smoke_tb;
     protect_status_status_i = 32'h0;
     rtl002_evt_overflow_status_status_i = 32'h0;
     rtl003_status_i = '0;
-    time_status_status_i = 32'h0;
-    time_raw_lo_status_i = 32'h0;
-    time_raw_hi_status_i = 32'h0;
-    time_sync_status_status_i = 32'h0;
-    rtl004_evt_overflow_status_status_i = 32'h0;
+    rtl004_status_i = '0;
     evt_status_status_i = 32'h0;
     evt_count_status_i = 32'h0;
     evt_overflow_count_status_i = 32'h0;
@@ -531,21 +525,22 @@ module regbank_smoke_tb;
 
     // ---- Check 3: external field mirrors status_i combinationally ----
     // Redirected from SYS_STATUS to IRQ_RAW_STATUS (RTL-002 integration),
-    // then redirected again to TIME_STATUS this session: IRQ_RAW_STATUS's
-    // own status_i is no longer an individual port either (it's now
-    // aggregated into rtl003_status_i, real cross-module wiring covered by
-    // rtl003_integration_tb.sv instead). TIME_STATUS is untouched by that
-    // change (RTL-004 does not exist yet) and still uses the original
-    // generic per-register status_i mechanism this check is actually meant
-    // to exercise.
-    time_status_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_TIME_STATUS;
+    // then to TIME_STATUS (RTL-003 integration), then redirected a third
+    // time this session to EVT_STATUS: TIME_STATUS's own status_i is no
+    // longer an individual port either (it's now aggregated into
+    // rtl004_status_i, real cross-module wiring covered by
+    // rtl004_integration_tb.sv instead). EVT_STATUS (RTL-005, not yet real)
+    // is untouched by that change and still uses the original generic
+    // per-register status_i mechanism this check is actually meant to
+    // exercise.
+    evt_status_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_EVT_STATUS;
     #1;
-    check("TIME_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("TIME_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    time_status_status_i = 32'h0000_0041;
+    check("EVT_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("EVT_STATUS write_illegal (external)", write_illegal_o, 1'b1);
+    evt_status_status_i = 32'h0000_0041;
     #1;
-    check("TIME_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("EVT_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

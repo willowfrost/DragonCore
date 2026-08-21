@@ -2,12 +2,15 @@
 // Source: dfc_rtl001_regbank_slice.json + dfc_registers_pkg.json (353 registers)
 // Cross-module forwarding: RTL-002 (see tools/reggen/rtl002_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-003 (see tools/reggen/rtl003_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-004 (see tools/reggen/rtl004_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
   // Aggregated real RTL-002 control, replacing the prior disconnected placeholder for: RESET_CONTROL, RESET_DIAGNOSTIC, RESET_STATUS, RTL002_EVT_OVERFLOW_STATUS, SUBSYS_ENABLE, SYS_CONTROL
   // Aggregated real RTL-003 status, replacing individual ports for: IRQ_ACKED, IRQ_CLEAR, IRQ_PENDING, IRQ_RAW_STATUS, IRQ_VECTOR, RTL003_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-003 control, replacing the prior disconnected placeholder for: IRQ_ACK, IRQ_CLEAR, IRQ_ENABLE, RTL003_EVT_OVERFLOW_STATUS, TEST_IRQ_INJECT
+  // Aggregated real RTL-004 status, replacing individual ports for: RTL004_EVT_OVERFLOW_STATUS, TIME_ACTIVE_OFFSET_HI, TIME_ACTIVE_OFFSET_LO, TIME_RAW_HI, TIME_RAW_LO, TIME_STATUS, TIME_SYNC_STATUS
+  // Aggregated real RTL-004 control, replacing the prior disconnected placeholder for: RTL004_EVT_OVERFLOW_STATUS, TIME_CONTROL, TIME_SNAPSHOT, TIME_STATUS, TIME_SYNC_COMMIT, TIME_SYNC_OFFSET_HI, TIME_SYNC_OFFSET_LO
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -20,13 +23,6 @@ module dfc_config_regbank_regs (
   output logic         protected_o,
   input  logic [31:0]  protect_status_status_i,
   input  logic [31:0]  rtl002_evt_overflow_status_status_i,
-  input  logic [31:0]  time_status_status_i,
-  input  logic [31:0]  time_raw_lo_status_i,
-  input  logic [31:0]  time_raw_hi_status_i,
-  input  logic [31:0]  time_sync_status_status_i,
-  input  logic [31:0]  rtl004_evt_overflow_status_status_i,
-  input  logic [31:0]  time_active_offset_lo_status_i,
-  input  logic [31:0]  time_active_offset_hi_status_i,
   input  logic [31:0]  evt_status_status_i,
   input  logic [31:0]  evt_count_status_i,
   input  logic [31:0]  evt_overflow_count_status_i,
@@ -190,7 +186,9 @@ module dfc_config_regbank_regs (
   input  logic [111:0]  rtl002_status_i,
   output logic [59:0] rtl002_control_o,
   input  logic [152:0]  rtl003_status_i,
-  output logic [128:0] rtl003_control_o
+  output logic [128:0] rtl003_control_o,
+  input  logic [168:0]  rtl004_status_i,
+  output logic [72:0] rtl004_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -395,17 +393,33 @@ module dfc_config_regbank_regs (
     if (!rst_ni) time_control_q <= 32'h00000001;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TIME_CONTROL)) time_control_q <= wdata_i;
 
-  // TIME_STATUS (0x0204) -- external passthrough, owner RTL-004
-  wire [31:0] time_status_q = time_status_status_i;
+  // TIME_STATUS (0x0204) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-004, real
+  //   generation per contract REG-0204, not a permanent tie.
+  logic [31:0] time_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) time_status_pulse_q <= 32'h0;
+    else time_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TIME_STATUS)) ? wdata_i : 32'h0;
 
-  // TIME_SNAPSHOT (0x0208) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TIME_SNAPSHOT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // TIME_STATUS (0x0204) -- external passthrough, owner RTL-004. Reconstructed from the aggregated rtl004_status_i input (contract REG-0204), not an individual per-register port.
+  wire [31:0] time_status_q = {27'h0, rtl004_status_i[7:7], rtl004_status_i[6:6], rtl004_status_i[5:5], rtl004_status_i[4:4], rtl004_status_i[3:3]};
+
+  // TIME_SNAPSHOT (0x0208) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-004, real
+  //   generation per contract REG-0208, not a permanent tie.
+  logic [31:0] time_snapshot_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) time_snapshot_pulse_q <= 32'h0;
+    else time_snapshot_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TIME_SNAPSHOT)) ? wdata_i : 32'h0;
+
+  // TIME_SNAPSHOT (0x0208) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-004 via time_snapshot_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] time_snapshot_q = 32'h00000000;
 
-  // TIME_RAW_LO (0x020C) -- external passthrough, owner RTL-004
-  wire [31:0] time_raw_lo_q = time_raw_lo_status_i;
+  // TIME_RAW_LO (0x020C) -- external passthrough, owner RTL-004. Reconstructed from the aggregated rtl004_status_i input (contract REG-020C), not an individual per-register port.
+  wire [31:0] time_raw_lo_q = {rtl004_status_i[39:8]};
 
-  // TIME_RAW_HI (0x0210) -- external passthrough, owner RTL-004
-  wire [31:0] time_raw_hi_q = time_raw_hi_status_i;
+  // TIME_RAW_HI (0x0210) -- external passthrough, owner RTL-004. Reconstructed from the aggregated rtl004_status_i input (contract REG-0210), not an individual per-register port.
+  wire [31:0] time_raw_hi_q = {rtl004_status_i[71:40]};
 
   // TIME_SYNC_OFFSET_LO (0x0214) -- RW, owner RTL-001 / RTL-004
   logic [31:0] time_sync_offset_lo_q;
@@ -419,20 +433,36 @@ module dfc_config_regbank_regs (
     if (!rst_ni) time_sync_offset_hi_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TIME_SYNC_OFFSET_HI)) time_sync_offset_hi_q <= wdata_i;
 
-  // TIME_SYNC_COMMIT (0x021C) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TIME_SYNC_COMMIT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // TIME_SYNC_COMMIT (0x021C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-004, real
+  //   generation per contract REG-021C, not a permanent tie.
+  logic [31:0] time_sync_commit_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) time_sync_commit_pulse_q <= 32'h0;
+    else time_sync_commit_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TIME_SYNC_COMMIT)) ? wdata_i : 32'h0;
+
+  // TIME_SYNC_COMMIT (0x021C) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-004 via time_sync_commit_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] time_sync_commit_q = 32'h00000000;
 
-  // TIME_SYNC_STATUS (0x0220) -- external passthrough, owner RTL-004
-  wire [31:0] time_sync_status_q = time_sync_status_status_i;
+  // TIME_SYNC_STATUS (0x0220) -- external passthrough, owner RTL-004. Reconstructed from the aggregated rtl004_status_i input (contract REG-0220), not an individual per-register port.
+  wire [31:0] time_sync_status_q = {15'h0, rtl004_status_i[88:88], rtl004_status_i[87:72]};
 
-  // RTL004_EVT_OVERFLOW_STATUS (0x0224) -- external passthrough, owner RTL-004
-  wire [31:0] rtl004_evt_overflow_status_q = rtl004_evt_overflow_status_status_i;
+  // RTL004_EVT_OVERFLOW_STATUS (0x0224) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-004, real
+  //   generation per contract REG-0224, not a permanent tie.
+  logic [31:0] rtl004_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl004_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl004_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL004_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // TIME_ACTIVE_OFFSET_LO (0x0228) -- external passthrough, owner RTL-001 / RTL-004
-  wire [31:0] time_active_offset_lo_q = time_active_offset_lo_status_i;
+  // RTL004_EVT_OVERFLOW_STATUS (0x0224) -- external passthrough, owner RTL-004. Reconstructed from the aggregated rtl004_status_i input (contract REG-0224), not an individual per-register port.
+  wire [31:0] rtl004_evt_overflow_status_q = {8'h0, rtl004_status_i[104:89], 7'h0, rtl004_status_i[2:2]};
 
-  // TIME_ACTIVE_OFFSET_HI (0x022C) -- external passthrough, owner RTL-001 / RTL-004
-  wire [31:0] time_active_offset_hi_q = time_active_offset_hi_status_i;
+  // TIME_ACTIVE_OFFSET_LO (0x0228) -- external passthrough, owner RTL-001 / RTL-004. Reconstructed from the aggregated rtl004_status_i input (contract REG-0228), not an individual per-register port.
+  wire [31:0] time_active_offset_lo_q = {rtl004_status_i[136:105]};
+
+  // TIME_ACTIVE_OFFSET_HI (0x022C) -- external passthrough, owner RTL-001 / RTL-004. Reconstructed from the aggregated rtl004_status_i input (contract REG-022C), not an individual per-register port.
+  wire [31:0] time_active_offset_hi_q = {rtl004_status_i[168:137]};
 
   // EVT_CONTROL (0x0300) -- Mixed: RW, CONST1, RSV0, owner RTL-005
   logic [31:0] evt_control_q;
@@ -1767,6 +1797,25 @@ module dfc_config_regbank_regs (
   assign rtl003_control_o[63:32] = irq_ack_pulse_q[31:0];  // IRQ_ACK.irq_ack__ack_set
   assign rtl003_control_o[31:0] = irq_enable_q[31:0];  // IRQ_ENABLE.irq_enable__enable
 
+  // ==========================================================================
+  // Aggregated rtl004_control_o -- real forwarding to RTL-004, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl004_control_t defines --
+  // cross-checked at generation time (73/73 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl004_control_o[72] = rtl004_evt_overflow_status_pulse_q[0:0];  // RTL004_EVT_OVERFLOW_STATUS.rtl004_evt_overflow_status__event_overflow
+  assign rtl004_control_o[71] = time_status_pulse_q[2:2];  // TIME_STATUS.time_status__sync_valid
+  assign rtl004_control_o[70] = time_status_pulse_q[1:1];  // TIME_STATUS.time_status__snapshot_valid
+  assign rtl004_control_o[69] = time_sync_commit_pulse_q[0:0];  // TIME_SYNC_COMMIT.time_sync_commit__commit
+  assign rtl004_control_o[68:37] = time_sync_offset_hi_q[31:0];  // TIME_SYNC_OFFSET_HI.time_sync_offset_hi__offset_hi
+  assign rtl004_control_o[36:5] = time_sync_offset_lo_q[31:0];  // TIME_SYNC_OFFSET_LO.time_sync_offset_lo__offset_lo
+  assign rtl004_control_o[4] = time_snapshot_pulse_q[0:0];  // TIME_SNAPSHOT.time_snapshot__capture
+  assign rtl004_control_o[3] = time_status_pulse_q[4:4];  // TIME_STATUS.time_status__error
+  assign rtl004_control_o[2] = time_status_pulse_q[3:3];  // TIME_STATUS.time_status__sync_updated
+  assign rtl004_control_o[1] = time_control_q[1:1];  // TIME_CONTROL.time_control__correlation_enable
+  assign rtl004_control_o[0] = time_control_q[0:0];  // TIME_CONTROL.time_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -1811,7 +1860,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_IRQ_VECTOR: begin rdata_o = irq_vector_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_RTL003_EVT_OVERFLOW_STATUS: begin rdata_o = rtl003_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_CONTROL: begin rdata_o = time_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_TIME_STATUS: begin rdata_o = time_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_TIME_STATUS: begin rdata_o = time_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_SNAPSHOT: begin rdata_o = time_snapshot_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_RAW_LO: begin rdata_o = time_raw_lo_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_RAW_HI: begin rdata_o = time_raw_hi_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
@@ -1819,7 +1868,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_TIME_SYNC_OFFSET_HI: begin rdata_o = time_sync_offset_hi_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_TIME_SYNC_COMMIT: begin rdata_o = time_sync_commit_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_TIME_SYNC_STATUS: begin rdata_o = time_sync_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL004_EVT_OVERFLOW_STATUS: begin rdata_o = rtl004_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL004_EVT_OVERFLOW_STATUS: begin rdata_o = rtl004_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_ACTIVE_OFFSET_LO: begin rdata_o = time_active_offset_lo_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_TIME_ACTIVE_OFFSET_HI: begin rdata_o = time_active_offset_hi_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_EVT_CONTROL: begin rdata_o = evt_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

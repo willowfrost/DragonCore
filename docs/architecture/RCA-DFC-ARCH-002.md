@@ -596,8 +596,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl002_status_i | input | dfc_rtl002_status_t / 112 | RTL-002.status_o | RTL-001.rtl002_status_i; RTL-002.module_ready_i[1]; RTL-002.module_fault_i[1] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl003_control_o | output | dfc_rtl003_control_t / 129 | RTL-001.rtl003_control_o | RTL-003.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl003_status_i | input | dfc_rtl003_status_t / 153 | RTL-003.status_o | RTL-001.rtl003_status_i; RTL-002.module_ready_i[2]; RTL-002.module_fault_i[2] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl004_control_o | output | dfc_rtl004_control_t / 70 | RTL-001.rtl004_control_o | RTL-004.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl004_status_i | input | dfc_rtl004_status_t / 105 | RTL-004.status_o | RTL-001.rtl004_status_i; RTL-002.module_ready_i[3]; RTL-002.module_fault_i[3] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl004_control_o | output | dfc_rtl004_control_t / 73 | RTL-001.rtl004_control_o | RTL-004.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl004_status_i | input | dfc_rtl004_status_t / 169 | RTL-004.status_o | RTL-001.rtl004_status_i; RTL-002.module_ready_i[3]; RTL-002.module_fault_i[3] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl005_control_o | output | dfc_rtl005_control_t / 128 | RTL-001.rtl005_control_o | RTL-005.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl005_status_i | input | dfc_rtl005_status_t / 268 | RTL-005.status_o | RTL-001.rtl005_status_i; RTL-002.module_ready_i[4]; RTL-002.module_fault_i[4] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl006_control_o | output | dfc_rtl006_control_t / 122 | RTL-001.rtl006_control_o | RTL-006.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
@@ -712,8 +712,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-004.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-004.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[3] | RTL-004.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl004_control_t / 70 | RTL-001.rtl004_control_o | RTL-004.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl004_status_t / 105 | RTL-004.status_o | RTL-001.rtl004_status_i; RTL-002.module_ready_i[3]; RTL-002.module_fault_i[3] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl004_control_t / 73 | RTL-001.rtl004_control_o | RTL-004.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl004_status_t / 169 | RTL-004.status_o | RTL-001.rtl004_status_i; RTL-002.module_ready_i[3]; RTL-002.module_fault_i[3] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-004.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-004.evt_valid_o | RTL-005.evt_valid_i[3] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[3] | RTL-004.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -1416,7 +1416,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 136 | irq_vector__valid | 1 | unsigned | 0 | readback_value |
 | 152:137 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### dfc_rtl004_control_t — 70 bits
+### dfc_rtl004_control_t — 73 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1428,8 +1428,11 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 36:5 | time_sync_offset_lo__offset_lo | 32 | unsigned | 0 | control_value |
 | 68:37 | time_sync_offset_hi__offset_hi | 32 | unsigned | 0 | control_value |
 | 69 | time_sync_commit__commit | 1 | unsigned | 0 | command_pulse |
+| 70 | time_status__snapshot_valid | 1 | unsigned | 0 | clear_mask; host-initiated clear-request for TIME_STATUS.SNAPSHOT_VALID (REG-002 0x0204) -- added to close a real, confirmed operational gap: this struct previously had no field carrying this clear-request from RTL-001 into RTL-004, so the host had no way to acknowledge snapshot-valid evidence once set, despite REG-002 declaring the register bit real W1C. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged. |
+| 71 | time_status__sync_valid | 1 | unsigned | 0 | clear_mask; host-initiated clear-request for TIME_STATUS.SYNC_VALID (REG-002 0x0204) -- same real, confirmed gap and same fix shape as bit 70 immediately above. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged. |
+| 72 | rtl004_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask; host-initiated clear-request for RTL004_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x0224) -- same real, confirmed gap already fixed for RTL-002/RTL-003 (dfc_rtl002_control_t/dfc_rtl003_control_t), now closed for RTL-004 from the start rather than shipped with the gap. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged. |
 
-### dfc_rtl004_status_t — 105 bits
+### dfc_rtl004_status_t — 169 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1446,6 +1449,8 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 87:72 | time_sync_status__update_sequence | 16 | unsigned | 0 | readback_value |
 | 88 | time_sync_status__active_valid | 1 | unsigned | 0 | readback_value |
 | 104:89 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 136:105 | time_active_offset_lo__offset_lo | 32 | unsigned | 0 | readback_value; added to close a real, confirmed gap: this struct previously had no field carrying the real active (committed) correlation offset back to TIME_ACTIVE_OFFSET_LO (REG-002 0x0228), an external-readback register with no other real data source. Placed at the new highest bits specifically so every other field in this struct keeps its existing bit position unchanged. |
+| 168:137 | time_active_offset_hi__offset_hi | 32 | unsigned | 0 | readback_value; same real, confirmed gap and same fix shape as the field immediately above, for TIME_ACTIVE_OFFSET_HI (REG-002 0x022C). |
 
 ### dfc_rtl005_control_t — 128 bits
 

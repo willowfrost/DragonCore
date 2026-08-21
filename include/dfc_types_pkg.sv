@@ -305,8 +305,11 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL003_STATUS__EVENT_DROP_COUNT_HI = 152;
   localparam int unsigned DFC_RTL003_STATUS__EVENT_DROP_COUNT_LO = 137;
 
-  // ARCH-002 Appendix B dfc_rtl004_control_t (70 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl004_control_t (73 bits, rich format)
   typedef struct packed {
+    logic rtl004_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask; host-initiated clear-request for RTL004_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x0224) -- same real, confirmed gap already fixed for RTL-002/RTL-003 (dfc_rtl002_control_t/dfc_rtl003_control_t), now closed for RTL-004 from the start rather than shipped with the gap. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged.
+    logic time_status__sync_valid;  //  reset=0 :: clear_mask; host-initiated clear-request for TIME_STATUS.SYNC_VALID (REG-002 0x0204) -- same real, confirmed gap and same fix shape as bit 70 immediately above. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged.
+    logic time_status__snapshot_valid;  //  reset=0 :: clear_mask; host-initiated clear-request for TIME_STATUS.SNAPSHOT_VALID (REG-002 0x0204) -- added to close a real, confirmed operational gap: this struct previously had no field carrying this clear-request from RTL-001 into RTL-004, so the host had no way to acknowledge snapshot-valid evidence once set, despite REG-002 declaring the register bit real W1C. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged.
     logic time_sync_commit__commit;  //  reset=0 :: command_pulse
     logic [31:0] time_sync_offset_hi__offset_hi;  //  reset=0 :: control_value
     logic [31:0] time_sync_offset_lo__offset_lo;  //  reset=0 :: control_value
@@ -316,9 +319,9 @@ package dfc_types_pkg;
     logic time_control__correlation_enable;  //  reset=0 :: control_value
     logic time_control__enable;  //  reset=1 :: constant_one; writes of zero rejected and reads remain one
   } dfc_rtl004_control_t;
-  // total width: 70 bits
+  // total width: 73 bits
 
-  localparam int unsigned DFC_RTL004_CONTROL_WIDTH = 70;
+  localparam int unsigned DFC_RTL004_CONTROL_WIDTH = 73;
   localparam int unsigned DFC_RTL004_CONTROL__TIME_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL004_CONTROL__TIME_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL004_CONTROL__TIME_CONTROL__CORRELATION_ENABLE_HI = 1;
@@ -335,9 +338,17 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL004_CONTROL__TIME_SYNC_OFFSET_HI__OFFSET_HI_LO = 37;
   localparam int unsigned DFC_RTL004_CONTROL__TIME_SYNC_COMMIT__COMMIT_HI = 69;
   localparam int unsigned DFC_RTL004_CONTROL__TIME_SYNC_COMMIT__COMMIT_LO = 69;
+  localparam int unsigned DFC_RTL004_CONTROL__TIME_STATUS__SNAPSHOT_VALID_HI = 70;
+  localparam int unsigned DFC_RTL004_CONTROL__TIME_STATUS__SNAPSHOT_VALID_LO = 70;
+  localparam int unsigned DFC_RTL004_CONTROL__TIME_STATUS__SYNC_VALID_HI = 71;
+  localparam int unsigned DFC_RTL004_CONTROL__TIME_STATUS__SYNC_VALID_LO = 71;
+  localparam int unsigned DFC_RTL004_CONTROL__RTL004_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 72;
+  localparam int unsigned DFC_RTL004_CONTROL__RTL004_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 72;
 
-  // ARCH-002 Appendix B dfc_rtl004_status_t (105 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl004_status_t (169 bits, rich format)
   typedef struct packed {
+    logic [31:0] time_active_offset_hi__offset_hi;  //  reset=0 :: readback_value; same real, confirmed gap and same fix shape as the field immediately above, for TIME_ACTIVE_OFFSET_HI (REG-002 0x022C).
+    logic [31:0] time_active_offset_lo__offset_lo;  //  reset=0 :: readback_value; added to close a real, confirmed gap: this struct previously had no field carrying the real active (committed) correlation offset back to TIME_ACTIVE_OFFSET_LO (REG-002 0x0228), an external-readback register with no other real data source. Placed at the new highest bits specifically so every other field in this struct keeps its existing bit position unchanged.
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic time_sync_status__active_valid;  //  reset=0 :: readback_value
     logic [15:0] time_sync_status__update_sequence;  //  reset=0 :: readback_value
@@ -352,9 +363,9 @@ package dfc_types_pkg;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl004_status_t;
-  // total width: 105 bits
+  // total width: 169 bits
 
-  localparam int unsigned DFC_RTL004_STATUS_WIDTH = 105;
+  localparam int unsigned DFC_RTL004_STATUS_WIDTH = 169;
   localparam int unsigned DFC_RTL004_STATUS__READY_HI = 0;
   localparam int unsigned DFC_RTL004_STATUS__READY_LO = 0;
   localparam int unsigned DFC_RTL004_STATUS__FAULT_HI = 1;
@@ -381,6 +392,10 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL004_STATUS__TIME_SYNC_STATUS__ACTIVE_VALID_LO = 88;
   localparam int unsigned DFC_RTL004_STATUS__EVENT_DROP_COUNT_HI = 104;
   localparam int unsigned DFC_RTL004_STATUS__EVENT_DROP_COUNT_LO = 89;
+  localparam int unsigned DFC_RTL004_STATUS__TIME_ACTIVE_OFFSET_LO__OFFSET_LO_HI = 136;
+  localparam int unsigned DFC_RTL004_STATUS__TIME_ACTIVE_OFFSET_LO__OFFSET_LO_LO = 105;
+  localparam int unsigned DFC_RTL004_STATUS__TIME_ACTIVE_OFFSET_HI__OFFSET_HI_HI = 168;
+  localparam int unsigned DFC_RTL004_STATUS__TIME_ACTIVE_OFFSET_HI__OFFSET_HI_LO = 137;
 
   // ARCH-002 Appendix B dfc_rtl005_control_t (128 bits, rich format)
   typedef struct packed {

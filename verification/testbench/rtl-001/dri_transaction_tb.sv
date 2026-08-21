@@ -35,6 +35,11 @@ module dri_transaction_tb;
   // has these two new real ports.
   logic [dfc_types_pkg::DFC_RTL003_CONTROL_WIDTH-1:0] rtl003_control_o;
   logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status_i = '0;
+  // Same isolation choice for RTL-004, added this session: this testbench
+  // does not model RTL-004 either -- rtl004_status_i is tied to a
+  // disclosed stub ('0) and rtl004_control_o is left unread.
+  logic [dfc_types_pkg::DFC_RTL004_CONTROL_WIDTH-1:0] rtl004_control_o;
+  logic [dfc_types_pkg::DFC_RTL004_STATUS_WIDTH-1:0]  rtl004_status_i = '0;
   // RTL-001's own new real status_o -- unused by this testbench (which
   // exercises DRI protocol correctness, not RTL-001's own readiness).
   logic [dfc_types_pkg::DFC_RTL001_STATUS_WIDTH-1:0] status_o;

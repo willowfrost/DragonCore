@@ -127,7 +127,31 @@ module rtl024_skeleton_tb;
     status = rspbuf[1];
   endtask
 
-  logic [7:0] wr_status;
+  // Real SPI host-READ helper (same real frame shape as spi_bridge_tb.sv's
+  // own Transaction 2, opcode 0x01) -- added this session so this skeleton
+  // test can prove RTL-004's real readiness reaches the host-visible
+  // SUBSYS_READY aggregate over the real physical SPI pins, not just via a
+  // hierarchical peek.
+  task automatic spi_read32(input logic [31:0] addr, output logic [31:0] data,
+                             output logic [7:0] status);
+    logic [15:0] crc;
+    cmdbuf[0] = 8'h01;
+    cmdbuf[1] = addr[31:24];
+    cmdbuf[2] = addr[23:16];
+    cmdbuf[3] = addr[15:8];
+    cmdbuf[4] = addr[7:0];
+    cmdbuf[5] = 8'h00;
+    crc = 16'hFFFF;
+    for (int i = 0; i < 6; i++) crc = host_crc16(crc, cmdbuf[i]);
+    cmdbuf[6] = crc[15:8];
+    cmdbuf[7] = crc[7:0];
+    spi_transact(8, 10);
+    status = rspbuf[1];
+    data   = {rspbuf[4], rspbuf[5], rspbuf[6], rspbuf[7]};
+  endtask
+
+  logic [7:0] wr_status, rd_status;
+  logic [31:0] rd_data;
 
   initial begin
     por_n_i = 0;
@@ -206,15 +230,38 @@ module rtl024_skeleton_tb;
     spi_write32(DFC_ADDR_IRQ_ENABLE, 32'h0000_0001, wr_status);
     check("IRQ_ENABLE SPI write (source 0 enabled) accepted", |wr_status, 1'b0);
 
-    // The stub topology's mandatory-mask modules (RTL-004/005, RTL-012
-    // through RTL-016, RTL-019, etc.) never report ready, so RTL-002 is
-    // expected to run out its full 499,000-cycle mandatory-init timeout
-    // and land in FAULTED -- this is the disclosed, real consequence of
-    // the current stub topology (see dfc_rtl024.sv's RTL-002 integration
-    // comment), not a defect in RTL-002 itself. RTL-003 is now real, but
-    // it is not a mandatory-mask module dependency for this specific
-    // timeout path -- RTL-002 already relies on RTL-003 being one of the
-    // still-unready mandatory members (bit 2 of 0x80F81F), so this test's
+    // ------------------------------------------------------------------
+    // RTL-004 integration checks -- real, over the real physical SPI pins,
+    // added this session. RTL-004's own real status_o.ready/.fault
+    // (unconditional 1'b1/error_q -- see dfc_rtl004.sv's own header)
+    // genuinely reaches the host-visible SUBSYS_READY aggregate (bit 3,
+    // ARCH-002 Appendix C module index 3) through RTL-002's real
+    // module_ready_i[3], not a hierarchical shortcut -- rtl004_integration_tb.sv
+    // already covers the RTL-001<->RTL-004 register bus and the real
+    // timestamp broadcast to a real consumer (RTL-002) directly; this
+    // proves the same readiness fact holds inside the actual RTL-024
+    // top-level integration too.
+    // ------------------------------------------------------------------
+    check("rtl004 status_o.ready is real (unconditional 1'b1, no multi-cycle startup)",
+          dut.rtl004_status[dfc_types_pkg::DFC_RTL004_STATUS__READY_HI], 1'b1);
+    check("rtl004 status_o.fault is real (clear, no arithmetic error forced)",
+          dut.rtl004_status[dfc_types_pkg::DFC_RTL004_STATUS__FAULT_HI], 1'b0);
+
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check("host-readable SUBSYS_READY bit 3 (RTL-004) reflects RTL-004's real readiness",
+          rd_data[3], 1'b1);
+
+    // The stub topology's remaining mandatory-mask modules (RTL-005,
+    // RTL-012 through RTL-016, RTL-021, etc.) never report ready, so
+    // RTL-002 is expected to run out its full 499,000-cycle mandatory-init
+    // timeout and land in FAULTED -- this is the disclosed, real
+    // consequence of the current stub topology (see dfc_rtl024.sv's
+    // RTL-002 integration comment), not a defect in RTL-002 itself.
+    // RTL-003/RTL-004 are now real, but neither is a mandatory-mask module
+    // dependency RTL-002 can still rely on being ready for this specific
+    // timeout path -- RTL-002 already relies on other, still-unready
+    // mandatory members (e.g. RTL-005, bit 4 of 0x80F81F), so this test's
     // long-standing "reaches FAULTED" outcome is unchanged in kind, only
     // in which remaining stub modules are responsible for it.
     begin
@@ -240,6 +287,14 @@ module rtl024_skeleton_tb;
       check("rtl002 status_o.fault asserted once FAULTED", dut.rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__FAULT_HI], 1'b1);
       check("rtl002 status_o.sys_status__init_failed set", dut.rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__SYS_STATUS__INIT_FAILED_HI], 1'b1);
     end
+
+    // RTL-004's real timestamp broadcast genuinely advances within the
+    // actual RTL-024 top-level integration (not just in isolation --
+    // rtl004_integration_tb.sv already proves the unit-to-unit connection
+    // directly): after the real ~499,000-cycle wait above, the real raw
+    // counter (one tick per 50 CORE_CLK edges) must be well past zero.
+    check("rtl004_timestamp (the real broadcast net) genuinely advanced during the real wait above, not a permanent zero-tie",
+          (dut.rtl004_timestamp > 64'd9000), 1'b1);
 
     // ------------------------------------------------------------------
     // THE CONCRETE, END-TO-END PROOF that the real RTL-002<->RTL-024
