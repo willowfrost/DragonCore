@@ -148,6 +148,7 @@ $SourceFiles = @(
     "rtl\infrastructure\src\dfc_rtl003.sv",
     "rtl\infrastructure\src\dfc_rtl004.sv",
     "rtl\infrastructure\src\dfc_rtl005.sv",
+    "rtl\infrastructure\src\dfc_rtl006.sv",
     "rtl\top\dfc_rtl024_spi_bridge.sv",
     "rtl\top\dfc_rtl024.sv",
     "fpga\ecp5\ulx3s_dfc_top.sv",
@@ -208,6 +209,7 @@ read_verilog -sv dfc_rtl002.sv;
 read_verilog -sv dfc_rtl003.sv;
 read_verilog -sv dfc_rtl004.sv;
 read_verilog -sv dfc_rtl005.sv;
+read_verilog -sv dfc_rtl006.sv;
 read_verilog -sv dfc_rtl024_spi_bridge.sv;
 read_verilog -sv dfc_rtl024.sv;
 read_verilog dfc_ecp5_pll.v;

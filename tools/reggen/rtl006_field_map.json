@@ -1,0 +1,123 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x0400-0x0438), cited by contract ID below -- same disclosed scope/rationale as rtl002_field_map.json's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). RTL006_EVT_OVERFLOW_STATUS's status_registers entry below (EVENT_OVERFLOW/DROP_COUNT mapped to the generic status_o.event_overflow/event_drop_count fields every dfc_rtlNNN_status_t struct already carries) closes a real, newly-found gap discovered while building this file: RTL002_EVT_OVERFLOW_STATUS/RTL003_EVT_OVERFLOW_STATUS/RTL004_EVT_OVERFLOW_STATUS each got a real control-side clear-request field in an earlier session (OPEN_ISSUES.md items 2/7/8), but none of their own field-map files ever added the matching status_registers entry -- their readback still comes from the old individual '<name>_status_i' port, permanently tied to '0 in dfc_rtl001.sv, so a host read of any of those three registers' EVENT_OVERFLOW/DROP_COUNT fields always returns zero regardless of the module's real internal state. Logged as a new OPEN_ISSUES.md item (RTL-006 avoids reproducing it by including the mapping here from the start; backporting the fix to RTL-002/003/004 is out of scope for this session).",
+  "consumer_module": "RTL-006",
+  "control_struct": "dfc_rtl006_control_t",
+  "status_struct": "dfc_rtl006_status_t",
+  "control_registers": [
+    {
+      "register": "GPIO_CONTROL", "contract_id": "REG-0400",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "gpio_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "gpio_control__qualification_enable"}
+      ]
+    },
+    {
+      "register": "GPIO_DIR", "contract_id": "REG-0404",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "gpio_dir__direction"}
+      ]
+    },
+    {
+      "register": "GPIO_OUT", "contract_id": "REG-0408",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "gpio_out__output"}
+      ]
+    },
+    {
+      "register": "GPIO_RISE_ENABLE", "contract_id": "REG-0418",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "gpio_rise_enable__rise_enable"}
+      ]
+    },
+    {
+      "register": "GPIO_FALL_ENABLE", "contract_id": "REG-041C",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "gpio_fall_enable__fall_enable"}
+      ]
+    },
+    {
+      "register": "GPIO_EVENT_ENABLE", "contract_id": "REG-0420",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "gpio_event_enable__event_enable"}
+      ]
+    },
+    {
+      "register": "GPIO_IRQ_ENABLE", "contract_id": "REG-0424",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "gpio_irq_enable__irq_enable"}
+      ]
+    },
+    {
+      "register": "GPIO_EVENT_STATUS", "contract_id": "REG-0428",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "W1C", "struct_field": "gpio_event_status__event"}
+      ]
+    },
+    {
+      "register": "GPIO_QUAL_0_3", "contract_id": "REG-042C",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "gpio_qual_0_3__ch0_ms"},
+        {"reg_hi": 15, "reg_lo": 8, "class": "RW", "struct_field": "gpio_qual_0_3__ch1_ms"},
+        {"reg_hi": 23, "reg_lo": 16, "class": "RW", "struct_field": "gpio_qual_0_3__ch2_ms"},
+        {"reg_hi": 31, "reg_lo": 24, "class": "RW", "struct_field": "gpio_qual_0_3__ch3_ms"}
+      ]
+    },
+    {
+      "register": "GPIO_QUAL_4_7", "contract_id": "REG-0430",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "gpio_qual_4_7__ch4_ms"},
+        {"reg_hi": 15, "reg_lo": 8, "class": "RW", "struct_field": "gpio_qual_4_7__ch5_ms"},
+        {"reg_hi": 23, "reg_lo": 16, "class": "RW", "struct_field": "gpio_qual_4_7__ch6_ms"},
+        {"reg_hi": 31, "reg_lo": 24, "class": "RW", "struct_field": "gpio_qual_4_7__ch7_ms"}
+      ]
+    },
+    {
+      "register": "RTL006_EVT_OVERFLOW_STATUS", "contract_id": "REG-0434",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl006_evt_overflow_status__event_overflow"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "GPIO_RAW_IN", "contract_id": "REG-040C",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "gpio_raw_in__raw_input"}
+      ]
+    },
+    {
+      "register": "GPIO_SYNC_IN", "contract_id": "REG-0410",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "gpio_sync_in__sync_input"}
+      ]
+    },
+    {
+      "register": "GPIO_QUAL_IN", "contract_id": "REG-0414",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "gpio_qual_in__qual_input"}
+      ]
+    },
+    {
+      "register": "GPIO_EVENT_STATUS", "contract_id": "REG-0428",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "gpio_event_status__event"}
+      ]
+    },
+    {
+      "register": "RTL006_EVT_OVERFLOW_STATUS", "contract_id": "REG-0434",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    },
+    {
+      "register": "GPIO_STATUS", "contract_id": "REG-0438",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "gpio_status__commanded_output"},
+        {"reg_hi": 15, "reg_lo": 8, "struct_field": "gpio_status__effective_output"},
+        {"reg_hi": 23, "reg_lo": 16, "struct_field": "gpio_status__direction"},
+        {"reg_hi": 31, "reg_lo": 24, "struct_field": "gpio_status__qualification_in_progress"}
+      ]
+    }
+  ]
+}

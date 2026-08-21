@@ -30,6 +30,29 @@ IOBUF PORT "gp2" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gp3" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gp4" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 
+# ---- GPIO Controller (RTL-006): J1 gp5-gp7 + J2 gp22-gp26, single-ended-
+# only positions (real board file, "GPIO repeated as individual signals"
+# section) -- gp5=ch0 gp6=ch1 gp7=ch2 gp22=ch3 gp23=ch4 gp24=ch5 gp25=ch6
+# gp26=ch7. Each is a real bidirectional pin (see ulx3s_dfc_top.sv's own
+# tristate wiring); gp27 is left unassigned as a spare single-ended-only
+# position for a future module.
+LOCATE COMP "gp5" SITE "C8";
+LOCATE COMP "gp6" SITE "C6";
+LOCATE COMP "gp7" SITE "A6";
+LOCATE COMP "gp22" SITE "B15";
+LOCATE COMP "gp23" SITE "B17";
+LOCATE COMP "gp24" SITE "C16";
+LOCATE COMP "gp25" SITE "D14";
+LOCATE COMP "gp26" SITE "B13";
+IOBUF PORT "gp5" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp6" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp7" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp22" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp23" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp24" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp25" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp26" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

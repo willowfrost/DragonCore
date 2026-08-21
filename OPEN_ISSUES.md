@@ -353,3 +353,98 @@ incomplete, logged here rather than silently resolved or guessed.
     pointing at an actual design-side congestion/fanout problem worth
     investigating directly, the same way the earlier ABC9 combinational-loop
     investigation was (see PROJECT_CONTINUITY.md Section 4).
+
+## RTL-006 (GPIO Controller) integration
+
+19. **RESOLVED (2026-08-21), same resolution style as items 1/10/11/13.**
+    `RTL-006_RevA.md` SS2 states `control_i`/`status_o` are 114/51 bits.
+    `RCA-DFC-ARCH-002.md`'s own Appendix B struct tables (the owning
+    document, CHTR-DOC-003) gave `dfc_rtl006_control_t` as 122 bits and
+    `dfc_rtl006_status_t` as 83 bits, confirmed directly against the real
+    struct field tables, not restated from the spec. Resolved in favor of
+    ARCH-002 -- `dfc_rtl006.sv` implements the real ARCH-002 widths.
+
+20. **RESOLVED (2026-08-21), approved before implementation, same pattern
+    as items 2/7/8/12 (the fifth real instance of this exact gap class --
+    exactly as PROJECT_CONTINUITY.md's own lessons-learned predicted).**
+    `dfc_rtl006_control_t` (122 bits) had no clear-request field for
+    `RTL006_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-002 0x0434 bit 0, a
+    real W1C field). Fixed: ARCH-002 grew the struct 122->123 bits, adding
+    `rtl006_evt_overflow_status__event_overflow` at the new highest bit
+    (122) -- every pre-existing field's bit position confirmed unchanged
+    via a real `regenerate.ps1` run. `tools/reggen/rtl006_field_map.json`
+    carries the corresponding `control_registers` entry from the start.
+
+21. **A real, previously-undiscovered gap found in RTL-002/003/004's own
+    already-shipped `RTLNNN_EVT_OVERFLOW_STATUS` registers while building
+    `rtl006_field_map.json` -- logged here, NOT fixed this session (out of
+    scope; RTL-006 avoids reproducing it, see below).** Items 2/7/8 closed
+    each module's real host-WRITE (clear) path for its own generic
+    `EVENT_OVERFLOW`/`DROP_COUNT` pair, but none of the three modules'
+    field-maps ever added the matching `status_registers` entry -- confirmed
+    directly in the real generated `dfc_config_regbank_regs.sv`: e.g.
+    `RTL002_EVT_OVERFLOW_STATUS`'s read value
+    (`rtl002_evt_overflow_status_q`) is still wired from the OLD individual
+    `rtl002_evt_overflow_status_status_i` port, which `dfc_rtl001.sv` still
+    ties to a permanent `'0`. A host READ of any of these three registers'
+    `EVENT_OVERFLOW`/`DROP_COUNT` fields therefore always returns zero
+    regardless of the module's real internal state, even though the real
+    host WRITE (clear) works. This was never caught because
+    `rtl002/003/004_integration_tb.sv` each only ever checked the DUT's
+    internal `status_o` signal directly (white-box), never a real host
+    REGISTER READ of that specific address. `rtl006_field_map.json`'s own
+    `status_registers` section maps `RTL006_EVT_OVERFLOW_STATUS.
+    EVENT_OVERFLOW`/`DROP_COUNT` directly onto `dfc_rtl006_status_t`'s
+    generic `event_overflow`/`event_drop_count` fields, closing this gap
+    for RTL-006 from the start -- confirmed via `rtl006_integration_tb.sv`
+    Part 6 issuing a real host READ. Backporting the equivalent field-map
+    fix to RTL-002/003/004 (each needs one new `status_registers` entry
+    mapping its own `RTLNNN_EVT_OVERFLOW_STATUS` to its struct's existing
+    `event_overflow`/`event_drop_count` fields, plus a real
+    `reggen.py`/`regenerate.ps1` run and a real host-READ check added to
+    each module's own integration testbench) is real, disclosed,
+    out-of-scope future work for this session.
+
+22. **RESOLVED (2026-08-21), same class as item 5 ("a sibling module's own
+    port-catalog nonconformance can surface during a later module's
+    integration").** RTL-006's own real ARCH-002 port catalog names its
+    `module_enable_i`/`effective_operational_enable_i` producers as
+    `RTL-002.module_enable_o[5]`/`RTL-002.effective_operational_enable_o`
+    -- both real ports already present in ARCH-002's own RTL-002 port
+    catalog table (rows `module_enable_o`/`effective_operational_enable_o`),
+    but `dfc_rtl002.sv`, as it existed before this session, implemented
+    neither. This was an implementation gap in already-shipped RTL-002, not
+    an ARCH-002 document gap (ARCH-002 already specified both ports
+    correctly). Fixed by adding both as real outputs on `dfc_rtl002.sv`:
+    `module_enable_o` is the real SUBSYS_ENABLE bitmap with mandatory bits
+    forced to `SUBSYS_ENABLE_MANDATORY_MASK` (matching the port's own
+    documented "mandatory bits fixed, optional bits configurable"
+    semantic) ORed with the already-computed `effective_optional_enable`
+    wire; `effective_operational_enable_o` is a direct passthrough of the
+    already-computed `effective_operational_enable` wire. Every existing
+    testbench instantiating `dfc_rtl002` (via `.*` wildcard or explicit
+    named ports) was checked and updated for the two new ports, same
+    discipline as every prior port addition in this project.
+
+23. **Real, newly-found `extract_registers.py` bug -- cosmetic only, not
+    fixed this session (out of scope; logged, not silently worked
+    around).** `GPIO_DIR`'s real, compound `Owner` field in
+    `RCA-DFC-REG-002.md` (`RTL-001 / RTL-006`, confirmed by direct read of
+    the source document) extracts into `dfc_registers_pkg.json`/the real
+    generated `regmap_manifest.txt` as `RTL-006 / RTL-024` instead --
+    confirmed wrong by direct comparison, not assumed. Every OTHER
+    RTL-006-owned register with a plain single-value `Owner` field (e.g.
+    `GPIO_CONTROL`, `GPIO_OUT`, `GPIO_RAW_IN`, all `Owner: RTL-006`)
+    extracts correctly, isolating this to compound (`A / B`) owner values
+    specifically -- `GPIO_DIR` is the only RTL-006 register with a
+    compound owner, so this project has no other RTL-006 example to
+    triangulate against. Confirmed NOT to affect any functional generated
+    behavior: `protection`/`readback`/`access_summary` (the fields that
+    actually drive `write_illegal_o`/`protected_o`/forwarding logic) are
+    each extracted correctly for `GPIO_DIR` (protection=Yes, matching
+    REG-002's real "Protection: Yes" text) -- `owner` is used only in
+    `reggen.py`'s own generated comments and `regmap_manifest.txt`, never
+    in any functional decode/protection/forwarding logic. Real, disclosed,
+    out-of-scope future work: find and fix the compound-owner parsing case
+    in `extract_registers.py`, then re-run `regenerate.ps1` and confirm
+    `GPIO_DIR`'s owner field reads `RTL-001 / RTL-006` for real.

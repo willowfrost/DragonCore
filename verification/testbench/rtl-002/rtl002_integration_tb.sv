@@ -55,6 +55,10 @@ module rtl002_integration_tb;
   logic [dfc_types_pkg::DFC_RTL004_STATUS_WIDTH-1:0]  rtl004_status_stub = '0;
   logic [dfc_types_pkg::DFC_RTL005_CONTROL_WIDTH-1:0] rtl005_control_unused;
   logic [dfc_types_pkg::DFC_RTL005_STATUS_WIDTH-1:0]  rtl005_status_stub = '0;
+  // RTL-006 likewise out of this test's scope -- same disclosed-stub
+  // pattern, added during RTL-006's own integration session.
+  logic [dfc_types_pkg::DFC_RTL006_CONTROL_WIDTH-1:0] rtl006_control_unused;
+  logic [dfc_types_pkg::DFC_RTL006_STATUS_WIDTH-1:0]  rtl006_status_stub = '0;
 
   // Real signal (not a bare literal tie) so Part 4 below can withhold the
   // event handshake on purpose to force a genuine, real overflow condition
@@ -84,6 +88,8 @@ module rtl002_integration_tb;
     .rtl004_status_i        (rtl004_status_stub),
     .rtl005_control_o       (rtl005_control_unused),
     .rtl005_status_i        (rtl005_status_stub),
+    .rtl006_control_o       (rtl006_control_unused),
+    .rtl006_status_i        (rtl006_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );
@@ -120,7 +126,13 @@ module rtl002_integration_tb;
     .global_irq_enable_o       (),
     .global_event_enable_o     (),
     .event_condition_enable_i  (64'h0),
-    .irq_condition_enable_i    (64'h0)
+    .irq_condition_enable_i    (64'h0),
+    // Real ports added during RTL-006's own integration session -- tied
+    // open/unused here since this test targets the RTL-001<->RTL-002
+    // register bus specifically, not these new gates
+    // (rtl006_integration_tb.sv covers their real forwarding).
+    .module_enable_o                (),
+    .effective_operational_enable_o ()
   );
 
   int errors = 0, checks = 0;

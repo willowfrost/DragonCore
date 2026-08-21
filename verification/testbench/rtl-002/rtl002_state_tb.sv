@@ -64,6 +64,19 @@ module rtl002_state_tb;
   logic [63:0] event_condition_enable_i = 64'h0;
   logic [63:0] irq_condition_enable_i   = 64'h0;
 
+  // Real ports added during RTL-006's own integration session, closing
+  // the same class of gap as OPEN_ISSUES.md item 5 (dfc_rtl002.sv was
+  // missing two real ARCH-002 ports until RTL-006's own module_enable_i/
+  // effective_operational_enable_i needed them) -- this testbench
+  // exercises the primary state machine, not these gates
+  // (rtl002_integration_tb.sv/rtl006_integration_tb.sv cover their real
+  // forwarding). Declared here only so the `.*` wildcard instantiation
+  // below still elaborates now that dfc_rtl002.sv has these two new
+  // real ports (a `.*` wildcard errors on an unmatched port under Icarus,
+  // confirmed project-wide finding).
+  logic [23:0] module_enable_o;
+  logic        effective_operational_enable_o;
+
   always #10 core_clk_i = ~core_clk_i;  // 50 MHz CORE_CLK
 
   dfc_rtl002 dut (.*);

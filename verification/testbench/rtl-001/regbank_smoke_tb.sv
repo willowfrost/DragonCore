@@ -78,11 +78,13 @@ module regbank_smoke_tb;
   // evt_pop_error_count_status_i no longer exist as individual ports.
   logic [dfc_types_pkg::DFC_RTL005_STATUS_WIDTH-1:0]  rtl005_status_i;
   logic [dfc_types_pkg::DFC_RTL005_CONTROL_WIDTH-1:0] rtl005_control_o;
-  logic [31:0] gpio_raw_in_status_i;
-  logic [31:0] gpio_sync_in_status_i;
-  logic [31:0] gpio_qual_in_status_i;
-  logic [31:0] gpio_event_status_status_i;
-  logic [31:0] rtl006_evt_overflow_status_status_i;
+  // Replaced by the aggregated real RTL-006 bus this session (same
+  // treatment as RTL-002/RTL-003/RTL-004/RTL-005 above) -- gpio_raw_in_
+  // status_i, gpio_sync_in_status_i, gpio_qual_in_status_i, gpio_event_
+  // status_status_i, rtl006_evt_overflow_status_status_i, and
+  // gpio_status_status_i no longer exist as individual ports.
+  logic [dfc_types_pkg::DFC_RTL006_STATUS_WIDTH-1:0]  rtl006_status_i;
+  logic [dfc_types_pkg::DFC_RTL006_CONTROL_WIDTH-1:0] rtl006_control_o;
   logic [31:0] host_status_status_i;
   logic [31:0] host_last_result_status_i;
   logic [31:0] host_last_address_status_i;
@@ -239,11 +241,8 @@ module regbank_smoke_tb;
     .rtl004_control_o(rtl004_control_o),
     .rtl005_status_i(rtl005_status_i),
     .rtl005_control_o(rtl005_control_o),
-    .gpio_raw_in_status_i(gpio_raw_in_status_i),
-    .gpio_sync_in_status_i(gpio_sync_in_status_i),
-    .gpio_qual_in_status_i(gpio_qual_in_status_i),
-    .gpio_event_status_status_i(gpio_event_status_status_i),
-    .rtl006_evt_overflow_status_status_i(rtl006_evt_overflow_status_status_i),
+    .rtl006_status_i(rtl006_status_i),
+    .rtl006_control_o(rtl006_control_o),
     .host_status_status_i(host_status_status_i),
     .host_last_result_status_i(host_last_result_status_i),
     .host_last_address_status_i(host_last_address_status_i),
@@ -367,11 +366,7 @@ module regbank_smoke_tb;
     rtl003_status_i = '0;
     rtl004_status_i = '0;
     rtl005_status_i = '0;
-    gpio_raw_in_status_i = 32'h0;
-    gpio_sync_in_status_i = 32'h0;
-    gpio_qual_in_status_i = 32'h0;
-    gpio_event_status_status_i = 32'h0;
-    rtl006_evt_overflow_status_status_i = 32'h0;
+    rtl006_status_i = '0;
     host_status_status_i = 32'h0;
     host_last_result_status_i = 32'h0;
     host_last_address_status_i = 32'h0;
@@ -509,21 +504,22 @@ module regbank_smoke_tb;
     // ---- Check 3: external field mirrors status_i combinationally ----
     // Redirected from SYS_STATUS to IRQ_RAW_STATUS (RTL-002 integration),
     // then to TIME_STATUS (RTL-003 integration), then to EVT_STATUS
-    // (RTL-004 integration), then redirected a fourth time this session to
-    // GPIO_RAW_IN: EVT_STATUS's own status_i is no longer an individual
-    // port either (it's now aggregated into rtl005_status_i, real
-    // cross-module wiring covered by rtl005_integration_tb.sv instead).
-    // GPIO_RAW_IN (RTL-006, not yet real) is untouched by that change and
-    // still uses the original generic per-register status_i mechanism
-    // this check is actually meant to exercise.
-    gpio_raw_in_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_GPIO_RAW_IN;
+    // (RTL-004 integration), then to GPIO_RAW_IN (RTL-005 integration), and
+    // now redirected a fifth time this session to ROTOR_STATUS: GPIO_RAW_IN's
+    // own status_i is no longer an individual port either (it's now
+    // aggregated into rtl006_status_i, real cross-module wiring covered by
+    // rtl006_integration_tb.sv instead). ROTOR_STATUS (RTL-007, not yet
+    // real) is untouched by that change and still uses the original generic
+    // per-register status_i mechanism this check is actually meant to
+    // exercise.
+    rotor_status_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_ROTOR_STATUS;
     #1;
-    check("GPIO_RAW_IN mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("GPIO_RAW_IN write_illegal (external)", write_illegal_o, 1'b1);
-    gpio_raw_in_status_i = 32'h0000_0041;
+    check("ROTOR_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("ROTOR_STATUS write_illegal (external)", write_illegal_o, 1'b1);
+    rotor_status_status_i = 32'h0000_0041;
     #1;
-    check("GPIO_RAW_IN tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("ROTOR_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

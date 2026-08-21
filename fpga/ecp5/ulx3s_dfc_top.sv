@@ -29,12 +29,18 @@
 //     configuration flash, SDRAM, or the onboard WiFi module).
 //     gp0=SCLK(in), gp1=CS_N(in), gp2=MOSI(in), gp3=MISO(tristate out).
 //   - host_irq_n_o: mapped to gp4.
+//   - GPIO: mapped to J1 gp[5:7] and J2 gp[22:26] (8 single-ended-only
+//     positions, confirmed free per the real board constraint file --
+//     see ULX3S_CONNECTION_MAP.md's own new GPIO section for exactly how
+//     each site was confirmed). Each pin is a real ECP5 tristate, driven
+//     by dfc_rtl024's own gpio_o/gpio_oe_o and read back via gpio_i,
+//     the same tristate idiom already used for gp3 (SPI MISO).
 //   - Debug LEDs: PLL-locked and POR-released status only, using signals
 //     this wrapper itself generates -- no hierarchical reference into
 //     dfc_rtl024's internals.
 //
 // NOT WIRED (tied safe, matching dfc_rtl024's own disclosed skeleton
-// scope -- RTL-002 through RTL-023 don't exist yet):
+// scope -- RTL-007 through RTL-023 don't exist yet):
 //   ARINC, CAN, UART, rotor/engine/pulse/health monitoring inputs, user
 //   I/O, production-test pins, safety outputs. See dfc_rtl024.sv's own
 //   header for exactly what's stubbed and why.
@@ -47,6 +53,14 @@ module ulx3s_dfc_top (
   inout  wire  gp2,   // SPI MOSI (host-driven input)
   inout  wire  gp3,   // SPI MISO (ECP5-driven tristate output)
   inout  wire  gp4,   // host_irq_n_o (ECP5-driven output)
+  inout  wire  gp5,   // GPIO channel 0
+  inout  wire  gp6,   // GPIO channel 1
+  inout  wire  gp7,   // GPIO channel 2
+  inout  wire  gp22,  // GPIO channel 3
+  inout  wire  gp23,  // GPIO channel 4
+  inout  wire  gp24,  // GPIO channel 5
+  inout  wire  gp25,  // GPIO channel 6
+  inout  wire  gp26,  // GPIO channel 7
   output logic [7:0] led
 );
 
@@ -84,6 +98,31 @@ module ulx3s_dfc_top (
   logic host_irq_n;
   assign gp4 = host_irq_n;
 
+  // ---- GPIO: 8 real bidirectional channels, same tristate idiom as
+  // gp3 (SPI MISO) above -- gpio_i always reads the pad; gpio_o only
+  // actually drives the pad while the corresponding gpio_oe_o bit is
+  // asserted, high-Z otherwise. See ULX3S_CONNECTION_MAP.md's new GPIO
+  // section for the real gp<N>-to-channel mapping and site confirmation. ----
+  logic [7:0] gpio_i, gpio_o, gpio_oe_o;
+
+  assign gpio_i[0] = gp5;
+  assign gpio_i[1] = gp6;
+  assign gpio_i[2] = gp7;
+  assign gpio_i[3] = gp22;
+  assign gpio_i[4] = gp23;
+  assign gpio_i[5] = gp24;
+  assign gpio_i[6] = gp25;
+  assign gpio_i[7] = gp26;
+
+  assign gp5  = gpio_oe_o[0] ? gpio_o[0] : 1'bz;
+  assign gp6  = gpio_oe_o[1] ? gpio_o[1] : 1'bz;
+  assign gp7  = gpio_oe_o[2] ? gpio_o[2] : 1'bz;
+  assign gp22 = gpio_oe_o[3] ? gpio_o[3] : 1'bz;
+  assign gp23 = gpio_oe_o[4] ? gpio_o[4] : 1'bz;
+  assign gp24 = gpio_oe_o[5] ? gpio_o[5] : 1'bz;
+  assign gp25 = gpio_oe_o[6] ? gpio_o[6] : 1'bz;
+  assign gp26 = gpio_oe_o[7] ? gpio_o[7] : 1'bz;
+
   // ---- Dragon Core top-level: real instantiation, no functional logic
   // added in this wrapper ----
   dfc_rtl024 u_dragon_core (
@@ -98,9 +137,9 @@ module ulx3s_dfc_top (
 
     .host_irq_n_o  (host_irq_n),
 
-    .gpio_i        (8'h00),
-    .gpio_o        (),
-    .gpio_oe_o     (),
+    .gpio_i        (gpio_i),
+    .gpio_o        (gpio_o),
+    .gpio_oe_o     (gpio_oe_o),
 
     .arinc_rx_i                 (1'b0),
     .arinc_tx_ctrl_o            (),

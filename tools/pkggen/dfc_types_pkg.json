@@ -1291,8 +1291,8 @@
     },
     {
       "name": "dfc_rtl006_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl006_control_t (122 bits, rich format)",
-      "width": 122,
+      "trace": "ARCH-002 Appendix B dfc_rtl006_control_t (123 bits, rich format)",
+      "width": 123,
       "fields": [
         {
           "name": "gpio_control__enable",
@@ -1446,6 +1446,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "RTL-006-owned direction configuration; one means output"
+        },
+        {
+          "name": "rtl006_evt_overflow_status__event_overflow",
+          "hi": 122,
+          "lo": 122,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask; added to close a real, confirmed gap: this struct previously had no field for clearing RTL006_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x0434 bit 0, a real W1C field), identical in kind to the analogous fix already made for dfc_rtl002/003/004/005_control_t. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged."
         }
       ]
     },

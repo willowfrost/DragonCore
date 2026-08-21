@@ -68,6 +68,10 @@ module rtl005_integration_tb;
   logic [dfc_types_pkg::DFC_RTL002_STATUS_WIDTH-1:0]  rtl002_status_stub = '0;
   logic [dfc_types_pkg::DFC_RTL003_CONTROL_WIDTH-1:0] rtl003_control_unused;
   logic [dfc_types_pkg::DFC_RTL003_STATUS_WIDTH-1:0]  rtl003_status_stub = '0;
+  // RTL-006 likewise out of this test's scope -- same disclosed-stub
+  // pattern, added during RTL-006's own integration session.
+  logic [dfc_types_pkg::DFC_RTL006_CONTROL_WIDTH-1:0] rtl006_control_unused;
+  logic [dfc_types_pkg::DFC_RTL006_STATUS_WIDTH-1:0]  rtl006_status_stub = '0;
 
   logic [63:0] rtl004_timestamp;
 
@@ -113,6 +117,8 @@ module rtl005_integration_tb;
     .rtl004_status_i        (rtl004_status),
     .rtl005_control_o       (rtl005_control),
     .rtl005_status_i        (rtl005_status),
+    .rtl006_control_o       (rtl006_control_unused),
+    .rtl006_status_i        (rtl006_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

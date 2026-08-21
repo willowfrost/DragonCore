@@ -4,6 +4,7 @@
 // Cross-module forwarding: RTL-003 (see tools/reggen/rtl003_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-004 (see tools/reggen/rtl004_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-005 (see tools/reggen/rtl005_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-006 (see tools/reggen/rtl006_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -14,6 +15,8 @@
   // Aggregated real RTL-004 control, replacing the prior disconnected placeholder for: RTL004_EVT_OVERFLOW_STATUS, TIME_CONTROL, TIME_SNAPSHOT, TIME_STATUS, TIME_SYNC_COMMIT, TIME_SYNC_OFFSET_HI, TIME_SYNC_OFFSET_LO
   // Aggregated real RTL-005 status, replacing individual ports for: EVT_ARB_STATUS, EVT_COUNT, EVT_DATA0, EVT_DATA1, EVT_DATA2, EVT_DATA3, EVT_DROP_SOURCE, EVT_OVERFLOW_COUNT, EVT_POP_ERROR_COUNT, EVT_STATUS
   // Aggregated real RTL-005 control, replacing the prior disconnected placeholder for: EVT_CLEAR, EVT_CONTROL, EVT_DROP_SOURCE, EVT_OVERFLOW_COUNT, EVT_POP, EVT_POP_ERROR_COUNT, EVT_SNAPSHOT, EVT_SOURCE_ENABLE, EVT_STATUS
+  // Aggregated real RTL-006 status, replacing individual ports for: GPIO_EVENT_STATUS, GPIO_QUAL_IN, GPIO_RAW_IN, GPIO_STATUS, GPIO_SYNC_IN, RTL006_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-006 control, replacing the prior disconnected placeholder for: GPIO_CONTROL, GPIO_DIR, GPIO_EVENT_ENABLE, GPIO_EVENT_STATUS, GPIO_FALL_ENABLE, GPIO_IRQ_ENABLE, GPIO_OUT, GPIO_QUAL_0_3, GPIO_QUAL_4_7, GPIO_RISE_ENABLE, RTL006_EVT_OVERFLOW_STATUS
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -26,12 +29,6 @@ module dfc_config_regbank_regs (
   output logic         protected_o,
   input  logic [31:0]  protect_status_status_i,
   input  logic [31:0]  rtl002_evt_overflow_status_status_i,
-  input  logic [31:0]  gpio_raw_in_status_i,
-  input  logic [31:0]  gpio_sync_in_status_i,
-  input  logic [31:0]  gpio_qual_in_status_i,
-  input  logic [31:0]  gpio_event_status_status_i,
-  input  logic [31:0]  rtl006_evt_overflow_status_status_i,
-  input  logic [31:0]  gpio_status_status_i,
   input  logic [31:0]  host_status_status_i,
   input  logic [31:0]  host_last_result_status_i,
   input  logic [31:0]  host_last_address_status_i,
@@ -183,7 +180,9 @@ module dfc_config_regbank_regs (
   input  logic [168:0]  rtl004_status_i,
   output logic [72:0] rtl004_control_o,
   input  logic [267:0]  rtl005_status_i,
-  output logic [128:0] rtl005_control_o
+  output logic [128:0] rtl005_control_o,
+  input  logic [82:0]  rtl006_status_i,
+  output logic [122:0] rtl006_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -584,14 +583,14 @@ module dfc_config_regbank_regs (
     if (!rst_ni) gpio_out_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_GPIO_OUT)) gpio_out_q <= wdata_i;
 
-  // GPIO_RAW_IN (0x040C) -- external passthrough, owner RTL-006
-  wire [31:0] gpio_raw_in_q = gpio_raw_in_status_i;
+  // GPIO_RAW_IN (0x040C) -- external passthrough, owner RTL-006. Reconstructed from the aggregated rtl006_status_i input (contract REG-040C), not an individual per-register port.
+  wire [31:0] gpio_raw_in_q = {24'h0, rtl006_status_i[10:3]};
 
-  // GPIO_SYNC_IN (0x0410) -- external passthrough, owner RTL-006
-  wire [31:0] gpio_sync_in_q = gpio_sync_in_status_i;
+  // GPIO_SYNC_IN (0x0410) -- external passthrough, owner RTL-006. Reconstructed from the aggregated rtl006_status_i input (contract REG-0410), not an individual per-register port.
+  wire [31:0] gpio_sync_in_q = {24'h0, rtl006_status_i[18:11]};
 
-  // GPIO_QUAL_IN (0x0414) -- external passthrough, owner RTL-006
-  wire [31:0] gpio_qual_in_q = gpio_qual_in_status_i;
+  // GPIO_QUAL_IN (0x0414) -- external passthrough, owner RTL-006. Reconstructed from the aggregated rtl006_status_i input (contract REG-0414), not an individual per-register port.
+  wire [31:0] gpio_qual_in_q = {24'h0, rtl006_status_i[26:19]};
 
   // GPIO_RISE_ENABLE (0x0418) -- Mixed: RW, RSV0, owner RTL-006
   logic [31:0] gpio_rise_enable_q;
@@ -617,8 +616,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) gpio_irq_enable_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_GPIO_IRQ_ENABLE)) gpio_irq_enable_q <= wdata_i;
 
-  // GPIO_EVENT_STATUS (0x0428) -- external passthrough, owner RTL-006
-  wire [31:0] gpio_event_status_q = gpio_event_status_status_i;
+  // GPIO_EVENT_STATUS (0x0428) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-006, real
+  //   generation per contract REG-0428, not a permanent tie.
+  logic [31:0] gpio_event_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) gpio_event_status_pulse_q <= 32'h0;
+    else gpio_event_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_GPIO_EVENT_STATUS)) ? wdata_i : 32'h0;
+
+  // GPIO_EVENT_STATUS (0x0428) -- external passthrough, owner RTL-006. Reconstructed from the aggregated rtl006_status_i input (contract REG-0428), not an individual per-register port.
+  wire [31:0] gpio_event_status_q = {24'h0, rtl006_status_i[34:27]};
 
   // GPIO_QUAL_0_3 (0x042C) -- RW, owner RTL-006
   logic [31:0] gpio_qual_0_3_q;
@@ -632,11 +639,19 @@ module dfc_config_regbank_regs (
     if (!rst_ni) gpio_qual_4_7_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_GPIO_QUAL_4_7)) gpio_qual_4_7_q <= wdata_i;
 
-  // RTL006_EVT_OVERFLOW_STATUS (0x0434) -- external passthrough, owner RTL-006
-  wire [31:0] rtl006_evt_overflow_status_q = rtl006_evt_overflow_status_status_i;
+  // RTL006_EVT_OVERFLOW_STATUS (0x0434) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-006, real
+  //   generation per contract REG-0434, not a permanent tie.
+  logic [31:0] rtl006_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl006_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl006_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL006_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // GPIO_STATUS (0x0438) -- external passthrough, owner RTL-006
-  wire [31:0] gpio_status_q = gpio_status_status_i;
+  // RTL006_EVT_OVERFLOW_STATUS (0x0434) -- external passthrough, owner RTL-006. Reconstructed from the aggregated rtl006_status_i input (contract REG-0434), not an individual per-register port.
+  wire [31:0] rtl006_evt_overflow_status_q = {8'h0, rtl006_status_i[50:35], 7'h0, rtl006_status_i[2:2]};
+
+  // GPIO_STATUS (0x0438) -- external passthrough, owner RTL-006. Reconstructed from the aggregated rtl006_status_i input (contract REG-0438), not an individual per-register port.
+  wire [31:0] gpio_status_q = {rtl006_status_i[82:75], rtl006_status_i[74:67], rtl006_status_i[66:59], rtl006_status_i[58:51]};
 
   // HOST_CONTROL (0x0500) -- Mixed: CONST1, RW, RSV0, owner RTL-001 / RTL-024
   logic [31:0] host_control_q;
@@ -1888,6 +1903,32 @@ module dfc_config_regbank_regs (
   assign rtl005_control_o[1] = evt_status_pulse_q[3:3];  // EVT_STATUS.evt_status__overflow
   assign rtl005_control_o[0] = evt_control_q[0:0];  // EVT_CONTROL.evt_control__logger_enable
 
+  // ==========================================================================
+  // Aggregated rtl006_control_o -- real forwarding to RTL-006, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl006_control_t defines --
+  // cross-checked at generation time (123/123 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl006_control_o[122] = rtl006_evt_overflow_status_pulse_q[0:0];  // RTL006_EVT_OVERFLOW_STATUS.rtl006_evt_overflow_status__event_overflow
+  assign rtl006_control_o[121:114] = gpio_dir_q[7:0];  // GPIO_DIR.gpio_dir__direction
+  assign rtl006_control_o[113:106] = gpio_qual_4_7_q[31:24];  // GPIO_QUAL_4_7.gpio_qual_4_7__ch7_ms
+  assign rtl006_control_o[105:98] = gpio_qual_4_7_q[23:16];  // GPIO_QUAL_4_7.gpio_qual_4_7__ch6_ms
+  assign rtl006_control_o[97:90] = gpio_qual_4_7_q[15:8];  // GPIO_QUAL_4_7.gpio_qual_4_7__ch5_ms
+  assign rtl006_control_o[89:82] = gpio_qual_4_7_q[7:0];  // GPIO_QUAL_4_7.gpio_qual_4_7__ch4_ms
+  assign rtl006_control_o[81:74] = gpio_qual_0_3_q[31:24];  // GPIO_QUAL_0_3.gpio_qual_0_3__ch3_ms
+  assign rtl006_control_o[73:66] = gpio_qual_0_3_q[23:16];  // GPIO_QUAL_0_3.gpio_qual_0_3__ch2_ms
+  assign rtl006_control_o[65:58] = gpio_qual_0_3_q[15:8];  // GPIO_QUAL_0_3.gpio_qual_0_3__ch1_ms
+  assign rtl006_control_o[57:50] = gpio_qual_0_3_q[7:0];  // GPIO_QUAL_0_3.gpio_qual_0_3__ch0_ms
+  assign rtl006_control_o[49:42] = gpio_event_status_pulse_q[7:0];  // GPIO_EVENT_STATUS.gpio_event_status__event
+  assign rtl006_control_o[41:34] = gpio_irq_enable_q[7:0];  // GPIO_IRQ_ENABLE.gpio_irq_enable__irq_enable
+  assign rtl006_control_o[33:26] = gpio_event_enable_q[7:0];  // GPIO_EVENT_ENABLE.gpio_event_enable__event_enable
+  assign rtl006_control_o[25:18] = gpio_fall_enable_q[7:0];  // GPIO_FALL_ENABLE.gpio_fall_enable__fall_enable
+  assign rtl006_control_o[17:10] = gpio_rise_enable_q[7:0];  // GPIO_RISE_ENABLE.gpio_rise_enable__rise_enable
+  assign rtl006_control_o[9:2] = gpio_out_q[7:0];  // GPIO_OUT.gpio_out__output
+  assign rtl006_control_o[1] = gpio_control_q[1:1];  // GPIO_CONTROL.gpio_control__qualification_enable
+  assign rtl006_control_o[0] = gpio_control_q[0:0];  // GPIO_CONTROL.gpio_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -1968,10 +2009,10 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_GPIO_FALL_ENABLE: begin rdata_o = gpio_fall_enable_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_GPIO_EVENT_ENABLE: begin rdata_o = gpio_event_enable_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_GPIO_IRQ_ENABLE: begin rdata_o = gpio_irq_enable_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_GPIO_EVENT_STATUS: begin rdata_o = gpio_event_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_GPIO_EVENT_STATUS: begin rdata_o = gpio_event_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_GPIO_QUAL_0_3: begin rdata_o = gpio_qual_0_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_GPIO_QUAL_4_7: begin rdata_o = gpio_qual_4_7_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL006_EVT_OVERFLOW_STATUS: begin rdata_o = rtl006_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL006_EVT_OVERFLOW_STATUS: begin rdata_o = rtl006_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_GPIO_STATUS: begin rdata_o = gpio_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HOST_CONTROL: begin rdata_o = host_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HOST_STATUS: begin rdata_o = host_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end

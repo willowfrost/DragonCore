@@ -522,8 +522,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL005_STATUS__EVT_POP_ERROR_COUNT__COUNT_HI = 267;
   localparam int unsigned DFC_RTL005_STATUS__EVT_POP_ERROR_COUNT__COUNT_LO = 236;
 
-  // ARCH-002 Appendix B dfc_rtl006_control_t (122 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl006_control_t (123 bits, rich format)
   typedef struct packed {
+    logic rtl006_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask; added to close a real, confirmed gap: this struct previously had no field for clearing RTL006_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x0434 bit 0, a real W1C field), identical in kind to the analogous fix already made for dfc_rtl002/003/004/005_control_t. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged.
     logic [7:0] gpio_dir__direction;  //  reset=0 :: RTL-006-owned direction configuration; one means output
     logic [7:0] gpio_qual_4_7__ch7_ms;  //  reset=0 :: control_value
     logic [7:0] gpio_qual_4_7__ch6_ms;  //  reset=0 :: control_value
@@ -542,9 +543,9 @@ package dfc_types_pkg;
     logic gpio_control__qualification_enable;  //  reset=0 :: control_value
     logic gpio_control__enable;  //  reset=0 :: control_value
   } dfc_rtl006_control_t;
-  // total width: 122 bits
+  // total width: 123 bits
 
-  localparam int unsigned DFC_RTL006_CONTROL_WIDTH = 122;
+  localparam int unsigned DFC_RTL006_CONTROL_WIDTH = 123;
   localparam int unsigned DFC_RTL006_CONTROL__GPIO_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL006_CONTROL__GPIO_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL006_CONTROL__GPIO_CONTROL__QUALIFICATION_ENABLE_HI = 1;
@@ -579,6 +580,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL006_CONTROL__GPIO_QUAL_4_7__CH7_MS_LO = 106;
   localparam int unsigned DFC_RTL006_CONTROL__GPIO_DIR__DIRECTION_HI = 121;
   localparam int unsigned DFC_RTL006_CONTROL__GPIO_DIR__DIRECTION_LO = 114;
+  localparam int unsigned DFC_RTL006_CONTROL__RTL006_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 122;
+  localparam int unsigned DFC_RTL006_CONTROL__RTL006_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 122;
 
   // ARCH-002 Appendix B dfc_rtl006_status_t (83 bits, rich format)
   typedef struct packed {

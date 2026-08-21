@@ -218,7 +218,25 @@ module dfc_rtl002 (
   output logic         global_irq_enable_o,
   output logic         global_event_enable_o,
   input  logic [63:0]  event_condition_enable_i,
-  input  logic [63:0]  irq_condition_enable_i
+  input  logic [63:0]  irq_condition_enable_i,
+
+  // REAL ports, per the Architecture formal port catalog (RTL-002 -- 24
+  // ports, rows `module_enable_o`/`effective_operational_enable_o`) --
+  // added during RTL-006's own integration session, same class of gap as
+  // OPEN_ISSUES.md item 5 (a sibling module's own port-catalog
+  // nonconformance surfacing during a later module's integration):
+  // RTL-006's real `module_enable_i`/`effective_operational_enable_i`
+  // ports name these two as their producer, but neither existed on this
+  // module before now. `module_enable_o` is the real SUBSYS_ENABLE bitmap
+  // with mandatory bits forced to `SUBSYS_ENABLE_MANDATORY_MASK`
+  // (matching the port's own documented "mandatory bits fixed, optional
+  // bits configurable" semantic/reset value `0x80F81F`) ORed with the
+  // already-computed `effective_optional_enable` wire -- zero new logic.
+  // `effective_operational_enable_o` is a direct passthrough of the
+  // already-computed `effective_operational_enable` wire (the same signal
+  // `status_o.sys_status__effective_operational_enable` already exposes).
+  output logic [23:0]  module_enable_o,
+  output logic         effective_operational_enable_o
 );
 
   // SECOND TOOLCHAIN-DRIVEN DEVIATION (real, confirmed): the person's real
@@ -761,6 +779,12 @@ module dfc_rtl002 (
   // additional registration stage is needed inside this module.
   assign global_irq_enable_o   = ctl_global_irq_enable;
   assign global_event_enable_o = ctl_global_event_enable;
+
+  // Real module_enable_o/effective_operational_enable_o -- see the port
+  // declarations' own header note above for exactly which prior gap this
+  // closes.
+  assign module_enable_o               = SUBSYS_ENABLE_MANDATORY_MASK | effective_optional_enable;
+  assign effective_operational_enable_o = effective_operational_enable;
 
   wire real_state_transition   = (state_d != state_q);
   wire degraded_ack_this_cycle = (state_q == dfc_types_pkg::DEGRADED) &&

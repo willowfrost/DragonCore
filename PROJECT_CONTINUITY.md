@@ -78,7 +78,17 @@ constraint on what's allowed to change.
   interface uses `gp[0:4]` (confirmed free, general-purpose header pins,
   not shared with configuration flash/SDRAM/WiFi) — see
   `fpga/ecp5/ulx3s_dfc.lpf` for the exact, real, fetched-not-memorized
-  constraint values.
+  constraint values. **The full, corrected single-ended/differential
+  picture across both headers, confirmed directly against ULX3S's own
+  official manual (an earlier note here, based only on a schematic
+  excerpt, was incomplete — corrected once, don't re-introduce the
+  incomplete version):** `gp`/`gn` positions **0-7 (J1) and 22-27 (J2)
+  are single-ended-only** (each independently usable); positions **8-13
+  (J1) and 14-21 (J2) are differential-capable** (`gp[N]`/`gn[N]`
+  committed together as one logical signal) but per the manual can also
+  be used as ordinary single-ended pins if needed. This matters for
+  every future pin assignment: see `ULX3S_CONNECTION_MAP.md`'s own
+  Section 4 note before choosing a position for a new interface.
 
 ---
 
@@ -456,6 +466,15 @@ written in this project going forward, not just a historical note.
     change, get it approved, then update everything the change touches
     for real (same standard as any other real fix in this project) —
     not "never touch it."
+  - **Repo root** — living reference documents, distinct from `docs\`'s
+    frozen-baseline specs: `PROJECT_CONTINUITY.md` (this file),
+    `OPEN_ISSUES.md` (real, disclosed gaps/ambiguities), and
+    `ULX3S_CONNECTION_MAP.md` (real physical board wiring — which
+    `gp<N>` signal maps to which J1/J2 header position, confirmed
+    against the actual board, not just the schematic — see that file's
+    own header for exactly how each fact was confirmed). All three get
+    updated as part of the work that makes them stale, not deferred to a
+    separate cleanup pass.
   - `include/` — shared, generated `dfc_*_pkg.sv` packages (all six now
     fully generator-driven — see Section 4)
   - `rtl/<domain>/generated/` — machine-generated RTL (e.g.
@@ -1283,10 +1302,167 @@ written in this project going forward, not just a historical note.
     three code states were reconfirmed via a full Icarus regression
     (9/9 testbenches, 205/205 checks, unchanged throughout) — this was
     purely a timing-closure issue, never a functional/simulation one.
-- **RTL-006 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001/002/003/004/005/024, exist and are citation-verified
-  against the `-002` baseline) but **not yet implemented as real RTL.**
-  This is the actual next phase of work — see Section 5.
+- **RTL-006 (GPIO Controller): real, implemented and integrated into
+  `dfc_rtl024.sv`.** Implements ARCH-002 SS9's full ARCH-MON-001 contract:
+  a real two-flop synchronizer plus millisecond-scale stable-time
+  qualification counter per channel (qualification value zero passes
+  through without delay; nonzero commits only after that many consecutive
+  1ms samples agree, on a real free-running `ms_tick` generator assuming
+  the project's nominal 50 MHz CORE_CLK), independently-masked rising/
+  falling/active-high/active-low/either-edge subconditions per channel
+  gated by the real Appendix F.3 condition-mask ports, the unconditional
+  OE-gating equation (`direction && module_enable && effective_operational_
+  enable && !TEST_DEBUG && !observational_mode`, structurally unconditional
+  before any route/data logic via the registered-output reset branch), and
+  real, counted own-diagnostic-event generation (event ID 0x0010, source
+  index 5). Real cross-module register forwarding for all 15 REG-002
+  0x0400-0x0438 registers via `reggen.py` v4 and
+  `tools/reggen/rtl006_field_map.json`.
+  - **THE REAL, CONFIRMED GPIO-PAD GAP IS CLOSED:** `gpio_i`/`gpio_o`/
+    `gpio_oe_o` (previously hard-tied `8'h00`/`8'h00`/unconsumed with an
+    explicit "RTL-006 not instantiated" comment) now genuinely reach a
+    real `dfc_rtl006` instance, and from there the real external ECP5
+    pads via `ulx3s_dfc_top.sv`'s new tristate wiring on `gp5`-`gp7`/
+    `gp22`-`gp26` (J1 positions 5-7 + J2 positions 22-26, the first 8 of
+    the 9 real, confirmed single-ended-only positions Section 4 of
+    `ULX3S_CONNECTION_MAP.md` had reserved — see that document's own new
+    Section 5 for the fetched-not-memorized site confirmation, `gp27`
+    left as the one remaining open position). This is the first
+    Infrastructure module in this build with a real, physical,
+    bidirectional aircraft-facing interface, not a purely internal/logical
+    one like RTL-002 through RTL-005.
+  - **Two real ARCH-002-class gaps were found and fixed before/during this
+    module's implementation, both explicitly anticipated by this session's
+    own task instructions:**
+    1. `dfc_rtl006_control_t` (122 bits) had no clear-request field for
+       `RTL006_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` — the fifth real
+       instance of this exact gap class (RTL-002/003's own EVT_OVERFLOW_
+       STATUS, RTL-004's SNAPSHOT_VALID/SYNC_VALID, RTL-005's
+       SNAPSHOT_VALID). Fixed the same way: ARCH-002 grew the struct
+       122->123 bits, adding the new field at the new highest bit (122) —
+       every pre-existing field's bit position confirmed unchanged via a
+       real `regenerate.ps1` run. `OPEN_ISSUES.md` item 20.
+    2. RTL-006's own real ARCH-002 port catalog names its `module_enable_i`/
+       `effective_operational_enable_i` producers as `RTL-002.
+       module_enable_o[5]`/`RTL-002.effective_operational_enable_o` — both
+       real ports ARCH-002 already specified on RTL-002 (24 ports), but
+       `dfc_rtl002.sv` implemented neither before this session (an
+       implementation gap in already-shipped RTL-002, not a document gap,
+       same class as `OPEN_ISSUES.md` item 5). Fixed by adding both as
+       real outputs on `dfc_rtl002.sv` (`module_enable_o` = the real
+       SUBSYS_ENABLE bitmap with mandatory bits forced on, ORed with the
+       already-computed `effective_optional_enable` wire;
+       `effective_operational_enable_o` = a direct passthrough of the
+       already-computed `effective_operational_enable` wire) — zero new
+       logic, just exposing two already-computed signals correctly.
+       `OPEN_ISSUES.md` item 22.
+  - **A real, previously-undiscovered gap in RTL-002/003/004's own
+    already-shipped `RTLNNN_EVT_OVERFLOW_STATUS` registers was found while
+    building `rtl006_field_map.json`, logged but NOT fixed this session
+    (out of scope) — `OPEN_ISSUES.md` item 21:** each of those three
+    modules' real host-WRITE (clear) path works, but none of their
+    field-maps ever added the matching `status_registers` entry, so a host
+    READ of any of those three registers' `EVENT_OVERFLOW`/`DROP_COUNT`
+    fields still always returns zero via the OLD individual, permanently
+    stub-tied status port — confirmed directly in the real generated
+    `dfc_config_regbank_regs.sv`, not assumed. `rtl006_field_map.json`'s
+    own `status_registers` section closes this for RTL-006 from the start
+    (mapped onto the struct's existing generic `event_overflow`/
+    `event_drop_count` fields), confirmed via a real host READ in
+    `rtl006_integration_tb.sv` Part 6 — not a white-box check.
+  - **A real, minor `extract_registers.py` bug was found while building the
+    field-map, logged but NOT fixed this session (cosmetic only, does not
+    affect generated protection/decode/forwarding behavior)** —
+    `OPEN_ISSUES.md` item 23: `GPIO_DIR`'s real compound `Owner` field
+    (`RTL-001 / RTL-006` in the source document) extracts as `RTL-006 /
+    RTL-024` in the generated manifest; every other RTL-006 register with
+    a plain single-value owner extracts correctly.
+  - **Disclosed, real interpretations, not silent inventions** (full detail
+    in `dfc_rtl006.sv`'s own header): "either-edge" (F.3 bits 32-39)
+    implemented as an alternate gate for the same rise/fall-enabled edge
+    signal, since REG-002/ARCH-002 give it no dedicated enable register or
+    distinct C.7 event subtype of its own; "illegal configuration" (the
+    module's own `ready`/`fault` contract) implemented as any channel's
+    configured qualification time exceeding the real ARCH-VAL-006 0-100ms
+    range (RTL-001 has no per-field range validation yet, so this value can
+    genuinely reach `control_i` — same "defend against what RTL-001
+    doesn't yet reject" precedent as RTL-003's reserved-bit handling);
+    "unrecoverable qualification logic error" and the pad-assignment
+    legality clause both have no real detection mechanism in this
+    implementation, same class of disclosed gap as RTL-004/005's own
+    fault-source disclosures; `route_gpio_req_i` (RTL-023.route_dest_o) is
+    a real port permanently tied to a disclosed stub (8'h0), since
+    RTL-022/023 are permanently out of scope for this build, not a
+    "not yet built" gap like every other stubbed signal in this project.
+  - **Proven via a new, real integration testbench**,
+    `rtl006_integration_tb.sv` (35/35 checks): a real host write via
+    RTL-001's real DRI path genuinely changes RTL-006's real behavior
+    (GPIO_DIR/GPIO_OUT driving the real `gpio_oe_o`/`gpio_o`), and a real,
+    simulated external pin transition on `gpio_i` genuinely reaches a real
+    host read of GPIO_SYNC_IN/GPIO_QUAL_IN through the real two-flop
+    synchronizer — including a real test of the qualification timer
+    genuinely rejecting a too-short transition and genuinely accepting a
+    qualifying one (held a full simulated 1ms sample), real rising- and
+    falling-edge and active-high-level event/irq generation, and the real
+    host-READ-level RTL006_EVT_OVERFLOW_STATUS fix described above.
+    **Additionally proven inside the actual RTL-024 top-level
+    integration**: `rtl024_skeleton_tb.sv` was updated with a real SPI read
+    of SUBSYS_READY confirming bit 5 (RTL-006) reflects RTL-006's real
+    readiness, a real SPI write reaching `control_i` (GPIO_STATUS
+    readback) with the real, correctly-gated consequence that
+    `gpio_oe_o`/`gpio_o` stay low while RTL-002 is still in STARTUP (never
+    NORMAL/DEGRADED in this stub topology — the same disclosed
+    stub-topology consequence already established for RTL-002's own
+    FAULTED outcome, not a defect), and a real external `gpio_i` pin
+    transition reaching a real SPI read of GPIO_SYNC_IN.
+  - Every other existing testbench was checked for breakage from RTL-006's
+    two new `dfc_rtl001.sv` ports (`rtl006_control_o`/`rtl006_status_i`,
+    replacing 6 individual stub-tied status ports) and from `dfc_rtl002.sv`'s
+    two new ports (`module_enable_o`/`effective_operational_enable_o`):
+    `regbank_smoke_tb.sv` needed its Check 3 ("external field mirrors
+    status_i combinationally") redirected a fifth time (SYS_STATUS ->
+    IRQ_RAW_STATUS -> TIME_STATUS -> EVT_STATUS -> GPIO_RAW_IN -> now
+    ROTOR_STATUS, since GPIO_RAW_IN is aggregated too as of this session)
+    and needed the two new `dfc_rtl001` ports removed from its own
+    `dfc_config_regbank_regs` instantiation (the individual
+    `gpio_raw_in_status_i`/`gpio_sync_in_status_i`/`gpio_qual_in_status_i`/
+    `gpio_event_status_status_i`/`rtl006_evt_overflow_status_status_i`
+    ports it explicitly declared/connected no longer exist on the
+    regenerated module — this incidentally also fixed a real, pre-existing
+    gap: this file never declared/connected `gpio_status_status_i` at all,
+    a floating-input bug now moot since that port no longer exists either);
+    `dri_transaction_tb.sv` (`.*` wildcard instantiation of `dfc_rtl001`)
+    and `rtl002/003/004/005_integration_tb.sv` (explicit named ports) all
+    needed the two new `dfc_rtl001` ports declared/tied off;
+    `rtl002_state_tb.sv` (`.*` wildcard instantiation of `dfc_rtl002`)
+    needed the two new `dfc_rtl002` ports declared (unused, tied for
+    wildcard elaboration); `rtl002_integration_tb.sv`/
+    `rtl004_integration_tb.sv` (explicit named ports for `dfc_rtl002`)
+    needed the same two new ports tied open. All confirmed via a real,
+    individual `iverilog`/`vvp` run before the full regression, not
+    assumed.
+  - **CONFIRMED, end-to-end, on the person's real machine — a real
+    `gate.ps1` run passed completely clean**: `lint.ps1` PASSED, `sim.ps1`
+    10/10 testbenches (**254/254 checks** — verified by adding up each
+    testbench's own individually-reported count from the real output:
+    12+12+16+28+30+24+37+35+47+13=254, not restated from memory),
+    `formal.ps1` both `bmc` and `prove` tasks genuinely PASS (real
+    k-induction against real RTL-001, unaffected by the RTL-006 changes),
+    coverage check ran clean (57/353 registers textually referenced, up
+    from 42/353, expected given RTL-006's own 15 registers are now
+    exercised). A real `build_ecp5.ps1` run (Build ID `20260821_090802`,
+    default invocation, no special flags) also passed completely clean:
+    **62.21 MHz PASS at 50 MHz required**, real critical path 1.94 ns
+    logic + 12.45 ns routing, **TRELLIS_COMB 20% / TRELLIS_FF 16%**
+    utilization (up from RTL-005's 19%/15%, a modest, expected increase
+    given RTL-006's own per-channel synchronizer/qualification/edge-
+    detection logic), "Program finished normally," no
+    `--timing-allow-fail` needed.
+- **RTL-007 through RTL-023:** spec-complete (all 24 module specs,
+  including RTL-001/002/003/004/005/006/024, exist and are
+  citation-verified against the `-002` baseline) but **not yet
+  implemented as real RTL.** This is the actual next phase of work — see
+  Section 5.
 - **Full regression across every real testbench in the project, run for
   real this session (both individually and via `gate.ps1`'s own `sim.ps1`
   step), all green — 120/120 checks, 0 failures:**
@@ -1539,11 +1715,11 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-005 are now all real and implemented — the next
-  real step is RTL-006 (GPIO)** to finish the Infrastructure batch, one
-  module at a time, using the exact same real-verification discipline as
-  RTL-001/002/003/004/005 (compile, simulate, and only then trust — never
-  claim something works without actually running it). Then Monitoring,
+- **RTL-002 through RTL-006 are now all real and implemented — the next
+  real step is RTL-007 (Rotor RPM)** to finish the Infrastructure batch,
+  one module at a time, using the exact same real-verification discipline
+  as RTL-001/002/003/004/005/006 (compile, simulate, and only then trust —
+  never claim something works without actually running it). Then Monitoring,
   Safety, Databus, in that order (Programmable is now out of scope
   entirely — see the scope-change entry directly above). **RTL-005's own
   implementation session already closed the real, previously-disclosed
@@ -1655,6 +1831,22 @@ written in this project going forward, not just a historical note.
   synthesis `.ys` script's read order, immediately after the previous
   module) is now a checklist item for every module going forward, not
   something to rediscover fresh each time.
+- **RTL-006 (GPIO Controller): COMPLETE TASK SPECIFICATION — STATUS: DONE,
+  verified for real (see the RTL-006 entry in Section 4 above for the
+  actual `gate.ps1`/`build_ecp5.ps1` results: 10/10 testbenches, 254/254
+  checks, lint/formal/coverage all clean; Build ID `20260821_090802`,
+  **62.21 MHz PASS at 50 MHz required**, TRELLIS_COMB 20%/TRELLIS_FF 16%
+  utilization; the first Infrastructure module with a real, physical,
+  bidirectional aircraft-facing pad interface, per `ULX3S_CONNECTION_MAP.md`'s
+  own new Section 5).** Followed the RTL-003 task-spec template below
+  (items 1-10, substituting RTL-006's own module/registers/ports
+  throughout) plus the one ARCH-002 struct-growth fix, the real
+  `dfc_rtl002.sv` port-conformance fix (`module_enable_o`/
+  `effective_operational_enable_o`), and the two genuine, disclosed-not-
+  fixed gaps described above (RTL-002/003/004's own EVT_OVERFLOW_STATUS
+  readback, `extract_registers.py`'s compound-owner parsing) — do not
+  re-execute this for RTL-006 again; use the RTL-003 template below as
+  the shape for RTL-007's own task spec instead.
 - **RTL-005 (Event Logger): COMPLETE TASK SPECIFICATION — STATUS: DONE,
   verified for real (see the RTL-005 entry in Section 4 above for the
   actual `gate.ps1`/`build_ecp5.ps1` results: 9/9 testbenches, 205/205
@@ -1665,9 +1857,7 @@ written in this project going forward, not just a historical note.
   Followed the RTL-003 task-spec template below (items 1-10, substituting
   RTL-005's own module/registers/ports throughout) plus the one ARCH-002
   struct-growth fix and the one genuine, disclosed-not-fixed register gap
-  described above — do not re-execute this for RTL-005 again; use the
-  RTL-003
-  template below as the shape for RTL-006's own task spec instead.
+  described above — do not re-execute this for RTL-005 again.
 - **RTL-004 (Timestamp Engine): COMPLETE TASK SPECIFICATION — STATUS:
   DONE, verified for real (see the RTL-004 entry in Section 4 above for the
   actual `gate.ps1`/`build_ecp5.ps1` results: Build ID `20260820_133515`,
@@ -1787,7 +1977,32 @@ written in this project going forward, not just a historical note.
   or whichever module owns which physical signal) additionally need real,
   confirmed-available pin assignments in `fpga/ecp5/ulx3s_dfc.lpf` when
   that module is actually coded — don't invent or assume a pin mapping in
-  advance of that module's own implementation session.
+  advance of that module's own implementation session. **Before choosing
+  *which* physical position to assign, read `ULX3S_CONNECTION_MAP.md`'s
+  Section 4 first** — it records the real, confirmed electrical picture
+  (see Section 1's own note too): `gp`/`gn` positions **0-7 (J1) and
+  22-27 (J2) are single-ended-only** (9 such positions currently open);
+  positions **8-13 (J1) and 14-21 (J2) are differential-capable** but can
+  also be used single-ended if genuinely needed. Every aircraft-facing
+  module built so far uses ordinary single-ended signals per its own real
+  spec — **exhaust the single-ended-only positions first** (they cover
+  RTL-006's 8 channels comfortably on their own) before using a
+  differential-capable position for an ordinary signal; that's a real,
+  available fallback, not a hard restriction, just the less-preferred
+  choice when a single-ended-only position is available instead. **When
+  the assignment is made, also update `ULX3S_CONNECTION_MAP.md` (repo
+  root) in the same session, not as an afterthought** — that document
+  exists specifically so the `gp<N>`-to-signal correspondence and
+  physical J1/J2 position for every wired interface stays in one place,
+  confirmed against the real board rather than re-derived from memory
+  each time. Add a new section to it the same way its existing SPI
+  section was built: transcribe the real, new `.lpf` addition, confirm
+  the physical header position, and cite how each fact was actually
+  confirmed — don't just restate a section from an older revision of
+  this same file. If a pin assignment is made in `.lpf` but
+  `ULX3S_CONNECTION_MAP.md` isn't updated in the
+  same session, treat that as an incomplete task, not a follow-up to
+  defer.
 - **RTL-002's real full-chip `nextpnr-ecp5` place-and-route timing-
   closure checkpoint is DONE, most recently reconfirmed via a real
   `build_ecp5.ps1` run** (Build ID `20260818_093015`, after the real
