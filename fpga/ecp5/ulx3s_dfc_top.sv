@@ -53,12 +53,20 @@
 //     can be used single-ended when not paired for LVDS) -- dfc_rtl008.sv
 //     itself owns its own, independent CDC-PULSE synchronizer instance (no
 //     sharing with dfc_rtl007.sv's).
+//   - Pulse/Frequency Measurement (RTL-009): mapped to J1 gp9/gp10, the
+//     next two positions of the differential-capable range (confirmed free
+//     per the real board constraint file -- see ULX3S_CONNECTION_MAP.md's
+//     own new Section 8). Both are plain single-ended inputs, same idiom
+//     as gp8/gp27 above -- dfc_rtl009.sv owns both channels' own,
+//     independent CDC-PULSE synchronizer instances internally; this
+//     wrapper only maps the two board pins onto the one logical 2-bit
+//     pulse_i port dfc_rtl024.sv already declares.
 //
 // NOT WIRED (tied safe, matching dfc_rtl024's own disclosed skeleton
-// scope -- RTL-009 through RTL-023 don't exist yet):
-//   ARINC, CAN, UART, pulse/health monitoring inputs, user I/O,
-//   production-test pins, safety outputs. See dfc_rtl024.sv's own header
-//   for exactly what's stubbed and why.
+// scope -- RTL-010 through RTL-023 don't exist yet):
+//   ARINC, CAN, UART, health monitoring inputs, user I/O, production-test
+//   pins, safety outputs. See dfc_rtl024.sv's own header for exactly
+//   what's stubbed and why.
 // ============================================================================
 
 module ulx3s_dfc_top (
@@ -78,6 +86,8 @@ module ulx3s_dfc_top (
   inout  wire  gp26,  // GPIO channel 7
   input  logic gp27,  // Rotor RPM tachometer pulse input (RTL-007)
   input  logic gp8,   // Engine RPM tachometer pulse input (RTL-008)
+  input  logic gp9,   // Pulse/Frequency channel 0 input (RTL-009)
+  input  logic gp10,  // Pulse/Frequency channel 1 input (RTL-009)
   output logic [7:0] led
 );
 
@@ -172,7 +182,7 @@ module ulx3s_dfc_top (
 
     .rotor_i   (gp27),
     .engine_i  (gp8),
-    .pulse_i   (2'b00),
+    .pulse_i   ({gp10, gp9}),
     .health_i  (8'h00),
 
     .safety_out_o (),

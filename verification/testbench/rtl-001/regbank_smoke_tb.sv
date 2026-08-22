@@ -99,6 +99,15 @@ module regbank_smoke_tb;
   // ports.
   logic [dfc_types_pkg::DFC_RTL008_STATUS_WIDTH-1:0]  rtl008_status_i;
   logic [dfc_types_pkg::DFC_RTL008_CONTROL_WIDTH-1:0] rtl008_control_o;
+  // Replaced by the aggregated real RTL-009 bus this session (same
+  // treatment as RTL-002 through RTL-008 above) -- pulse0_status_status_i,
+  // pulse0_freq_q17_15_status_i, pulse0_period_ticks_status_i,
+  // pulse1_status_status_i, pulse1_freq_q17_15_status_i,
+  // pulse1_period_ticks_status_i, and
+  // rtl009_evt_overflow_status_status_i no longer exist as individual
+  // ports.
+  logic [dfc_types_pkg::DFC_RTL009_STATUS_WIDTH-1:0]  rtl009_status_i;
+  logic [dfc_types_pkg::DFC_RTL009_CONTROL_WIDTH-1:0] rtl009_control_o;
   logic [31:0] host_status_status_i;
   logic [31:0] host_last_result_status_i;
   logic [31:0] host_last_address_status_i;
@@ -150,13 +159,6 @@ module regbank_smoke_tb;
   logic [31:0] route_active_filter_mask_status_i;
   logic [31:0] route_entry_status_status_i;
   logic [31:0] rtl021_evt_overflow_status_status_i;
-  logic [31:0] pulse0_status_status_i;
-  logic [31:0] pulse0_freq_q17_15_status_i;
-  logic [31:0] pulse0_period_ticks_status_i;
-  logic [31:0] pulse1_status_status_i;
-  logic [31:0] pulse1_freq_q17_15_status_i;
-  logic [31:0] pulse1_period_ticks_status_i;
-  logic [31:0] rtl009_evt_overflow_status_status_i;
   logic [31:0] sensor_status_status_i;
   logic [31:0] sensor0_value_status_i;
   logic [31:0] sensor0_status_status_i;
@@ -304,13 +306,8 @@ module regbank_smoke_tb;
     .rtl007_control_o(rtl007_control_o),
     .rtl008_status_i(rtl008_status_i),
     .rtl008_control_o(rtl008_control_o),
-    .pulse0_status_status_i(pulse0_status_status_i),
-    .pulse0_freq_q17_15_status_i(pulse0_freq_q17_15_status_i),
-    .pulse0_period_ticks_status_i(pulse0_period_ticks_status_i),
-    .pulse1_status_status_i(pulse1_status_status_i),
-    .pulse1_freq_q17_15_status_i(pulse1_freq_q17_15_status_i),
-    .pulse1_period_ticks_status_i(pulse1_period_ticks_status_i),
-    .rtl009_evt_overflow_status_status_i(rtl009_evt_overflow_status_status_i),
+    .rtl009_status_i(rtl009_status_i),
+    .rtl009_control_o(rtl009_control_o),
     .sensor_status_status_i(sensor_status_status_i),
     .sensor0_value_status_i(sensor0_value_status_i),
     .sensor0_status_status_i(sensor0_status_status_i),
@@ -422,13 +419,7 @@ module regbank_smoke_tb;
     rtl021_evt_overflow_status_status_i = 32'h0;
     rtl007_status_i = '0;
     rtl008_status_i = '0;
-    pulse0_status_status_i = 32'h0;
-    pulse0_freq_q17_15_status_i = 32'h0;
-    pulse0_period_ticks_status_i = 32'h0;
-    pulse1_status_status_i = 32'h0;
-    pulse1_freq_q17_15_status_i = 32'h0;
-    pulse1_period_ticks_status_i = 32'h0;
-    rtl009_evt_overflow_status_status_i = 32'h0;
+    rtl009_status_i = '0;
     sensor_status_status_i = 32'h0;
     sensor0_value_status_i = 32'h0;
     sensor0_status_status_i = 32'h0;
@@ -502,21 +493,22 @@ module regbank_smoke_tb;
     // then to TIME_STATUS (RTL-003 integration), then to EVT_STATUS
     // (RTL-004 integration), then to GPIO_RAW_IN (RTL-005 integration), then
     // to ROTOR_STATUS (RTL-006 integration), then to ENGINE_STATUS (RTL-007
-    // integration), and now redirected a seventh time this session to
-    // PULSE0_STATUS: ENGINE_STATUS's own status_i is no longer an
-    // individual port either (it's now aggregated into rtl008_status_i,
-    // real cross-module wiring covered by rtl008_integration_tb.sv
-    // instead). PULSE0_STATUS (RTL-009, not yet real) is untouched by that
-    // change and still uses the original generic per-register status_i
-    // mechanism this check is actually meant to exercise.
-    pulse0_status_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_PULSE0_STATUS;
+    // integration), then to PULSE0_STATUS (RTL-008 integration), and now
+    // redirected an eighth time this session to SENSOR_STATUS: PULSE0_
+    // STATUS's own status_i is no longer an individual port either (it's
+    // now aggregated into rtl009_status_i, real cross-module wiring covered
+    // by rtl009_integration_tb.sv instead). SENSOR_STATUS (RTL-010, not yet
+    // real) is untouched by that change and still uses the original generic
+    // per-register status_i mechanism this check is actually meant to
+    // exercise.
+    sensor_status_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_SENSOR_STATUS;
     #1;
-    check("PULSE0_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("PULSE0_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    pulse0_status_status_i = 32'h0000_0041;
+    check("SENSOR_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("SENSOR_STATUS write_illegal (external)", write_illegal_o, 1'b1);
+    sensor_status_status_i = 32'h0000_0041;
     #1;
-    check("PULSE0_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("SENSOR_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

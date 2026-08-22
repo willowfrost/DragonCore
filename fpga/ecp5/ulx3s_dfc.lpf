@@ -75,6 +75,28 @@ IOBUF PORT "gp27" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 LOCATE COMP "gp8" SITE "A4";
 IOBUF PORT "gp8" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 
+# ---- Pulse/Frequency Measurement (RTL-009): J1 gp9/gp10, two tachometer/
+# pulse-frequency inputs sharing one logical 2-bit pulse_i port. Real board
+# file (emard/ulx3s, doc/constraints/ulx3s_v20.lpf), "DIFF"-tagged
+# differential-capable section, positions immediately following RTL-008's
+# gp8 -- confirmed free via a direct curl+grep of the real raw file content
+# against the exact "gp9"/"gn9"/"gp10"/"gn10" LOCATE lines (and the
+# surrounding gp11-gp13/gn11-gn13 lines, to directly confirm which nearby
+# positions carry the wifi-sharing comment and which don't): gp9/gp10 carry
+# no wifi-sharing comment (unlike gp11-gp13's "wifi_gpio26"/"wifi_gpio33"/
+# "wifi_gpio35"), confirmed free. Used here as ordinary single-ended inputs
+# per ULX3S's own manual ("DIFF pairs can be used also as single-ended
+# pins"), same precedent as gp8 above -- no differential signal involved.
+# pulse_i[0]=gp9 (channel 0), pulse_i[1]=gp10 (channel 1). gn9 (SITE B1)
+# and gn10 (SITE B4) are left unassigned -- see ULX3S_CONNECTION_MAP.md's
+# own Section 8 for the note that this makes gn9/gn10 implicitly
+# unavailable for a true LVDS pair with gp9/gp10 respectively, same
+# disclosed consequence as gp8/gn8 in Section 7.
+LOCATE COMP "gp9" SITE "A2";
+LOCATE COMP "gp10" SITE "C4";
+IOBUF PORT "gp9" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp10" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

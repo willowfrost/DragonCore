@@ -2071,8 +2071,8 @@
     },
     {
       "name": "dfc_rtl009_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl009_control_t (334 bits, rich format)",
-      "width": 334,
+      "trace": "ARCH-002 Appendix B dfc_rtl009_control_t (335 bits, rich format)",
+      "width": 335,
       "fields": [
         {
           "name": "pulse0_control__enable",
@@ -2289,6 +2289,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "control_value"
+        },
+        {
+          "name": "rtl009_evt_overflow_status__event_overflow",
+          "hi": 334,
+          "lo": 334,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },

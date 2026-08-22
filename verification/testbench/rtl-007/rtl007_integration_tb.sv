@@ -70,6 +70,16 @@ module rtl007_integration_tb;
   logic [dfc_types_pkg::DFC_RTL005_STATUS_WIDTH-1:0]  rtl005_status_stub = '0;
   logic [dfc_types_pkg::DFC_RTL006_CONTROL_WIDTH-1:0] rtl006_control_unused;
   logic [dfc_types_pkg::DFC_RTL006_STATUS_WIDTH-1:0]  rtl006_status_stub = '0;
+  // REAL, PRE-EXISTING GAP FOUND AND FIXED while integrating RTL-009 (same
+  // class as OPEN_ISSUES.md item 15): this file's dfc_rtl001 instantiation
+  // was missing the rtl008_control_o/rtl008_status_i pair entirely (not
+  // merely stub-tied) since RTL-008's own integration session never
+  // updated this file -- left as floating/undriven ports. Fixed alongside
+  // adding RTL-009's own pair below.
+  logic [dfc_types_pkg::DFC_RTL008_CONTROL_WIDTH-1:0] rtl008_control_unused;
+  logic [dfc_types_pkg::DFC_RTL008_STATUS_WIDTH-1:0]  rtl008_status_stub = '0;
+  logic [dfc_types_pkg::DFC_RTL009_CONTROL_WIDTH-1:0] rtl009_control_unused;
+  logic [dfc_types_pkg::DFC_RTL009_STATUS_WIDTH-1:0]  rtl009_status_stub = '0;
 
   logic [63:0] tb_timestamp = 64'h0;
   always @(posedge core_clk_i) tb_timestamp <= tb_timestamp + 64'd1;
@@ -111,6 +121,10 @@ module rtl007_integration_tb;
     .rtl006_status_i        (rtl006_status_stub),
     .rtl007_control_o       (rtl007_control),
     .rtl007_status_i        (rtl007_status),
+    .rtl008_control_o       (rtl008_control_unused),
+    .rtl008_status_i        (rtl008_status_stub),
+    .rtl009_control_o       (rtl009_control_unused),
+    .rtl009_status_i        (rtl009_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

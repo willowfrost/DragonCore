@@ -703,3 +703,96 @@ incomplete, logged here rather than silently resolved or guessed.
     sharing, then multiplier pipelining), each only discoverable by
     actually re-running the real toolchain and reading its new critical
     path report -- not something to budget as a single quick fix.**
+
+## RTL-009 (Pulse/Frequency Measurement) integration
+
+32. **RESOLVED (2026-08-22), approved before implementation, same pattern
+    as items 2/7/8/12/20/24/28 (the eighth real instance of this exact gap
+    class).** `dfc_rtl009_control_t` (334 bits) had no clear-request field
+    for `RTL009_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-002 0x2250 bit 0,
+    a real W1C field). Fixed: ARCH-002 grew the struct 334->335 bits,
+    adding `rtl009_evt_overflow_status__event_overflow` at the new highest
+    bit (334) -- every pre-existing field's bit position confirmed
+    unchanged via a real `regenerate.ps1` run. `tools/reggen/rtl009_field_map.json`
+    carries the corresponding `control_registers` entry, and its
+    `status_registers` section closes the RTL-002/003/004-style readback
+    gap (item 21) for RTL-009 from the start, same discipline already
+    established for RTL-006/007/008.
+
+33. **Real, disclosed gap -- logged, not silently resolved (nothing to fix:
+    no field exists to attach a meaning to, and inventing one would violate
+    CHTR-DOC-006).** RTL-009's two channels share ONE event ID (0x0032) and
+    ONE pending slot (a single `evt_valid_o`/`evt_ready_i`/`evt_record_o`
+    triple per the Architecture port catalog, not one pair per channel).
+    Neither REG-002's own C.7 row for 0x0032 nor `dfc_event_record_t` itself
+    (Appendix B.1: timestamp/event_id/source_id/flags/event_data, no
+    channel field anywhere) allocates any bit to indicate WHICH channel
+    produced a given record. `dfc_rtl009.sv` does not invent a channel
+    indicator in the currently-reserved-zero upper byte of `event_data` --
+    a host observing an 0x0032 record must correlate against
+    `PULSE0_STATUS`/`PULSE1_STATUS`'s own independently-readable per-channel
+    sticky bits to determine origin. Zero functional consequence for this
+    module's own conformance (the event log has always been a diagnostic
+    aid layered on top of the real, independently-host-readable per-channel
+    status registers in this project, e.g. RTL-005/007/008's own identical
+    relationship between their event stream and their real status
+    registers).
+
+34. **Real, disclosed spec ambiguity -- no functional consequence, not
+    fixed (nothing to fix: no field exists to attach a meaning to). Same
+    class as items 25/29, the third real instance.** `ARCH-VAL-009`
+    (RTL-009's own validation contract) reads "Each Q17.15 threshold lies
+    from 0.5 through 100000 Hz, LOW <= HIGH, HYST <= HIGH-LOW,
+    qualification 0-100 ms, and nonzero timeout when enabled." Every clause
+    maps onto a real RTL-009 field except "qualification 0-100 ms" --
+    confirmed directly against `RTL-009_RevA.md` and REG-002's own
+    Pulse/Frequency block (0x2200-0x2254): `PULSEn_EDGE_FILTER.
+    MIN_EDGE_CYCLES` is a raw CORE_CLK-cycle count, not a millisecond
+    value, and no other "qualification" concept exists anywhere in this
+    module's real register set -- the identical, almost-certainly-copy-
+    forward gap already logged for RTL-007/008. `dfc_rtl009.sv` implements
+    every other clause as a real, live `illegal_config` check per channel
+    and disclaims this one specifically in its own header, same as
+    `dfc_rtl007.sv`/`dfc_rtl008.sv`.
+
+35. **Real, hard-won testbench-authoring lesson, found and fixed during
+    this module's own bring-up (`rtl009_integration_tb.sv`'s Part 5 and
+    `rtl024_skeleton_tb.sv`'s own RTL-009 section) -- kept here for any
+    future module sharing ARCH-MON-002's count-mode gate or this project's
+    own back-to-back-pulse-pair testbench idiom.**
+    - **Triggering the count-mode switch needs exactly THREE pulses at a
+      sub-1,000-cycle gap, not two.** The first accepted edge after
+      `have_prior_edge_q` is false only ever sets that flag -- no period is
+      measured yet, so it cannot count toward the "two consecutive periods
+      under 1,000 cycles" hysteresis test. The earliest a genuine two-in-a-
+      row classification can complete is the edge that measures the
+      SECOND real period, i.e. the third edge overall.
+    - **An edge landing exactly on the 100,000-cycle count-mode gate
+      boundary is genuinely NOT counted into that window's `edge_count`.**
+      `dfc_rtl009.sv`'s own gate-counter logic resets `edge_count_q` to 0 on
+      the exact cycle `gate_counter_q` reaches 99,999, regardless of
+      whether an edge also lands that same cycle -- reset wins over
+      increment on a real tie. A test that drives exactly 100 pulses at a
+      1,000-cycle gap after the switch (expecting the 100th to complete the
+      window) will find only 99 were ever counted; the 100th coincides with
+      the automatic gate expiry and is dropped. The gate expiry itself is
+      unconditional on `pulse_i` (a free-running counter), so a test needs
+      only enough pulses to cover the window, then a plain wait for the
+      commit to fire on its own.
+    - **A missing settle delay (`#1;`) between the end of a back-to-back
+      pulse pair's wait loop and re-asserting the pin for a SUBSEQUENT
+      pulse shifts the measured period by exactly one cycle**, confirmed via
+      a real, observed `PULSE0_PERIOD_TICKS` reading of 1999 instead of the
+      intended 2000 in `rtl024_skeleton_tb.sv`'s own first draft (which
+      inlined the pulse sequence instead of calling a shared task like
+      `rotor_pulse`/`engine_pulse`/`ch_pulse`, all of which already include
+      this exact settle delay before returning -- confirmed by inspection
+      once the discrepancy was found, not the origin of the bug). This
+      one-cycle error is invisible to PPR-scaled RPM checks (RTL-007/008's
+      own rounding happens to land on the same integer RPM whether the real
+      gap is N or N-1 cycles for the specific values those files chose),
+      which is exactly why it was never caught there -- RTL-009's exact
+      Q17.15 division has no such rounding slack, which is what actually
+      surfaced it. Any future module's testbench inlining a pulse sequence
+      rather than calling a shared task must include this same trailing
+      settle delay.

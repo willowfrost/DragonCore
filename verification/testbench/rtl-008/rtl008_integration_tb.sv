@@ -96,6 +96,10 @@ module rtl008_integration_tb;
   // (PROJECT_CONTINUITY.md Section 2).
   logic [dfc_types_pkg::DFC_RTL007_CONTROL_WIDTH-1:0] rtl007_control_unused_sink;
   logic [dfc_types_pkg::DFC_RTL007_STATUS_WIDTH-1:0]  rtl007_status_stub = '0;
+  // RTL-009 likewise out of this test's scope -- same disclosed-stub
+  // pattern, added during RTL-009's own integration session.
+  logic [dfc_types_pkg::DFC_RTL009_CONTROL_WIDTH-1:0] rtl009_control_unused;
+  logic [dfc_types_pkg::DFC_RTL009_STATUS_WIDTH-1:0]  rtl009_status_stub = '0;
 
   logic [63:0] tb_timestamp = 64'h0;
   always @(posedge core_clk_i) tb_timestamp <= tb_timestamp + 64'd1;
@@ -144,6 +148,8 @@ module rtl008_integration_tb;
     .rtl007_status_i        (rtl007_status_stub),
     .rtl008_control_o       (rtl008_control),
     .rtl008_status_i        (rtl008_status),
+    .rtl009_control_o       (rtl009_control_unused),
+    .rtl009_status_i        (rtl009_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

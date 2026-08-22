@@ -810,8 +810,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL008_STATUS__EVENT_DROP_COUNT_HI = 72;
   localparam int unsigned DFC_RTL008_STATUS__EVENT_DROP_COUNT_LO = 57;
 
-  // ARCH-002 Appendix B dfc_rtl009_control_t (334 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl009_control_t (335 bits, rich format)
   typedef struct packed {
+    logic rtl009_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic [31:0] pulse1_hysteresis_q17_15__hysteresis;  //  reset=0 :: control_value
     logic [31:0] pulse0_hysteresis_q17_15__hysteresis;  //  reset=0 :: control_value
     logic [31:0] pulse1_edge_filter__min_edge_cycles;  //  reset=0 :: control_value
@@ -837,9 +838,9 @@ package dfc_types_pkg;
     logic pulse0_control__rising_edge;  //  reset=1 :: control_value
     logic pulse0_control__enable;  //  reset=0 :: control_value
   } dfc_rtl009_control_t;
-  // total width: 334 bits
+  // total width: 335 bits
 
-  localparam int unsigned DFC_RTL009_CONTROL_WIDTH = 334;
+  localparam int unsigned DFC_RTL009_CONTROL_WIDTH = 335;
   localparam int unsigned DFC_RTL009_CONTROL__PULSE0_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL009_CONTROL__PULSE0_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL009_CONTROL__PULSE0_CONTROL__RISING_EDGE_HI = 1;
@@ -888,6 +889,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL009_CONTROL__PULSE0_HYSTERESIS_Q17_15__HYSTERESIS_LO = 270;
   localparam int unsigned DFC_RTL009_CONTROL__PULSE1_HYSTERESIS_Q17_15__HYSTERESIS_HI = 333;
   localparam int unsigned DFC_RTL009_CONTROL__PULSE1_HYSTERESIS_Q17_15__HYSTERESIS_LO = 302;
+  localparam int unsigned DFC_RTL009_CONTROL__RTL009_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 334;
+  localparam int unsigned DFC_RTL009_CONTROL__RTL009_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 334;
 
   // ARCH-002 Appendix B dfc_rtl009_status_t (159 bits, rich format)
   typedef struct packed {

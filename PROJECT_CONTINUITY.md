@@ -1755,11 +1755,158 @@ written in this project going forward, not just a historical note.
     RTL-007 alone — the timing fixes changed HOW the multiplies are
     scheduled, not how many physical DSP blocks they use), "Program
     finished normally," no `--timing-allow-fail` needed.
-- **RTL-009 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001/002/003/004/005/006/007/008/024, exist and are
-  citation-verified against the `-002` baseline) but **not yet
-  implemented as real RTL.** This is the actual next phase of work — see
-  Section 5.
+- **RTL-009 (Pulse/Frequency Measurement): real, implemented and
+  integrated into `dfc_rtl024.sv`.** The third and last Monitoring-domain
+  module using ARCH-MON-002's edge-qualification/mode-selection algorithm,
+  and the first module in this project with TWO fully independent
+  measurement channels in a single module, sharing one physical 2-bit
+  `pulse_i[1:0]` port. Each channel implements its own, entirely
+  independent CDC synchronizer, edge qualification (sticky min-edge latch,
+  "reset to 1 not 0" counter), hysteretic period/count-mode switching, and
+  a pipelined-multiply bit-serial 64-iteration Q17.15 divider — the
+  confirmed-working RTL-007/008 architecture (`OPEN_ISSUES.md` items
+  26/27/30/31) applied to BOTH channels from the very first line written,
+  not rediscovered a third time. Real cross-module register forwarding for
+  all 19 REG-002 0x2200-0x2254 registers (`PULSE0_CONTROL`/`PULSE0_THRESH_
+  LOW_Q17_15`/`PULSE0_THRESH_HIGH_Q17_15`/`PULSE0_TIMEOUT_US`/`PULSE0_EDGE_
+  FILTER`/`PULSE0_HYSTERESIS_Q17_15`/`PULSE1_*` mirrors/`RTL009_EVT_
+  OVERFLOW_STATUS` control forwarding; `PULSE0_STATUS`/`PULSE0_FREQ_Q17_
+  15`/`PULSE0_PERIOD_TICKS`/`PULSE1_*`/`RTL009_EVT_OVERFLOW_STATUS` status
+  forwarding) via `reggen.py` v4 and `tools/reggen/rtl009_field_map.json`.
+  Real, counted own-diagnostic-event generation (event ID 0x0032, source
+  index 8) shared by both channels through ONE pending slot.
+  - **THE REAL, CONFIRMED PULSE PHYSICAL-PIN GAP IS CLOSED:** `pulse_i[1:0]`
+    (previously hard-tied/unreferenced in `dfc_rtl024.sv`) now genuinely
+    reaches the real external `gp9`/J1-9 and `gp10`/J1-10 pads — the next
+    two positions in the differential-capable range after RTL-008's `gp8`
+    (see `ULX3S_CONNECTION_MAP.md`'s own new Section 8 for the
+    fetched-not-memorized site confirmation, A2/C4). RTL-009's own
+    `irq_req_o` now genuinely reaches RTL-003's real `irq_source_i[10]`,
+    and its `evt_valid_o`/`evt_record_o` now genuinely reach RTL-005's real
+    `evt_valid_i[8]`/`evt_record_i[8]`. `fault_req_o` is a real output left
+    genuinely unconsumed (RTL-013 does not exist yet), same disclosed
+    pattern as RTL-005/007/008.
+  - **One real ARCH-002 gap, found and fixed before this module was
+    implemented, approved before implementation (the eighth real instance
+    of this exact gap class):** `dfc_rtl009_control_t` (334 bits) had no
+    clear-request field for `RTL009_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` —
+    grown 334->335 bits, same growth-at-new-highest-bit pattern already
+    established. `rtl009_field_map.json`'s own `status_registers` section
+    also closes the RTL-002/003/004-style host-READ gap (`OPEN_ISSUES.md`
+    item 21) for RTL-009 from the start, same discipline RTL-006/007/008
+    already established.
+  - **A real design this module genuinely needed that RTL-007/008 (single
+    producer each) never did: shared-event-slot arbitration between two
+    internal producers.** Both channels' own diagnostic events compete for
+    ONE pending slot (dfc_rtl009.sv has a single `evt_valid_o`/`evt_ready_
+    i`/`evt_record_o` triple, not one pair per channel, per the
+    Architecture port catalog). Disclosed, locally-chosen priority (no
+    spec guidance exists on cross-channel priority): channel 0 wins ties;
+    the losing channel's candidate is genuinely counted as dropped (not
+    silently lost), with `event_drop_count_q` incrementing by the actual
+    number of losses in a single cycle (0, 1, or 2 — a real generalization
+    beyond RTL-007/008's own single-producer, always-increment-by-1 shape).
+    See `OPEN_ISSUES.md` item 33 for the real, disclosed gap this exposes
+    (no channel-indicator bit exists anywhere in `dfc_event_record_t`, so a
+    host must correlate an 0x0032 event against `PULSE0_STATUS`/
+    `PULSE1_STATUS`'s own independent sticky bits to determine origin).
+  - **Disclosed, real simplifications, genuinely different from and in one
+    respect simpler than RTL-007/008:** RTL-009 has no PPR field at all, so
+    (a) there is no analogous divide-by-zero defense needed (the divisor is
+    always the live period-ticks counter, which is provably >=1, or a
+    hardwired constant 1) and (b) the count-mode arithmetic uses a single
+    disclosed, mathematically EXACT algebraic simplification
+    ((50,000,000<<15)/100,000 = 16,384,000 exactly, for every edge_count
+    value) to keep the multiply operand widths bounded, rather than a
+    literal multiply-then-divide-by-100,000 reading that would need a
+    ~73-bit intermediate. ARCH-VAL-009's own "qualification 0-100 ms"
+    clause has no corresponding field, the third real instance of this
+    class (`OPEN_ISSUES.md` item 34, same as items 25/29).
+  - **Proven via a new, real integration testbench**,
+    `rtl009_integration_tb.sv` (60/60 checks): real host writes via
+    RTL-001's real DRI path genuinely change both channels' real behavior
+    independently, real simulated pulse trains on BOTH `pulse_i[0]` and
+    `pulse_i[1]` produce real, self-consistent Q17.15 frequency
+    measurements in both period mode (exact-dividing gaps, bit-exact
+    checks) and count mode (a real, hand-derived-and-then-simulation-
+    confirmed 99-edge count over the real 100,000-cycle gate window,
+    landing on the exact expected multiple of 16,384,000), real LOW/HIGH
+    threshold enter/exit and IRQ generation, a real no-edge TIMEOUT, the
+    real `RTL009_EVT_OVERFLOW_STATUS` host-read-and-clear round trip, a
+    real forced two-producer shared-slot arbitration test (channel 0 wins,
+    channel 1's loss is genuinely counted), real illegal-configuration-to-
+    fault detection, and — per the task's own explicit requirement — a
+    real, explicit channel-independence cross-check (channel 0 vs. channel
+    1 within this single module, same pattern as RTL-008's own cross-check
+    against RTL-007). **Three real, hard-won testbench-authoring lessons
+    were found and fixed during this file's own bring-up, kept in
+    `OPEN_ISSUES.md` item 35 for future modules:** the count-mode switch
+    needs exactly three pulses, not two; an edge landing exactly on the
+    count-mode gate boundary is genuinely not counted (reset wins the
+    tie); and a missing settle delay between an inlined pulse pair's two
+    edges shifts the measured period by exactly one cycle — invisible to
+    RPM-rounding checks elsewhere in this project, but not to RTL-009's own
+    exact Q17.15 division, which is what surfaced it (this last lesson
+    also required a real, matching fix in `rtl024_skeleton_tb.sv`'s own new
+    RTL-009 section, found the same way). **Additionally proven inside the
+    actual RTL-024 top-level integration**: `rtl024_skeleton_tb.sv` was
+    updated with a real SPI read of `SUBSYS_READY` confirming bit 8
+    (RTL-009) reflects RTL-009's real readiness, a real protected
+    `SUBSYS_ENABLE` write genuinely enabling the optional module-8 bit, and
+    a real transition on this file's own external `pulse_i[0]` top-level
+    pin (2000-cycle gap, genuinely producing 819,200,000 = 25,000 Hz)
+    genuinely reaching a real host SPI READ of `PULSE0_FREQ_Q17_15`, plus a
+    real check that RTL-008's own `ENGINE_RPM` state is genuinely
+    unaffected by RTL-009's own pulse train just driven.
+  - Every other existing testbench was checked for breakage from RTL-009's
+    two new `dfc_rtl001.sv` ports (`rtl009_control_o`/`rtl009_status_i`,
+    replacing 7 individual stub-tied status ports): `regbank_smoke_tb.sv`
+    needed its Check 3 redirected an eighth time (... -> PULSE0_STATUS ->
+    now SENSOR_STATUS, since PULSE0_STATUS is aggregated too as of this
+    session); `dri_transaction_tb.sv` and `rtl002/003/004/005/006/008_
+    integration_tb.sv` all needed the new ports declared/tied off. **A
+    real, pre-existing gap was found and fixed while doing this same check
+    for `rtl007_integration_tb.sv` specifically** (same class as
+    `OPEN_ISSUES.md` item 15): that file's own `dfc_rtl001` instantiation
+    was missing the `rtl008_control_o`/`rtl008_status_i` pair ENTIRELY
+    (floating, not merely stub-tied) since RTL-008's own integration
+    session never updated it — fixed alongside adding RTL-009's own pair.
+  - **CONFIRMED, end-to-end, on the person's real machine — a real
+    `gate.ps1` run passed completely clean**: `lint.ps1` PASSED, `sim.ps1`
+    13/13 testbenches (**441/441 checks** — verified by adding up each
+    testbench's own individually-reported count from the real output:
+    12+12+16+28+30+24+37+35+44+47+60+83+13=441, not restated from memory),
+    `formal.ps1` both `bmc` and `prove` tasks genuinely PASS (real
+    k-induction against real RTL-001, unaffected by the RTL-009 changes),
+    coverage check ran clean (95/353 registers textually referenced, up
+    from 78/353, expected given RTL-009's own 19 registers are now
+    exercised). A real `build_ecp5.ps1` run (Build ID `20260822_151859`,
+    default invocation, no special flags) also passed completely clean.
+    **A genuine, real build gap was found and fixed to get there**: the
+    first attempt failed at the Yosys hierarchy-check stage ("Module
+    `\dfc_rtl009' referenced... is not part of the design") because
+    `dfc_rtl009.sv` was missing from both `$SourceFiles` and the synthesis
+    `.ys` script's read order — the same class of gap RTL-002/004 first
+    hit (see this document's own Section 4 lessons on it) — fixed by
+    adding it in both places, immediately after `dfc_rtl008.sv`. Once
+    fixed: **52.14 MHz PASS at 50 MHz required** (confirmed from the real
+    LAST "Max frequency" line in the real pnr.log — an EARLIER, pessimistic
+    pre-route placement estimate in the same log read 41.92 MHz FAIL; the
+    build manifest's own generated note explicitly warns "earlier lines in
+    that log may show pessimistic pre-route estimates," and the real,
+    final, post-route result is the one that counts), **TRELLIS_COMB 27% /
+    TRELLIS_FF 19%** utilization (up from RTL-008's 22%/17%, expected given
+    RTL-009 duplicates the divider architecture across two more channels),
+    12/156 (7%) MULT18X18D hard blocks, "Program finished normally," no
+    `--timing-allow-fail` needed — **the pipelined-multiply pattern applied
+    to both channels from the start held real margin above 50 MHz without
+    requiring any further change to already-shipped RTL-007/008**, closing
+    the risk this document's own prior lessons-learned entry (Section 5)
+    flagged before this module was written.
+- **RTL-010 through RTL-023:** spec-complete (all 24 module specs,
+  including RTL-001 through RTL-009/024, exist and are citation-verified
+  against the `-002` baseline) but **not yet implemented as real RTL.**
+  This is the actual next phase of work — see Section 5.
 - **Full regression across every real testbench in the project, run for
   real this session (both individually and via `gate.ps1`'s own `sim.ps1`
   step), all green — 120/120 checks, 0 failures:**
@@ -2012,38 +2159,25 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-008 are now all real and implemented — RTL-008
-  completes the Engine RPM Monitor; the next real step is RTL-009
-  (Pulse/Frequency Monitor, the last Monitoring-domain module using this
-  same ARCH-MON-002/003/005 architecture)**, one module at a time, using
-  the exact same real-verification discipline as RTL-001 through RTL-008
-  (compile, simulate, and only then trust — never claim something works
-  without actually running it). Then Safety, Databus, in that order
-  (Programmable is now out of scope entirely — see the scope-change entry
-  directly above).
-  **RTL-008's own session had to spend real, additional effort closing a
-  timing-closure gap in ALREADY-SHIPPED RTL-007 (`OPEN_ISSUES.md` item 31)
-  — read this before writing any of RTL-009's own RTL:** RTL-007's own
-  real build closed at only 52.87 MHz (the narrowest margin of any module
-  so far), and this document's own prior lessons-learned entry explicitly
-  predicted "worth a closer look if RTL-008/009's own, architecturally-
-  identical dividers compound this further" — that prediction came true
-  the moment RTL-008 existed alongside it (4 real failed build attempts,
-  43-49 MHz, before any RTL fix was proposed). RTL-009 shares the
-  IDENTICAL edge-qualification-comparator and RPM-divider-multiply
-  architecture (across two channels in a single module, not just one) —
-  **read `OPEN_ISSUES.md` items 26/27/30/31 in full before writing any of
-  RTL-009's own RTL or testbench.** The three real fixes already applied to
-  both `dfc_rtl007.sv`/`dfc_rtl008.sv` (edge-qualification sticky latch,
-  explicit divider-multiply input muxing, divider-multiply pipelining into
-  a dedicated `MEAS_MULT` state) are the CONFIRMED-WORKING pattern —
-  implement RTL-009 with this pattern from the start rather than
-  reproducing RTL-007's original, more expensive shape and hitting the
-  identical build failure a third time. Run a real
-  `build_ecp5.ps1` checkpoint promptly once RTL-009 exists (per this
-  section's own standing "checkpoint after each domain batch" rule below)
-  rather than assuming the pattern generalizes without confirming it on
-  the real toolchain.
+- **RTL-002 through RTL-009 are now all real and implemented — RTL-009
+  completes the Monitoring domain's ARCH-MON-002/003/005-derived module
+  family (Pulse/Frequency Measurement, two independent channels sharing
+  one physical port); the next real step is RTL-010 (Sampled Sensor)**,
+  one module at a time, using the exact same real-verification discipline
+  as RTL-001 through RTL-009 (compile, simulate, and only then trust —
+  never claim something works without actually running it). Then Safety,
+  Databus, in that order (Programmable is now out of scope entirely — see
+  the scope-change entry directly above).
+  **RTL-009's own session confirmed the pipelined-multiply pattern
+  (`OPEN_ISSUES.md` items 26/27/30/31) generalizes cleanly to two channels
+  in one module** — see Section 4's own RTL-009 entry below for the real
+  `build_ecp5.ps1` result. RTL-009 also needed genuinely NEW design work
+  beyond what RTL-007/008 required: a real, disclosed two-level event-
+  arbitration scheme for its own shared one-deep pending slot (two
+  producers, one slot, channel 0 wins ties, the loser genuinely counted as
+  dropped) — read `OPEN_ISSUES.md` items 33/35 before any future module
+  that similarly aggregates multiple internal producers into one shared
+  event/IRQ resource.
   **RTL-005's own
   implementation session already closed the real, previously-disclosed
   event-bus gap for RTL-002/003/004's own `evt_valid_o`/`evt_record_o`**

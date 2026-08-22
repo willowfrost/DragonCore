@@ -606,7 +606,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl007_status_i | input | dfc_rtl007_status_t / 73 | RTL-007.status_o | RTL-001.rtl007_status_i; RTL-002.module_ready_i[6]; RTL-002.module_fault_i[6] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl008_control_o | output | dfc_rtl008_control_t / 136 | RTL-001.rtl008_control_o | RTL-008.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl008_status_i | input | dfc_rtl008_status_t / 73 | RTL-008.status_o | RTL-001.rtl008_status_i; RTL-002.module_ready_i[7]; RTL-002.module_fault_i[7] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl009_control_o | output | dfc_rtl009_control_t / 334 | RTL-001.rtl009_control_o | RTL-009.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl009_control_o | output | dfc_rtl009_control_t / 335 | RTL-001.rtl009_control_o | RTL-009.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl009_status_i | input | dfc_rtl009_status_t / 159 | RTL-009.status_o | RTL-001.rtl009_status_i; RTL-002.module_ready_i[8]; RTL-002.module_fault_i[8] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl010_control_o | output | dfc_rtl010_control_t / 345 | RTL-001.rtl010_control_o | RTL-010.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl010_status_i | input | dfc_rtl010_status_t / 225 | RTL-010.status_o | RTL-001.rtl010_status_i; RTL-002.module_ready_i[9]; RTL-002.module_fault_i[9] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
@@ -824,7 +824,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-009.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-009.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[8] | RTL-009.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl009_control_t / 334 | RTL-001.rtl009_control_o | RTL-009.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| control_i | input | dfc_rtl009_control_t / 335 | RTL-001.rtl009_control_o | RTL-009.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
 | status_o | output | dfc_rtl009_status_t / 159 | RTL-009.status_o | RTL-001.rtl009_status_i; RTL-002.module_ready_i[8]; RTL-002.module_fault_i[8] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-009.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-009.evt_valid_o | RTL-005.evt_valid_i[8] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
@@ -1611,7 +1611,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 56:25 | engine_period_ticks__period_ticks | 32 | unsigned | 0x00000000 | readback_value |
 | 72:57 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### `dfc_rtl009_control_t` — 334 bits
+### `dfc_rtl009_control_t` — 335 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1639,6 +1639,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 269:238 | pulse1_edge_filter__min_edge_cycles | 32 | unsigned | 0 | control_value |
 | 301:270 | pulse0_hysteresis_q17_15__hysteresis | 32 | unsigned | 0 | control_value |
 | 333:302 | pulse1_hysteresis_q17_15__hysteresis | 32 | unsigned | 0 | control_value |
+| 334 | rtl009_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
 
 ### dfc_rtl009_status_t — 159 bits
 

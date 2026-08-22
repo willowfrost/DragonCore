@@ -106,16 +106,23 @@ section to this document the same way Section 1 was built: transcribe
 the real `.lpf` addition, confirm the J1/J2 position against the real
 board, and cite the source for each fact rather than assume it.
 
-Positions still open on the GPIO headers for this purpose: **J1-9 through
-J1-13** plus **J2-14 through J2-21** (13 positions, all differential-
+Positions still open on the GPIO headers for this purpose: **J1-11 through
+J1-13** plus **J2-14 through J2-21** (11 positions, all differential-
 capable) — see Section 6 below for where the last single-ended-only
-position (`gp27`/J2-27) went, and Section 7 for where the first
-differential-capable position (`gp8`/J1-8) went. `gn8` (J1-8's own
-differential counterpart, SITE A5) is now implicitly unavailable for a
-true LVDS pair, since `gp8` is committed to an ordinary single-ended
-signal -- see Section 7's own note. None of the remaining
-differential-capable positions are committed to any specific future signal
-yet; do not treat any position number here as a preassigned plan.
+position (`gp27`/J2-27) went, Section 7 for where the first
+differential-capable position (`gp8`/J1-8) went, and Section 8 for where
+the next two differential-capable positions (`gp9`/J1-9, `gp10`/J1-10)
+went. `gn8`/`gn9`/`gn10` (J1-8/J1-9/J1-10's own differential counterparts,
+SITEs A5/B1/B4) are now implicitly unavailable for a true LVDS pair, since
+`gp8`/`gp9`/`gp10` are each committed to an ordinary single-ended signal —
+see Sections 7/8's own notes. None of the remaining differential-capable
+positions are committed to any specific future signal yet; do not treat
+any position number here as a preassigned plan. **J1-11 through J1-13 are
+shared with the onboard WiFi module** in the real board file's own comments
+(`wifi_gpio26`/`wifi_gpio33`/`wifi_gpio35`) — confirmed directly, not a
+preferred choice for a future module needing an unshared pin, though still
+usable if the remaining 8 J2 positions (J2-14 through J2-21) are ever
+exhausted first.
 **Corrected, complete picture of the real electrical distinction (an
 earlier draft of this section was incomplete — verified directly against
 ULX3S's own official manual, not just the schematic excerpt used
@@ -135,16 +142,16 @@ before):**
   choice for every remaining ordinary single-ended interface.
 
 Logical signals awaiting a physical assignment:
-`pulse_i[1:0]` (RTL-009), `arinc_rx_i`/
+`arinc_rx_i`/
 `arinc_tx_ctrl_o`/`arinc_rx_adapter_error_i`/`arinc_tx_adapter_error_i`
 (RTL-017/018), `can_rx_i`/`can_tx_o`/`can_transceiver_error_i` (RTL-019),
 `uart_rx_i`/`uart_tx_o` (RTL-020), `health_i[7:0]` (RTL-011),
 `safety_out_o[3:0]` (RTL-016), `user_i`/`o`/`oe[3:0]` (out of scope --
 RTL-022/023 dropped from this build per the demo-scope decision, see
 `PROJECT_CONTINUITY.md` Section 5). `gpio_i`/`gpio_o`/`gpio_oe_o`
-(RTL-006), `rotor_i` (RTL-007), and `engine_i` (RTL-008) are no longer in
-this list — see Sections 5, 6, and 7, their physical assignments are now
-real.
+(RTL-006), `rotor_i` (RTL-007), `engine_i` (RTL-008), and `pulse_i[1:0]`
+(RTL-009) are no longer in this list — see Sections 5, 6, 7, and 8, their
+physical assignments are now real.
 
 ---
 
@@ -306,3 +313,71 @@ which nearby positions carry a wifi-sharing comment and which don't), not
 recalled from memory or accepted from a single summarizing pass. The
 `gp8` → "J1, position 8" correspondence follows the same silkscreen-
 position convention already established and confirmed in Section 1.
+
+---
+
+## 8. Pulse/Frequency Measurement (RTL-009) — J1 gp9/gp10, 2 channels
+
+RTL-009 is the third module in the Monitoring domain with a real, physical
+interface — two independent frequency-measurement pulse inputs sharing one
+logical 2-bit `pulse_i[1:0]` port (per ARCH-002's own port catalog: "both
+channels share this one 2-bit port ... there is no separate physical pin
+per channel"), each requiring its own real physical pin.
+
+| Signal | `gp<N>` | J1/J2 position | Row | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|---|
+| `pulse_i[0]` (channel 0) | `gp9` | J1-9 | Outer (`+` / GP) | A2 | Input |
+| `pulse_i[1]` (channel 1) | `gp10` | J1-10 | Outer (`+` / GP) | C4 | Input |
+
+**Choice rationale:** per Section 4's own note, the single-ended-only range
+was fully exhausted by RTL-006/007 (Sections 5/6); RTL-008 (Section 7) was
+the first module assigned from the differential-capable range (J1-8 through
+J1-13, J2-14 through J2-21), taking `gp8`/J1-8, the first position in
+position order. RTL-009 needs two more positions for its two channels;
+`gp9`/J1-9 and `gp10`/J1-10 are the next two positions in position order
+within that same range, continuing the project's own "exhaust in position
+order" choice rationale already used for Sections 5, 6, and 7. `gp11`
+through `gp13` (J1-11 through J1-13) are shared with the onboard WiFi
+module in the real board file's own comments (`wifi_gpio26`/`wifi_gpio33`/
+`wifi_gpio35`), confirmed directly against the real board file — not a
+preferred choice for a future module needing an unshared pin, so this
+module's two channels are placed at `gp9`/`gp10` rather than spilling into
+the WiFi-shared range, leaving `gp11`-`gp13` plus `gp14`-`gp21` (J2) as the
+11 positions still open (Section 4).
+
+Both `pulse_i[0]`/`pulse_i[1]` are plain single-ended inputs (no tristate/
+output logic needed, same idiom as Section 6/7's `rotor_i`/`engine_i`) —
+`ulx3s_dfc_top.sv` reads the two pads directly into `dfc_rtl024.sv`'s own
+`pulse_i[1:0]` port, which `dfc_rtl009.sv` then synchronizes with its own
+two independent two-flop CDC-PULSE synchronizer instances (RTLSTD-CDC-008,
+one per channel) before any use — entirely separate hardware from
+`dfc_rtl007.sv`'s/`dfc_rtl008.sv`'s own synchronizers on `rotor_i`/
+`engine_i`.
+
+**This is the second and third pins this project has assigned from the
+differential-capable range** (after `gp8`/RTL-008 in Section 7). Per
+Section 4's own corrected note (and ULX3S's own official manual), `gp9`/
+`gn9` and `gp10`/`gn10` are each physically paired for true LVDS
+differential signaling — assigning `gp9`/`gp10` alone to ordinary
+single-ended signals means **`gn9` (SITE B1) and `gn10` (SITE B4) are now
+implicitly unavailable for a true differential pair with `gp9`/`gp10`
+respectively** if this project ever needs real LVDS signaling from either
+specific position later. `gn9`/`gn10` themselves remain physically real,
+unused pins (not committed to anything) — the constraint only affects their
+ability to be paired with `gp9`/`gp10` as matched differential signals;
+either could still be assigned as an independent single-ended pin of its
+own, the same way `gn8` (Section 7) and every earlier section's own
+unused inner-row pins are.
+
+**Provenance:** the `gp9`/`gn9`/`gp10`/`gn10` → FPGA site mapping
+(A2/B1/C4/B4) is fetched directly from the real board constraint file
+(`emard/ulx3s`, `doc/constraints/ulx3s_v20.lpf` — the same source every
+earlier section's own mappings were fetched from), confirmed via a direct
+`curl`+`grep` of the raw file content against the exact `LOCATE COMP
+"gp9"`/`"gn9"`/`"gp10"`/`"gn10"` lines (and the surrounding
+`gp11`-`gp13`/`gn11`-`gn13` lines, to directly confirm which nearby
+positions carry the wifi-sharing comment and which don't), not recalled
+from memory or accepted from a single summarizing pass. The `gp9`/`gp10` →
+"J1, position 9"/"J1, position 10" correspondence follows the same
+silkscreen-position convention already established and confirmed in
+Section 1.

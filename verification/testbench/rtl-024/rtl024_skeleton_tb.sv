@@ -523,6 +523,96 @@ module rtl024_skeleton_tb;
           dut.rtl007_status[dfc_types_pkg::DFC_RTL007_STATUS__ROTOR_RPM__RPM_HI:dfc_types_pkg::DFC_RTL007_STATUS__ROTOR_RPM__RPM_LO] == 16'd500,
           1'b1);
 
+    // ------------------------------------------------------------------
+    // RTL-009 integration checks -- real, added this session, over the
+    // real physical SPI pins and this skeleton's own real, external
+    // pulse_i[1:0] top-level testbench port (the same port ulx3s_dfc_top.sv
+    // wires to the real gp9/J1-9 and gp10/J1-10 ECP5 pads on hardware, see
+    // ULX3S_CONNECTION_MAP.md's own new Section 8). RTL-009's own real
+    // status_o.ready (both channels' configuration legal) genuinely reaches
+    // the host-visible SUBSYS_READY aggregate (bit 8, ARCH-002 Appendix C
+    // module index 8) through RTL-002's real module_ready_i[8].
+    // rtl009_integration_tb.sv already covers the RTL-001<->RTL-009
+    // register bus, both channels' own real pipelined Q17.15 dividers, and
+    // the shared-event-slot arbitration between them directly; this proves
+    // RTL-009's real readiness holds inside the actual RTL-024 top-level
+    // integration, plus a real, external pulse_i[0] pad-level round trip
+    // through this file's own top-level port (not a hierarchical force)
+    // all the way to a real host-readable PULSE0_FREQ_Q17_15 value.
+    // ------------------------------------------------------------------
+    check("rtl009 status_o.ready is real (legal configuration, reset-default thresholds)",
+          dut.rtl009_status[dfc_types_pkg::DFC_RTL009_STATUS__READY_HI], 1'b1);
+    check("rtl009 status_o.fault is real (clear, no illegal configuration forced)",
+          dut.rtl009_status[dfc_types_pkg::DFC_RTL009_STATUS__FAULT_HI], 1'b0);
+
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check("host-readable SUBSYS_READY bit 8 (RTL-009) reflects RTL-009's real readiness",
+          rd_data[8], 1'b1);
+
+    // Real, protected SUBSYS_ENABLE write -- genuinely enables the
+    // optional RTL-009 module bit (8) on top of the mandatory mask plus
+    // the already-enabled RTL-007/RTL-008 bits (6/7), over a real re-armed
+    // PROTECT_KEY sequence.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SUBSYS_ENABLE) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SUBSYS_ENABLE) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SUBSYS_ENABLE, 32'h0080_F9DF, wr_status);  // mandatory mask | bit 6 | bit 7 | bit 8
+    check("SUBSYS_ENABLE SPI write (RTL-009 bit 8 enabled) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_PULSE0_THRESH_LOW_Q17_15,  32'd819_200_000, wr_status);  // 25,000 Hz
+    check("PULSE0_THRESH_LOW_Q17_15 SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PULSE0_THRESH_HIGH_Q17_15, 32'd1_024_000_000, wr_status);  // 31,250 Hz
+    check("PULSE0_THRESH_HIGH_Q17_15 SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PULSE0_CONTROL, 32'h0000_0003, wr_status);  // ENABLE=1, RISING_EDGE=1
+    check("PULSE0_CONTROL SPI write (ENABLE=1) accepted", |wr_status, 1'b0);
+
+    // Two real rising edges on this file's own external pulse_i[0] pin,
+    // 2000 CORE_CLK cycles apart, must genuinely produce
+    // FREQ_Q17_15 = (50,000,000 << 15) / 2000 = 819,200,000 (25,000 Hz)
+    // through RTL-009's real pipelined divider -- proven here through the
+    // real physical pin and the real SPI read path, not a hierarchical
+    // force. NOTE the explicit `#1;` settle immediately after the repeat
+    // loop, before re-asserting the pin: a real, found-and-fixed bug in
+    // this section's own first draft omitted it (this file inlines the
+    // pulse sequence rather than calling a shared task, unlike
+    // rotor_i/engine_i's own rotor_pulse/engine_pulse tasks a few hundred
+    // lines above, which already include this exact settle delay before
+    // returning). Without it, the second pulse_i[0]=1 assignment lands in
+    // the same simulation time step as the repeat loop's own last clock
+    // edge, and the DUT's synchronizer samples it one cycle earlier than
+    // intended -- confirmed via a real, observed PULSE0_PERIOD_TICKS
+    // reading of 1999, not 2000, and a correspondingly real but "wrong
+    // gap" FREQ_Q17_15 result (819,609,805, not the intended 819,200,000)
+    // before this fix. This one-cycle error was never visible in the
+    // ROTOR_RPM/ENGINE_RPM checks elsewhere in this file, since PPR-scaled
+    // RPM rounding happens to land on the same integer RPM whether the
+    // real gap is N or N-1 cycles for the specific values chosen there --
+    // RTL-009's exact Q17.15 division has no such rounding slack, which is
+    // what actually surfaced this.
+    pulse_i[0] = 1'b1;
+    @(posedge core_clk_i); #1;
+    pulse_i[0] = 1'b0;
+    repeat (1999) @(posedge core_clk_i);
+    #1;
+    pulse_i[0] = 1'b1;
+    @(posedge core_clk_i); #1;
+    pulse_i[0] = 1'b0;
+    repeat (100) @(posedge core_clk_i); #1;  // real divider latency margin
+
+    spi_read32(DFC_ADDR_PULSE0_FREQ_Q17_15, rd_data, rd_status);
+    check("PULSE0_FREQ_Q17_15 SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable PULSE0_FREQ_Q17_15 genuinely reflects the real 2000-cycle ",
+           "pulse gap on this file's own external pulse_i[0] pin (25,000 Hz)"},
+          (rd_data == 32'd819_200_000), 1'b1);
+
+    check({"RTL-008's own ENGINE_RPM state is unaffected by RTL-009's real pulse_i[0] ",
+           "pulse train just driven -- confirms independent state even inside the ",
+           "actual RTL-024 top-level integration"},
+          dut.rtl008_status[dfc_types_pkg::DFC_RTL008_STATUS__ENGINE_RPM__RPM_HI:dfc_types_pkg::DFC_RTL008_STATUS__ENGINE_RPM__RPM_LO] == 16'd65535,
+          1'b1);
+
     // The stub topology's remaining mandatory-mask modules (RTL-012
     // through RTL-016, etc.) never report ready, so RTL-002 is expected to
     // run out its full 499,000-cycle mandatory-init timeout and land in

@@ -1,0 +1,163 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x2200-0x2254), cited by contract ID below -- same disclosed scope/rationale as every prior field-map file's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). RTL009_EVT_OVERFLOW_STATUS's status_registers entry below (EVENT_OVERFLOW/DROP_COUNT mapped to the generic status_o.event_overflow/event_drop_count fields dfc_rtl009_status_t carries) closes the readback gap from the start, same discipline rtl006/007/008_field_map.json established (OPEN_ISSUES.md item 21). PULSE0_STATUS/PULSE1_STATUS each appear in BOTH control_registers (their 3 real W1C clear-request fields) AND status_registers (their 6 real RO/W1C-readback fields) -- same dual-appearance pattern already used for RTL-007/008's own ROTOR_STATUS/ENGINE_STATUS. dfc_rtl009_control_t grew 334->335 bits this session (approved before implementation) to add rtl009_evt_overflow_status__event_overflow at the new highest bit (334), closing the eighth real instance of the EVENT_OVERFLOW-clear-field gap class (items 2/7/8/12/20/24/28). Confirmed directly against dfc_registers_pkg.json: PULSE0_STATUS/PULSE0_FREQ_Q17_15/PULSE0_PERIOD_TICKS/PULSE1_STATUS/PULSE1_FREQ_Q17_15/PULSE1_PERIOD_TICKS/RTL009_EVT_OVERFLOW_STATUS are all readback=external; PULSE0_CONTROL/PULSE0_THRESH_LOW_Q17_15/PULSE0_THRESH_HIGH_Q17_15/PULSE0_TIMEOUT_US/PULSE0_EDGE_FILTER/PULSE0_HYSTERESIS_Q17_15/PULSE1_CONTROL/PULSE1_THRESH_LOW_Q17_15/PULSE1_THRESH_HIGH_Q17_15/PULSE1_TIMEOUT_US/PULSE1_EDGE_FILTER/PULSE1_HYSTERESIS_Q17_15 are all readback=internal_reg.",
+  "consumer_module": "RTL-009",
+  "control_struct": "dfc_rtl009_control_t",
+  "status_struct": "dfc_rtl009_status_t",
+  "control_registers": [
+    {
+      "register": "PULSE0_CONTROL", "contract_id": "REG-2200",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "pulse0_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "pulse0_control__rising_edge"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "pulse0_control__event_enable"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "pulse0_control__irq_enable"}
+      ]
+    },
+    {
+      "register": "PULSE0_STATUS", "contract_id": "REG-2204",
+      "fields": [
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "pulse0_status__timeout"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "pulse0_status__range_error"},
+        {"reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "pulse0_status__updated"}
+      ]
+    },
+    {
+      "register": "PULSE0_THRESH_LOW_Q17_15", "contract_id": "REG-2210",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse0_thresh_low_q17_15__threshold"}
+      ]
+    },
+    {
+      "register": "PULSE0_THRESH_HIGH_Q17_15", "contract_id": "REG-2214",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse0_thresh_high_q17_15__threshold"}
+      ]
+    },
+    {
+      "register": "PULSE0_TIMEOUT_US", "contract_id": "REG-2218",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse0_timeout_us__timeout_us"}
+      ]
+    },
+    {
+      "register": "PULSE0_EDGE_FILTER", "contract_id": "REG-221C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse0_edge_filter__min_edge_cycles"}
+      ]
+    },
+    {
+      "register": "PULSE0_HYSTERESIS_Q17_15", "contract_id": "REG-2220",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse0_hysteresis_q17_15__hysteresis"}
+      ]
+    },
+    {
+      "register": "PULSE1_CONTROL", "contract_id": "REG-2230",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "pulse1_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "pulse1_control__rising_edge"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "pulse1_control__event_enable"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "pulse1_control__irq_enable"}
+      ]
+    },
+    {
+      "register": "PULSE1_STATUS", "contract_id": "REG-2234",
+      "fields": [
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "pulse1_status__timeout"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "pulse1_status__range_error"},
+        {"reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "pulse1_status__updated"}
+      ]
+    },
+    {
+      "register": "PULSE1_THRESH_LOW_Q17_15", "contract_id": "REG-2240",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse1_thresh_low_q17_15__threshold"}
+      ]
+    },
+    {
+      "register": "PULSE1_THRESH_HIGH_Q17_15", "contract_id": "REG-2244",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse1_thresh_high_q17_15__threshold"}
+      ]
+    },
+    {
+      "register": "PULSE1_TIMEOUT_US", "contract_id": "REG-2248",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse1_timeout_us__timeout_us"}
+      ]
+    },
+    {
+      "register": "PULSE1_EDGE_FILTER", "contract_id": "REG-224C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse1_edge_filter__min_edge_cycles"}
+      ]
+    },
+    {
+      "register": "RTL009_EVT_OVERFLOW_STATUS", "contract_id": "REG-2250",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl009_evt_overflow_status__event_overflow"}
+      ]
+    },
+    {
+      "register": "PULSE1_HYSTERESIS_Q17_15", "contract_id": "REG-2254",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "pulse1_hysteresis_q17_15__hysteresis"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "PULSE0_STATUS", "contract_id": "REG-2204",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "pulse0_status__valid"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "pulse0_status__low"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "pulse0_status__high"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "pulse0_status__timeout"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "pulse0_status__range_error"},
+        {"reg_hi": 5, "reg_lo": 5, "struct_field": "pulse0_status__updated"}
+      ]
+    },
+    {
+      "register": "PULSE0_FREQ_Q17_15", "contract_id": "REG-2208",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "pulse0_freq_q17_15__frequency_q17_15"}
+      ]
+    },
+    {
+      "register": "PULSE0_PERIOD_TICKS", "contract_id": "REG-220C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "pulse0_period_ticks__period_ticks"}
+      ]
+    },
+    {
+      "register": "PULSE1_STATUS", "contract_id": "REG-2234",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "pulse1_status__valid"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "pulse1_status__low"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "pulse1_status__high"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "pulse1_status__timeout"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "pulse1_status__range_error"},
+        {"reg_hi": 5, "reg_lo": 5, "struct_field": "pulse1_status__updated"}
+      ]
+    },
+    {
+      "register": "PULSE1_FREQ_Q17_15", "contract_id": "REG-2238",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "pulse1_freq_q17_15__frequency_q17_15"}
+      ]
+    },
+    {
+      "register": "PULSE1_PERIOD_TICKS", "contract_id": "REG-223C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "pulse1_period_ticks__period_ticks"}
+      ]
+    },
+    {
+      "register": "RTL009_EVT_OVERFLOW_STATUS", "contract_id": "REG-2250",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    }
+  ]
+}
