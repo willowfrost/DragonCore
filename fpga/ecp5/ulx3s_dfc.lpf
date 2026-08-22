@@ -61,6 +61,20 @@ IOBUF PORT "gp26" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 LOCATE COMP "gp27" SITE "D13";
 IOBUF PORT "gp27" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 
+# ---- Engine RPM Monitor (RTL-008): J1 gp8, tachometer/RPM pulse input.
+# Real board file (emard/ulx3s, doc/constraints/ulx3s_v20.lpf), "DIFF"-
+# tagged differential-capable section -- the single-ended-only range having
+# been fully exhausted by RTL-007 (see ULX3S_CONNECTION_MAP.md's own
+# Section 4/7 for the exhaustion note). gp8/gn8 carry no wifi-sharing
+# comment in the real board file (unlike gp11-gp13), confirmed free; used
+# here as an ordinary single-ended input per ULX3S's own manual ("DIFF
+# pairs can be used also as single-ended pins"). gn8 (SITE A5) is left
+# unassigned -- see ULX3S_CONNECTION_MAP.md's own Section 7 for the note
+# that this makes gn8 implicitly unavailable for a true LVDS pair with gp8
+# if that range is ever needed for real differential signaling later.
+LOCATE COMP "gp8" SITE "A4";
+IOBUF PORT "gp8" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

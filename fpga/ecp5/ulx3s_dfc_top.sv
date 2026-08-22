@@ -44,10 +44,19 @@
 //     for exactly how the site was confirmed). A plain single-ended input
 //     -- no tristate needed, unlike gp3/the GPIO channels above --
 //     dfc_rtl007.sv itself owns the real CDC-PULSE synchronizer.
+//   - Engine RPM Monitor (RTL-008): mapped to J1 gp8, the first position of
+//     the differential-capable range (the single-ended-only range having
+//     been fully exhausted by RTL-007 -- confirmed free per the real board
+//     constraint file, see ULX3S_CONNECTION_MAP.md's own new Section 7).
+//     A plain single-ended input, same idiom as gp27 above -- used as an
+//     ordinary single-ended pin per ULX3S's own manual (differential pairs
+//     can be used single-ended when not paired for LVDS) -- dfc_rtl008.sv
+//     itself owns its own, independent CDC-PULSE synchronizer instance (no
+//     sharing with dfc_rtl007.sv's).
 //
 // NOT WIRED (tied safe, matching dfc_rtl024's own disclosed skeleton
-// scope -- RTL-008 through RTL-023 don't exist yet):
-//   ARINC, CAN, UART, engine/pulse/health monitoring inputs, user I/O,
+// scope -- RTL-009 through RTL-023 don't exist yet):
+//   ARINC, CAN, UART, pulse/health monitoring inputs, user I/O,
 //   production-test pins, safety outputs. See dfc_rtl024.sv's own header
 //   for exactly what's stubbed and why.
 // ============================================================================
@@ -68,6 +77,7 @@ module ulx3s_dfc_top (
   inout  wire  gp25,  // GPIO channel 6
   inout  wire  gp26,  // GPIO channel 7
   input  logic gp27,  // Rotor RPM tachometer pulse input (RTL-007)
+  input  logic gp8,   // Engine RPM tachometer pulse input (RTL-008)
   output logic [7:0] led
 );
 
@@ -161,7 +171,7 @@ module ulx3s_dfc_top (
     .uart_tx_o (),
 
     .rotor_i   (gp27),
-    .engine_i  (1'b0),
+    .engine_i  (gp8),
     .pulse_i   (2'b00),
     .health_i  (8'h00),
 

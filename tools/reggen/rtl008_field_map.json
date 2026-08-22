@@ -1,0 +1,99 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x2100-0x2128), cited by contract ID below -- same disclosed scope/rationale as every prior field-map file's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). RTL008_EVT_OVERFLOW_STATUS's status_registers entry below (EVENT_OVERFLOW/DROP_COUNT mapped to the generic status_o.event_overflow/event_drop_count fields every dfc_rtlNNN_status_t struct already carries) closes the readback gap from the start, the same discipline rtl006_field_map.json/rtl007_field_map.json established (OPEN_ISSUES.md item 21 -- RTL-002/003/004's own field-maps still lack this, out of scope for this session, not reproduced here). ENGINE_STATUS appears in BOTH control_registers (its 3 real W1C clear-request fields) AND status_registers (its 6 real RO/W1C-readback fields) -- same dual-appearance pattern already used for RTL-007's own ROTOR_STATUS, confirmed safe by reggen.py's own per-register readback == \"external\" gating (dfc_registers_pkg.json confirms ENGINE_STATUS/ENGINE_RPM/ENGINE_PERIOD_TICKS/RTL008_EVT_OVERFLOW_STATUS are all readback=external; ENGINE_CONTROL/ENGINE_THRESH_LOW/ENGINE_THRESH_HIGH/ENGINE_PULSES_PER_REV/ENGINE_TIMEOUT_US/ENGINE_EDGE_FILTER/ENGINE_HYSTERESIS are all readback=internal_reg, confirmed directly, not assumed).",
+  "consumer_module": "RTL-008",
+  "control_struct": "dfc_rtl008_control_t",
+  "status_struct": "dfc_rtl008_status_t",
+  "control_registers": [
+    {
+      "register": "ENGINE_CONTROL", "contract_id": "REG-2100",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "engine_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "engine_control__rising_edge"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "engine_control__event_enable"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "engine_control__irq_enable"}
+      ]
+    },
+    {
+      "register": "ENGINE_STATUS", "contract_id": "REG-2104",
+      "fields": [
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "engine_status__timeout"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "engine_status__range_error"},
+        {"reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "engine_status__updated"}
+      ]
+    },
+    {
+      "register": "ENGINE_THRESH_LOW", "contract_id": "REG-2110",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "class": "RW", "struct_field": "engine_thresh_low__threshold"}
+      ]
+    },
+    {
+      "register": "ENGINE_THRESH_HIGH", "contract_id": "REG-2114",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "class": "RW", "struct_field": "engine_thresh_high__threshold"}
+      ]
+    },
+    {
+      "register": "ENGINE_PULSES_PER_REV", "contract_id": "REG-2118",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "class": "RW", "struct_field": "engine_pulses_per_rev__ppr"}
+      ]
+    },
+    {
+      "register": "ENGINE_TIMEOUT_US", "contract_id": "REG-211C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "engine_timeout_us__timeout_us"}
+      ]
+    },
+    {
+      "register": "ENGINE_EDGE_FILTER", "contract_id": "REG-2120",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "engine_edge_filter__min_edge_cycles"}
+      ]
+    },
+    {
+      "register": "RTL008_EVT_OVERFLOW_STATUS", "contract_id": "REG-2124",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl008_evt_overflow_status__event_overflow"}
+      ]
+    },
+    {
+      "register": "ENGINE_HYSTERESIS", "contract_id": "REG-2128",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "class": "RW", "struct_field": "engine_hysteresis__hysteresis"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "ENGINE_STATUS", "contract_id": "REG-2104",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "engine_status__valid"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "engine_status__low"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "engine_status__high"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "engine_status__timeout"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "engine_status__range_error"},
+        {"reg_hi": 5, "reg_lo": 5, "struct_field": "engine_status__updated"}
+      ]
+    },
+    {
+      "register": "ENGINE_RPM", "contract_id": "REG-2108",
+      "fields": [
+        {"reg_hi": 15, "reg_lo": 0, "struct_field": "engine_rpm__rpm"}
+      ]
+    },
+    {
+      "register": "ENGINE_PERIOD_TICKS", "contract_id": "REG-210C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "engine_period_ticks__period_ticks"}
+      ]
+    },
+    {
+      "register": "RTL008_EVT_OVERFLOW_STATUS", "contract_id": "REG-2124",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    }
+  ]
+}

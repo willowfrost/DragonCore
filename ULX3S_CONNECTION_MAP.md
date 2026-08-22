@@ -106,10 +106,14 @@ section to this document the same way Section 1 was built: transcribe
 the real `.lpf` addition, confirm the J1/J2 position against the real
 board, and cite the source for each fact rather than assume it.
 
-Positions still open on the GPIO headers for this purpose: **J1-8 through
-J1-13** plus **J2-14 through J2-21** (outer and inner rows both,
-differential-capable) — see Section 6 below for where the last
-single-ended-only position (`gp27`/J2-27) went. None of the remaining
+Positions still open on the GPIO headers for this purpose: **J1-9 through
+J1-13** plus **J2-14 through J2-21** (13 positions, all differential-
+capable) — see Section 6 below for where the last single-ended-only
+position (`gp27`/J2-27) went, and Section 7 for where the first
+differential-capable position (`gp8`/J1-8) went. `gn8` (J1-8's own
+differential counterpart, SITE A5) is now implicitly unavailable for a
+true LVDS pair, since `gp8` is committed to an ordinary single-ended
+signal -- see Section 7's own note. None of the remaining
 differential-capable positions are committed to any specific future signal
 yet; do not treat any position number here as a preassigned plan.
 **Corrected, complete picture of the real electrical distinction (an
@@ -123,13 +127,14 @@ before):**
   any future module needing a pin (RTL-008 onward) must use the
   differential-capable range below.
 - **J1-8 through J1-13 and J2-14 through J2-21 are differential-capable**
-  (14 positions) — but per ULX3S's own manual, "differential pairs can be
-  used also as single-ended pins," so these remain a real fallback now
-  that the single-ended-only positions above are exhausted, not a hard
-  no-go — just the less-preferred choice that is now the ONLY choice for
-  every remaining ordinary single-ended interface.
+  (14 positions; 1 -- `gp8`/J1-8 -- now committed to RTL-008's `engine_i`
+  per Section 7, 13 remaining) — but per ULX3S's own manual, "differential
+  pairs can be used also as single-ended pins," so these remain a real
+  fallback now that the single-ended-only positions above are exhausted,
+  not a hard no-go — just the less-preferred choice that is now the ONLY
+  choice for every remaining ordinary single-ended interface.
 
-Logical signals awaiting a physical assignment: `engine_i` (RTL-008),
+Logical signals awaiting a physical assignment:
 `pulse_i[1:0]` (RTL-009), `arinc_rx_i`/
 `arinc_tx_ctrl_o`/`arinc_rx_adapter_error_i`/`arinc_tx_adapter_error_i`
 (RTL-017/018), `can_rx_i`/`can_tx_o`/`can_transceiver_error_i` (RTL-019),
@@ -137,8 +142,9 @@ Logical signals awaiting a physical assignment: `engine_i` (RTL-008),
 `safety_out_o[3:0]` (RTL-016), `user_i`/`o`/`oe[3:0]` (out of scope --
 RTL-022/023 dropped from this build per the demo-scope decision, see
 `PROJECT_CONTINUITY.md` Section 5). `gpio_i`/`gpio_o`/`gpio_oe_o`
-(RTL-006) and `rotor_i` (RTL-007) are no longer in this list — see
-Sections 5 and 6, their physical assignments are now real.
+(RTL-006), `rotor_i` (RTL-007), and `engine_i` (RTL-008) are no longer in
+this list — see Sections 5, 6, and 7, their physical assignments are now
+real.
 
 ---
 
@@ -235,3 +241,68 @@ raw file content against the exact `LOCATE COMP "gp27"` line, not recalled
 from memory or accepted from a single summarizing pass. The `gp27` →
 "J2, position 27" correspondence follows the same silkscreen-position
 convention already established and confirmed in Section 1.
+
+---
+
+## 7. Engine RPM Monitor (RTL-008) — J1 gp8, 1 channel
+
+RTL-008 is the second module in the Monitoring domain with a real,
+physical interface — a single asynchronous tachometer/RPM pulse input
+(`engine_i`), one physical pin, functionally identical in kind to
+Section 6's `rotor_i` but on completely independent hardware (its own
+pad, its own CDC synchronizer instance, its own register block).
+
+| Signal | `gp<N>` | J1/J2 position | Row | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|---|
+| `engine_i` | `gp8` | J1-8 | Outer (`+` / GP) | A4 | Input |
+
+**Choice rationale:** per Section 4's own note, the 9 single-ended-only
+positions (J1-5 through J1-7, J2-22 through J2-27) were fully exhausted by
+RTL-006 (8 channels, Section 5) and RTL-007 (1 channel, `gp27`, Section 6).
+**RTL-008 is therefore the first module in this project genuinely assigned
+from the differential-capable range (J1-8 through J1-13, J2-14 through
+J2-21)** — not a hard restriction, per ULX3S's own manual: "differential
+pairs can be used also as single-ended pins," and this is exactly that
+case (one single-ended tachometer input, no differential signal involved,
+identical electrical usage to every other single-ended input already wired
+in this project). `gp8` (J1-8) is the first position in position order
+within that range, following the same "exhaust in position order" choice
+rationale already used for Sections 5 and 6. `gp9`/`gp10` (J1-9/J1-10)
+remain open and carry no wifi-sharing comment either, confirmed directly
+against the real board file; `gp11`-`gp13` (J1-11 through J1-13) are
+shared with the onboard WiFi module in the real board file's own comments
+(`wifi_gpio26`/`wifi_gpio33`/`wifi_gpio35`) and are not a preferred choice
+for a future module needing an unshared pin, though not used here.
+
+**This is the first pin this project has assigned from the
+differential-capable range.** Per Section 4's own corrected note (and
+ULX3S's own official manual), `gp8`/`gn8` are physically paired for true
+LVDS differential signaling — assigning `gp8` alone to an ordinary
+single-ended signal means **`gn8` (SITE A5) is now implicitly unavailable
+for a true differential pair with `gp8`** if this project ever needs real
+LVDS signaling from this specific position later. `gn8` itself remains a
+physically real, unused pin (not committed to anything) — the constraint
+only affects its ability to be paired with `gp8` as a matched differential
+signal; `gn8` could still be assigned as an independent single-ended pin
+of its own, the same way `gn0`-`gn4`/`gn5`-`gn7`/`gn22`-`gn26`/`gn27` are
+in every earlier section, just never as `gp8`'s differential partner.
+
+`engine_i` is a plain single-ended input (no tristate/output logic
+needed, same idiom as Section 6's `rotor_i`) — `ulx3s_dfc_top.sv` reads
+the pad directly into `dfc_rtl024.sv`'s own `engine_i` port, which
+`dfc_rtl008.sv` then synchronizes with its own, independent two-flop
+CDC-PULSE synchronizer (RTLSTD-CDC-008) before any use — entirely separate
+hardware from `dfc_rtl007.sv`'s own synchronizer on `rotor_i`, per
+ARCH-RTL008-001's own "separate state prevents rotor/engine coupling"
+requirement.
+
+**Provenance:** the `gp8`/`gn8` → FPGA site mapping (A4/A5) is fetched
+directly from the real board constraint file (`emard/ulx3s`,
+`doc/constraints/ulx3s_v20.lpf` — the same source every earlier section's
+own mappings were fetched from), confirmed via a direct `curl`+`grep` of
+the raw file content against the exact `LOCATE COMP "gp8"`/`"gn8"` lines
+(and the surrounding `gp9`-`gp13`/`gn9`-`gn13` lines, to directly confirm
+which nearby positions carry a wifi-sharing comment and which don't), not
+recalled from memory or accepted from a single summarizing pass. The
+`gp8` → "J1, position 8" correspondence follows the same silkscreen-
+position convention already established and confirmed in Section 1.

@@ -1823,8 +1823,8 @@
     },
     {
       "name": "dfc_rtl008_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl008_control_t (135 bits, rich format)",
-      "width": 135,
+      "trace": "ARCH-002 Appendix B dfc_rtl008_control_t (136 bits, rich format)",
+      "width": 136,
       "fields": [
         {
           "name": "engine_control__enable",
@@ -1942,6 +1942,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "control_value"
+        },
+        {
+          "name": "rtl008_evt_overflow_status__event_overflow",
+          "hi": 135,
+          "lo": 135,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask; added to close a real, confirmed gap: this struct previously had no field for clearing RTL008_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-002 0x2124 bit 0, a real W1C field), identical in kind to the analogous fix already made for dfc_rtl002/003/004/005/006/007_control_t. Placed at the new highest bit specifically so every other field in this struct keeps its existing bit position unchanged."
         }
       ]
     },

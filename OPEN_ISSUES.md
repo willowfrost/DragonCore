@@ -545,3 +545,161 @@ incomplete, logged here rather than silently resolved or guessed.
     accepted-event counter needs the same 0-vs-1 reset-value treatment,
     rather than re-deriving this the hard way via a real simulation
     failure.
+
+## RTL-008 (Engine RPM Monitor) integration
+
+28. **RESOLVED (2026-08-21), approved before implementation, same pattern
+    as items 2/7/8/12/20/24 (the seventh real instance of this exact gap
+    class).** `dfc_rtl008_control_t` (135 bits) had no clear-request field
+    for `RTL008_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-002 0x2124 bit 0,
+    a real W1C field). Fixed: ARCH-002 grew the struct 135->136 bits,
+    adding `rtl008_evt_overflow_status__event_overflow` at the new highest
+    bit (135) -- every pre-existing field's bit position confirmed
+    unchanged via a real `regenerate.ps1` run. `tools/reggen/rtl008_field_map.json`
+    carries the corresponding `control_registers` entry, and its
+    `status_registers` section closes the RTL-002/003/004-style readback
+    gap (item 21) for RTL-008 from the start, same discipline already
+    established for RTL-006/RTL-007.
+
+29. **Real, disclosed spec ambiguity -- no functional consequence, not
+    fixed (nothing to fix: no field exists to attach a meaning to). Same
+    class as item 25.** `ARCH-VAL-008` (RTL-008's own validation contract)
+    reads "`0 ≤ LOW ≤ HIGH ≤ 20000`, `HYST ≤ HIGH-LOW`, PPR 1–65535 when
+    enabled, qualification 0–100 ms, and nonzero timeout when enabled."
+    Every clause maps onto a real RTL-008 field except "qualification
+    0-100 ms" -- confirmed directly against `RTL-008_RevA.md` and REG-002's
+    own Engine RPM block (0x2100-0x2128): `ENGINE_EDGE_FILTER.MIN_EDGE_CYCLES`
+    is a raw CORE_CLK-cycle count, not a millisecond value, and no other
+    "qualification" concept exists anywhere in this module's real register
+    set -- the identical, almost-certainly-copy-forward gap already logged
+    for RTL-007. `dfc_rtl008.sv` implements every other clause as a real,
+    live `illegal_config` check and disclaims this one specifically in its
+    own header, same as `dfc_rtl007.sv`.
+
+30. **Real, hard-won testbench-authoring lesson, found and fixed during
+    this module's own bring-up -- kept here for RTL-009 (Pulse/Frequency
+    Monitor), which shares this identical hysteretic mode-selection
+    mechanism.** `rtl008_integration_tb.sv`'s first draft drove
+    back-to-back pulse pairs with 100-250 CORE_CLK-cycle gaps throughout
+    (Parts 2-5, 9, 11) to keep RPM values inside the engine's own
+    8,000-12,000 test range. This genuinely, silently tripped
+    ARCH-MON-002's own hysteretic period/count-mode switch (2 CONSECUTIVE
+    accepted periods under 1,000 CORE_CLK cycles switches the module from
+    period mode to count mode, after which per-edge commits stop firing
+    entirely -- commits only happen on the much slower 100,000-cycle
+    count-mode gate instead): the second call of the very first
+    back-to-back pair (Part 2, both calls 150 cycles apart) satisfied this
+    condition, silently switching RTL-008 into count mode and freezing
+    every subsequent RPM/PERIOD_TICKS/event/irq check at Part 2's own
+    baseline value for the rest of the test -- confirmed via a real
+    simulation failure (11 of 47 checks failing, every failure from Part 3
+    onward) that was traced directly to this mechanism, not a DUT bug (a
+    clean re-run of `dfc_rtl008.sv` unchanged, with every gap rescaled to
+    1000+ CORE_CLK cycles -- 1500/2500/1200/6000, choosing PPR=200 instead
+    of RTL-007's PPR=2000 to land in the engine's own higher RPM range at
+    those larger, mode-safe periods -- passed all 47 checks). Single,
+    non-consecutive one-off short periods (e.g. `engine_edge_after(50)` for
+    a HIGH-threshold commit) remain safe and were kept, matching
+    `rotor_edge_after(50)`'s identical, already-proven-safe usage in
+    `rtl007_integration_tb.sv` -- the real hazard is specifically TWO
+    CONSECUTIVE accepted periods both under 1,000 cycles, not short periods
+    in isolation. Any future module sharing ARCH-MON-002's mode-selection
+    mechanism (RTL-009) should choose test period values with this
+    threshold in mind from the start, not rediscover it the hard way via a
+    real simulation failure a second time.
+
+31. **RESOLVED (2026-08-21), a real, three-part timing-closure
+    investigation into already-shipped, already-verified RTL-007 --
+    approved before any change to that file, per this project's own
+    docs-governance discipline for touching prior work.** RTL-007's own
+    real timing margin (52.87 MHz, the narrowest of any module so far --
+    PROJECT_CONTINUITY.md's own lessons-learned explicitly flagged this as
+    "worth a closer look if RTL-008/009's own, architecturally-identical
+    dividers compound this further") was NOT enough headroom to absorb
+    RTL-008 duplicating RTL-007's identical, genuinely expensive per-cycle
+    arithmetic. Confirmed as a real design-margin problem, not placement
+    luck, before touching any RTL: 4 real `build_ecp5.ps1` attempts on the
+    original code (default, `-noabc9`, and two different `-Seed` retries)
+    all genuinely failed between 43-49 MHz, never reaching 50 -- the same
+    "retry before assuming a real problem" discipline already established
+    in this project (item 7) was followed, and it correctly ruled out
+    placement/ABC9 artifacts before any RTL change was proposed.
+    Three sequential real fixes were needed, applied identically to both
+    `dfc_rtl007.sv` and `dfc_rtl008.sv`, each found by actually re-running
+    `nextpnr-ecp5` and reading its new critical path report -- not guessed,
+    and not all found or fixed in one pass:
+    1. **Edge-qualification comparator.** `cycles_since_accepted_q >=
+       ctl_min_edge_cycles` -- a full 32-bit magnitude comparison between
+       two live-varying values -- synthesized as a real, deep CCU2C carry
+       chain that was the actual worst path (21.16 ns total, confirmed via
+       the real critical path report naming `dfc_rtl007.sv`'s own edge-
+       qualification line). Fixed the same architectural way as RTL-005's
+       own round-robin-arbiter timing fix (item 17): replaced the per-cycle
+       ARITHMETIC comparison with a cheap EQUALITY test plus a registered
+       sticky bit (`min_edge_met_q`) -- the counter increments by exactly 1
+       every cycle it doesn't reset, so it passes through every integer
+       value on its way up, including the threshold itself, at the
+       identical cycle the original `>=` first held (no off-by-one).
+       **Disclosed, narrow, approved behavioral difference from the
+       original:** a host write that LOWERS MIN_EDGE_CYCLES mid-flight,
+       strictly after the live counter has already passed the new, lower
+       value, does not retroactively qualify until the next accepted edge
+       (the original, live combinational comparator would have reacted the
+       same cycle) -- not exercised by any real test in this project.
+    2. **Divider multiply resource sharing, made explicit.** This fix alone
+       did not close timing (confirmed via a real subsequent build, 48.48
+       MHz): the two mutually-exclusive divider multiplies (period mode's
+       `cycles_since_accepted_q * ctl_ppr`, count mode's `edge_count_q *
+       30,000`) were originally two independent expressions muxed AFTER
+       multiplying; Yosys's own automatic resource-sharing pass merged them
+       into one physical unit whose generated input-selection muxing was
+       itself expensive. Made explicit at the RTL level instead (mux the
+       multiply's own inputs first) -- a pure refactor, bit-for-bit
+       identical result for any mode. **A real, self-found regression in
+       this fix's own first draft:** the second multiply operand was
+       accidentally widened from 16 to 32 bits (matching the first
+       operand's width for no real reason), turning a 32x16 multiply into
+       a full 32x32 one and making timing measurably worse before the
+       width mistake was caught and corrected back to 16 bits.
+    3. **Divider multiply, pipelined.** Even the correctly-sized,
+       explicitly-shared 32x16 multiply feeding directly into a register in
+       the same cycle it's selected remained the real critical path (8.83
+       ns logic + 11.80 ns/12.69 ns routing across two further real
+       nextpnr runs) -- a genuinely expensive operation, duplicated across
+       two modules, that no amount of input restructuring alone could make
+       cheap enough. Fixed by pipelining the multiply into its own,
+       isolated register-to-register state (`MEAS_MULT`, inserted between
+       `MEAS_IDLE` and `MEAS_RUN`): operands are captured into registers
+       the cycle a commit trigger arrives, the multiply itself runs alone
+       the following cycle, and only then does `MEAS_RUN` begin -- adding
+       exactly one CORE_CLK cycle of latency (65 cycles total instead of
+       64, ~1.3 us at 50 MHz instead of ~1.28 us), a real but functionally
+       and numerically IDENTICAL-result change already comfortably covered
+       by every testbench's own generous divider-latency margin (100
+       CORE_CLK cycles). **A real, easy-to-miss second instance of the same
+       problem, found by auditing every entry point rather than trusting
+       the "obvious" one alone:** the divider's own pre-existing "a new
+       trigger arrived while busy, latch it as a pending redo" path also
+       fed a multiply directly into a register in the exact same way, and
+       needed the identical pipeline treatment (funneled through the same
+       new `MEAS_MULT` state) to actually be closed, not just the
+       first-trigger-while-idle path.
+    Verified end-to-end after all three fixes: a full Icarus regression
+    (12/12 testbenches, 368/368 checks, unchanged throughout -- confirming
+    all three fixes are pure timing/refactor changes with no functional
+    regression except the one disclosed, approved MIN_EDGE_CYCLES
+    mid-flight-lowering edge case), a real `gate.ps1` run (lint/sim/formal
+    bmc+prove/coverage all clean), and a real `build_ecp5.ps1` run (Build
+    ID `20260821_220624`, **55.84 MHz PASS at 50 MHz required** -- a wider
+    margin than RTL-007 alone ever had (52.87 MHz), not just a narrow
+    recovery), 4/156 MULT18X18D (2%), TRELLIS_COMB 22%/TRELLIS_FF 17%
+    utilization. **Lesson for RTL-009 (Pulse/Frequency Monitor, which
+    shares this identical architecture across two channels in a single
+    module) and beyond: a module's own real timing margin at first
+    shipment is not a permanent property -- a narrow margin (RTL-007's
+    52.87 MHz) is a real, standing risk for every later module that
+    duplicates its architecture, and closing it can require multiple
+    sequential, independently-necessary fixes (comparator, then multiplier
+    sharing, then multiplier pipelining), each only discoverable by
+    actually re-running the real toolchain and reading its new critical
+    path report -- not something to budget as a single quick fix.**

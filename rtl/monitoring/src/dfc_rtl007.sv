@@ -262,9 +262,43 @@ module dfc_rtl007 (
   // ==========================================================================
   logic [31:0] cycles_since_accepted_q;
   logic        have_prior_edge_q;
+  logic        min_edge_met_q;
 
+  // min_edge_met_q: a sticky latch replacing a direct wide (32-bit)
+  // magnitude comparison (cycles_since_accepted_q >= ctl_min_edge_cycles)
+  // against a fully variable, live threshold -- a real, found-and-fixed
+  // timing-closure bug, not a stylistic change: this comparator,
+  // duplicated identically in dfc_rtl008.sv (ARCH-RTL008-001's own
+  // "same algorithm, separate instance"), pushed the combined design's
+  // real critical path over the 50 MHz budget once RTL-008 existed
+  // alongside this module's own already-narrow 52.87 MHz margin --
+  // confirmed via 4 real build attempts (default, -noabc9, and two
+  // different -Seed retries, all genuinely failing 43-49 MHz, never
+  // reaching 50) before concluding this was a real design-margin problem,
+  // not placement luck (per this project's own standing "retry before
+  // assuming a real problem" discipline, OPEN_ISSUES.md item 7). Fixed
+  // the same architectural way as RTL-005's own round-robin-arbiter
+  // timing fix (OPEN_ISSUES.md item 17): replace an expensive per-cycle
+  // ARITHMETIC comparison with a cheap EQUALITY test plus a registered
+  // sticky bit. cycles_since_accepted_q increments by exactly 1 every
+  // cycle it doesn't reset, so it passes through every integer value on
+  // its way up, including ctl_min_edge_cycles itself -- the exact cycle
+  // equality first holds is the same cycle the original ">=" comparison
+  // first held (no off-by-one), and the sticky latch then holds true for
+  // every subsequent cycle until the next accepted edge, matching ">="
+  // staying true forever after the threshold is first reached.
+  // DISCLOSED, narrow behavioral difference from the original (approved
+  // before this fix was made): a host write that LOWERS MIN_EDGE_CYCLES
+  // mid-flight, strictly AFTER the live counter has already passed the
+  // new, lower value, will not retroactively qualify until the NEXT
+  // accepted edge resets the measurement window (the original, live
+  // combinational ">=" comparator would have reacted the same cycle) --
+  // not exercised by any real test in this project, disclosed here rather
+  // than silently accepted.
+  wire min_edge_reached_now = (cycles_since_accepted_q == ctl_min_edge_cycles);
+  wire min_edge_is_zero     = (ctl_min_edge_cycles == 32'd0);
   wire edge_qualified = selected_edge && active &&
-                        (cycles_since_accepted_q >= ctl_min_edge_cycles);
+                        (min_edge_met_q || min_edge_reached_now);
 
   // NOTE: the just-completed period is deliberately read as the LIVE
   // cycles_since_accepted_q value (below, and at every other use-site in
@@ -307,14 +341,20 @@ module dfc_rtl007 (
     if (!core_rst_n_i) begin
       cycles_since_accepted_q <= 32'd0;
       have_prior_edge_q       <= 1'b0;
+      min_edge_met_q          <= 1'b0;
     end else if (module_reset_i || !active) begin
       cycles_since_accepted_q <= 32'd0;
       have_prior_edge_q       <= 1'b0;
+      min_edge_met_q          <= 1'b0;
     end else if (edge_qualified) begin
       have_prior_edge_q        <= 1'b1;
       cycles_since_accepted_q  <= 32'd1;
-    end else if (cycles_since_accepted_q != 32'hFFFFFFFF) begin
-      cycles_since_accepted_q <= cycles_since_accepted_q + 32'd1;
+      min_edge_met_q           <= min_edge_is_zero;
+    end else begin
+      if (cycles_since_accepted_q != 32'hFFFFFFFF)
+        cycles_since_accepted_q <= cycles_since_accepted_q + 32'd1;
+      if (min_edge_reached_now)
+        min_edge_met_q <= 1'b1;
     end
   end
 
@@ -382,7 +422,7 @@ module dfc_rtl007 (
   // shift-subtract division, one 64-bit subtract+compare per cycle -- see
   // header for why this is not a single combinational `/` operator.
   // ==========================================================================
-  typedef enum logic [1:0] { MEAS_IDLE, MEAS_RUN, MEAS_APPLY } meas_state_e;
+  typedef enum logic [1:0] { MEAS_IDLE, MEAS_MULT, MEAS_RUN, MEAS_APPLY } meas_state_e;
   meas_state_e meas_state_q;
   logic [5:0]  meas_iter_q;
   logic [63:0] meas_rem_q, meas_quot_q, meas_divisor_q;
@@ -398,22 +438,78 @@ module dfc_rtl007 (
   wire        meas_round_up    = (meas_rem_x2 >= meas_divisor_ext);
   wire [64:0] meas_rpm_wide    = {1'b0, meas_quot_q} + (meas_round_up ? 65'd1 : 65'd0);
   logic        meas_divzero_q;
-  logic        meas_pending_q;
-  logic [63:0] meas_pending_dividend_q, meas_pending_divisor_q;
-  logic        meas_pending_divzero_q;
-
-  wire [63:0] period_dividend_c = 64'd3_000_000_000;
-  wire [63:0] period_divisor_c  = {32'd0, cycles_since_accepted_q} * {48'd0, ctl_ppr};
-  wire [63:0] count_dividend_c  = ({32'd0, edge_count_q} * 64'd30_000);
-  wire [63:0] count_divisor_c   = {48'd0, ctl_ppr};
 
   wire period_commit_trig = new_period_valid && (mode_q == MODE_PERIOD) && !mode_switch;
   wire count_commit_trig  = gate_expire && !mode_switch;
   wire any_commit_trig    = period_commit_trig || count_commit_trig;
 
-  wire [63:0] commit_dividend_c = period_commit_trig ? period_dividend_c : count_dividend_c;
-  wire [63:0] commit_divisor_c  = period_commit_trig ? period_divisor_c  : count_divisor_c;
-  wire        commit_divzero_c  = (ctl_ppr == 16'd0);
+  // A real, found-and-fixed multi-step timing-closure investigation,
+  // needed after RTL-008 came into existence alongside this module and
+  // pushed the combined design's real critical path over the 50 MHz
+  // budget (confirmed via 4 real build attempts on the ORIGINAL edge-
+  // qualification comparator alone: default/-noabc9/-Seed 1/-Seed
+  // 42-class, all genuinely failing 43-49 MHz). Two further real,
+  // sequential fixes were needed beyond that comparator fix, each found by
+  // actually re-running nextpnr and reading its new critical path report,
+  // not guessed:
+  //   1. Making the two mutually-exclusive divider multiplies' resource
+  //      sharing EXPLICIT (mux the multiply's own INPUTS before
+  //      multiplying instead of muxing the two multiplies' RESULTS
+  //      afterward) -- this alone did not close timing (confirmed via a
+  //      real subsequent nextpnr run, 48.48 MHz), because a genuinely
+  //      correctly-sized 32x16 multiplier feeding DIRECTLY into a register
+  //      in the SAME cycle it is selected is still real, unavoidable
+  //      combinational cost (8.83 ns logic + 11.80 ns routing, confirmed
+  //      via that same run's own critical path report) -- duplicated
+  //      identically in dfc_rtl008.sv.
+  //   2. PIPELINING the multiply into its own, isolated register-to-
+  //      register step (this block, below): capture the cheaply-selected
+  //      operands into registers the cycle a commit trigger arrives, then
+  //      perform the actual multiply in a dedicated MEAS_MULT state, and
+  //      only then load meas_quot_q/meas_divisor_q for MEAS_RUN. This adds
+  //      exactly one CORE_CLK cycle of latency before the divider's own
+  //      already-established 64-cycle run (65 cycles total, ~1.3 us at
+  //      50 MHz instead of ~1.28 us) -- a real, disclosed, but
+  //      functionally and numerically IDENTICAL-result timing change, not
+  //      a shortcut: every existing testbench's own generous
+  //      divider-latency margin (100 CORE_CLK cycles, wait_for_divide())
+  //      already comfortably covers this. BOTH real entry points that
+  //      previously fed a multiply directly into a register in the same
+  //      cycle -- a fresh trigger arriving while MEAS_IDLE, and a queued
+  //      "redo" trigger that arrived while the divider was already busy --
+  //      now funnel through this SAME MEAS_MULT state, so neither remains
+  //      a same-cycle-multiply-into-register path (the redo path was a
+  //      real, easy-to-miss second instance of the identical problem: a
+  //      per-candidate audit found it, not inspection of the "obvious"
+  //      path alone).
+  wire [31:0] mult_operand_a_c = period_commit_trig ? cycles_since_accepted_q : edge_count_q;
+  // Narrowed to 16 bits, matching the real width of both real operands
+  // (ctl_ppr is a real 16-bit REG-002 field; 30,000 fits in 16 bits) -- a
+  // real, self-found regression in this fix's own first draft: widening
+  // this operand to 32 bits (matching mult_operand_a_c's width, for no
+  // real reason) made the multiplier a full 32x32 rather than the
+  // original, smaller 32x16 shape.
+  wire [15:0] mult_operand_b_c = period_commit_trig ? ctl_ppr : 16'd30_000;
+  wire        commit_divzero_c = (ctl_ppr == 16'd0);
+
+  // The "active" operand set for whichever multiply MEAS_MULT is about to
+  // perform -- captured combinationally-selected values above into
+  // registers, isolating the actual multiply into its own cycle (see
+  // header). Refreshed unconditionally whenever any_commit_trig fires
+  // (below), regardless of meas_state_q, since once MEAS_MULT has
+  // consumed the previous contents (copying the product into
+  // meas_quot_q/meas_divisor_q), these registers are free to hold the
+  // newest trigger's operands even while MEAS_RUN/MEAS_APPLY are still
+  // processing the earlier commit -- the same "latest wins" disclosed
+  // simplification as before, just applied one pipeline stage earlier.
+  logic        active_is_period_q;
+  logic [31:0] active_mult_a_q;
+  logic [15:0] active_mult_b_q;
+  logic [15:0] active_ppr_q;
+  logic        active_divzero_q;
+  logic        mult_pending_q;  // a redo should run through MEAS_MULT again after the current divide finishes
+
+  wire [63:0] active_mult_result_c = {32'd0, active_mult_a_q} * {48'd0, active_mult_b_q};
 
   wire [63:0] meas_new_rem_c = {meas_rem_q[62:0], meas_quot_q[63]};
 
@@ -429,10 +525,12 @@ module dfc_rtl007 (
       meas_quot_q              <= 64'd0;
       meas_divisor_q           <= 64'd0;
       meas_divzero_q           <= 1'b0;
-      meas_pending_q           <= 1'b0;
-      meas_pending_dividend_q  <= 64'd0;
-      meas_pending_divisor_q   <= 64'd0;
-      meas_pending_divzero_q   <= 1'b0;
+      active_is_period_q       <= 1'b0;
+      active_mult_a_q          <= 32'd0;
+      active_mult_b_q          <= 16'd0;
+      active_ppr_q             <= 16'd0;
+      active_divzero_q         <= 1'b0;
+      mult_pending_q           <= 1'b0;
       apply_fire_q             <= 1'b0;
       apply_rpm_q              <= 16'd0;
       apply_range_error_q      <= 1'b0;
@@ -443,10 +541,12 @@ module dfc_rtl007 (
       meas_quot_q              <= 64'd0;
       meas_divisor_q           <= 64'd0;
       meas_divzero_q           <= 1'b0;
-      meas_pending_q           <= 1'b0;
-      meas_pending_dividend_q  <= 64'd0;
-      meas_pending_divisor_q   <= 64'd0;
-      meas_pending_divzero_q   <= 1'b0;
+      active_is_period_q       <= 1'b0;
+      active_mult_a_q          <= 32'd0;
+      active_mult_b_q          <= 16'd0;
+      active_ppr_q             <= 16'd0;
+      active_divzero_q         <= 1'b0;
+      mult_pending_q           <= 1'b0;
       apply_fire_q             <= 1'b0;
       apply_rpm_q              <= 16'd0;
       apply_range_error_q      <= 1'b0;
@@ -455,14 +555,17 @@ module dfc_rtl007 (
 
       unique case (meas_state_q)
         MEAS_IDLE: begin
-          if (any_commit_trig) begin
-            meas_quot_q    <= commit_dividend_c;
-            meas_rem_q     <= 64'd0;
-            meas_divisor_q <= commit_divisor_c;
-            meas_divzero_q <= commit_divzero_c;
-            meas_iter_q    <= 6'd63;
-            meas_state_q   <= MEAS_RUN;
-          end
+          if (any_commit_trig) meas_state_q <= MEAS_MULT;
+        end
+        MEAS_MULT: begin
+          // The isolated, register-to-register multiply step -- see
+          // header for why this exists as its own state.
+          meas_quot_q    <= active_is_period_q ? 64'd3_000_000_000 : active_mult_result_c;
+          meas_rem_q     <= 64'd0;
+          meas_divisor_q <= active_is_period_q ? active_mult_result_c : {48'd0, active_ppr_q};
+          meas_divzero_q <= active_divzero_q;
+          meas_iter_q    <= 6'd63;
+          meas_state_q   <= MEAS_RUN;
         end
         MEAS_RUN: begin
           if (meas_divzero_q) begin
@@ -495,14 +598,9 @@ module dfc_rtl007 (
             apply_range_error_q <= 1'b0;
           end
           apply_fire_q <= 1'b1;
-          if (meas_pending_q) begin
-            meas_quot_q    <= meas_pending_dividend_q;
-            meas_rem_q     <= 64'd0;
-            meas_divisor_q <= meas_pending_divisor_q;
-            meas_divzero_q <= meas_pending_divzero_q;
-            meas_iter_q    <= 6'd63;
-            meas_pending_q <= 1'b0;
-            meas_state_q   <= MEAS_RUN;
+          if (mult_pending_q) begin
+            mult_pending_q <= 1'b0;
+            meas_state_q   <= MEAS_MULT;
           end else begin
             meas_state_q <= MEAS_IDLE;
           end
@@ -510,13 +608,18 @@ module dfc_rtl007 (
         default: meas_state_q <= MEAS_IDLE;
       endcase
 
-      // A new trigger arriving while busy: latch as the single pending
-      // redo (latest wins -- see header).
-      if (any_commit_trig && (meas_state_q != MEAS_IDLE)) begin
-        meas_pending_q          <= 1'b1;
-        meas_pending_dividend_q <= commit_dividend_c;
-        meas_pending_divisor_q  <= commit_divisor_c;
-        meas_pending_divzero_q  <= commit_divzero_c;
+      // Refresh the "active" operand set whenever a new trigger arrives --
+      // unconditional on state (see the signals' own declaration comment
+      // above for why this is safe). While busy (not MEAS_IDLE), also
+      // queue a redo so MEAS_APPLY loops back through MEAS_MULT once the
+      // in-flight divide finishes (latest wins -- see header).
+      if (any_commit_trig) begin
+        active_is_period_q <= period_commit_trig;
+        active_mult_a_q    <= mult_operand_a_c;
+        active_mult_b_q    <= mult_operand_b_c;
+        active_ppr_q       <= ctl_ppr;
+        active_divzero_q   <= commit_divzero_c;
+        if (meas_state_q != MEAS_IDLE) mult_pending_q <= 1'b1;
       end
     end
   end

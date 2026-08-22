@@ -6,6 +6,7 @@
 // Cross-module forwarding: RTL-005 (see tools/reggen/rtl005_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-006 (see tools/reggen/rtl006_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-007 (see tools/reggen/rtl007_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-008 (see tools/reggen/rtl008_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -20,6 +21,8 @@
   // Aggregated real RTL-006 control, replacing the prior disconnected placeholder for: GPIO_CONTROL, GPIO_DIR, GPIO_EVENT_ENABLE, GPIO_EVENT_STATUS, GPIO_FALL_ENABLE, GPIO_IRQ_ENABLE, GPIO_OUT, GPIO_QUAL_0_3, GPIO_QUAL_4_7, GPIO_RISE_ENABLE, RTL006_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-007 status, replacing individual ports for: ROTOR_PERIOD_TICKS, ROTOR_RPM, ROTOR_STATUS, RTL007_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-007 control, replacing the prior disconnected placeholder for: ROTOR_CONTROL, ROTOR_EDGE_FILTER, ROTOR_HYSTERESIS, ROTOR_PULSES_PER_REV, ROTOR_STATUS, ROTOR_THRESH_HIGH, ROTOR_THRESH_LOW, ROTOR_TIMEOUT_US, RTL007_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-008 status, replacing individual ports for: ENGINE_PERIOD_TICKS, ENGINE_RPM, ENGINE_STATUS, RTL008_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-008 control, replacing the prior disconnected placeholder for: ENGINE_CONTROL, ENGINE_EDGE_FILTER, ENGINE_HYSTERESIS, ENGINE_PULSES_PER_REV, ENGINE_STATUS, ENGINE_THRESH_HIGH, ENGINE_THRESH_LOW, ENGINE_TIMEOUT_US, RTL008_EVT_OVERFLOW_STATUS
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -105,10 +108,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  route_destination_drop_count_2_3_status_i,
   input  logic [31:0]  route_destination_drop_count_4_status_i,
   input  logic [31:0]  route_active_control_status_i,
-  input  logic [31:0]  engine_status_status_i,
-  input  logic [31:0]  engine_rpm_status_i,
-  input  logic [31:0]  engine_period_ticks_status_i,
-  input  logic [31:0]  rtl008_evt_overflow_status_status_i,
   input  logic [31:0]  pulse0_status_status_i,
   input  logic [31:0]  pulse0_freq_q17_15_status_i,
   input  logic [31:0]  pulse0_period_ticks_status_i,
@@ -183,7 +182,9 @@ module dfc_config_regbank_regs (
   input  logic [82:0]  rtl006_status_i,
   output logic [122:0] rtl006_control_o,
   input  logic [72:0]  rtl007_status_i,
-  output logic [135:0] rtl007_control_o
+  output logic [135:0] rtl007_control_o,
+  input  logic [72:0]  rtl008_status_i,
+  output logic [135:0] rtl008_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -1146,14 +1147,22 @@ module dfc_config_regbank_regs (
     if (!rst_ni) engine_control_q <= 32'h00000002;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ENGINE_CONTROL)) engine_control_q <= wdata_i;
 
-  // ENGINE_STATUS (0x2104) -- external passthrough, owner RTL-008
-  wire [31:0] engine_status_q = engine_status_status_i;
+  // ENGINE_STATUS (0x2104) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-008, real
+  //   generation per contract REG-2104, not a permanent tie.
+  logic [31:0] engine_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) engine_status_pulse_q <= 32'h0;
+    else engine_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ENGINE_STATUS)) ? wdata_i : 32'h0;
 
-  // ENGINE_RPM (0x2108) -- external passthrough, owner RTL-008
-  wire [31:0] engine_rpm_q = engine_rpm_status_i;
+  // ENGINE_STATUS (0x2104) -- external passthrough, owner RTL-008. Reconstructed from the aggregated rtl008_status_i input (contract REG-2104), not an individual per-register port.
+  wire [31:0] engine_status_q = {26'h0, rtl008_status_i[8:8], rtl008_status_i[7:7], rtl008_status_i[6:6], rtl008_status_i[5:5], rtl008_status_i[4:4], rtl008_status_i[3:3]};
 
-  // ENGINE_PERIOD_TICKS (0x210C) -- external passthrough, owner RTL-008
-  wire [31:0] engine_period_ticks_q = engine_period_ticks_status_i;
+  // ENGINE_RPM (0x2108) -- external passthrough, owner RTL-008. Reconstructed from the aggregated rtl008_status_i input (contract REG-2108), not an individual per-register port.
+  wire [31:0] engine_rpm_q = {16'h0, rtl008_status_i[24:9]};
+
+  // ENGINE_PERIOD_TICKS (0x210C) -- external passthrough, owner RTL-008. Reconstructed from the aggregated rtl008_status_i input (contract REG-210C), not an individual per-register port.
+  wire [31:0] engine_period_ticks_q = {rtl008_status_i[56:25]};
 
   // ENGINE_THRESH_LOW (0x2110) -- Mixed: RW, RSV0, owner RTL-008
   logic [31:0] engine_thresh_low_q;
@@ -1185,8 +1194,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) engine_edge_filter_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ENGINE_EDGE_FILTER)) engine_edge_filter_q <= wdata_i;
 
-  // RTL008_EVT_OVERFLOW_STATUS (0x2124) -- external passthrough, owner RTL-008
-  wire [31:0] rtl008_evt_overflow_status_q = rtl008_evt_overflow_status_status_i;
+  // RTL008_EVT_OVERFLOW_STATUS (0x2124) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-008, real
+  //   generation per contract REG-2124, not a permanent tie.
+  logic [31:0] rtl008_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl008_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl008_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL008_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
+  // RTL008_EVT_OVERFLOW_STATUS (0x2124) -- external passthrough, owner RTL-008. Reconstructed from the aggregated rtl008_status_i input (contract REG-2124), not an individual per-register port.
+  wire [31:0] rtl008_evt_overflow_status_q = {8'h0, rtl008_status_i[72:57], 7'h0, rtl008_status_i[2:2]};
 
   // ENGINE_HYSTERESIS (0x2128) -- Mixed: RW, RSV0, owner RTL-008
   logic [31:0] engine_hysteresis_q;
@@ -1968,6 +1985,28 @@ module dfc_config_regbank_regs (
   assign rtl007_control_o[1] = rotor_control_q[1:1];  // ROTOR_CONTROL.rotor_control__rising_edge
   assign rtl007_control_o[0] = rotor_control_q[0:0];  // ROTOR_CONTROL.rotor_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl008_control_o -- real forwarding to RTL-008, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl008_control_t defines --
+  // cross-checked at generation time (136/136 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl008_control_o[135] = rtl008_evt_overflow_status_pulse_q[0:0];  // RTL008_EVT_OVERFLOW_STATUS.rtl008_evt_overflow_status__event_overflow
+  assign rtl008_control_o[134:119] = engine_hysteresis_q[15:0];  // ENGINE_HYSTERESIS.engine_hysteresis__hysteresis
+  assign rtl008_control_o[118:87] = engine_edge_filter_q[31:0];  // ENGINE_EDGE_FILTER.engine_edge_filter__min_edge_cycles
+  assign rtl008_control_o[86:55] = engine_timeout_us_q[31:0];  // ENGINE_TIMEOUT_US.engine_timeout_us__timeout_us
+  assign rtl008_control_o[54:39] = engine_pulses_per_rev_q[15:0];  // ENGINE_PULSES_PER_REV.engine_pulses_per_rev__ppr
+  assign rtl008_control_o[38:23] = engine_thresh_high_q[15:0];  // ENGINE_THRESH_HIGH.engine_thresh_high__threshold
+  assign rtl008_control_o[22:7] = engine_thresh_low_q[15:0];  // ENGINE_THRESH_LOW.engine_thresh_low__threshold
+  assign rtl008_control_o[6] = engine_status_pulse_q[5:5];  // ENGINE_STATUS.engine_status__updated
+  assign rtl008_control_o[5] = engine_status_pulse_q[4:4];  // ENGINE_STATUS.engine_status__range_error
+  assign rtl008_control_o[4] = engine_status_pulse_q[3:3];  // ENGINE_STATUS.engine_status__timeout
+  assign rtl008_control_o[3] = engine_control_q[3:3];  // ENGINE_CONTROL.engine_control__irq_enable
+  assign rtl008_control_o[2] = engine_control_q[2:2];  // ENGINE_CONTROL.engine_control__event_enable
+  assign rtl008_control_o[1] = engine_control_q[1:1];  // ENGINE_CONTROL.engine_control__rising_edge
+  assign rtl008_control_o[0] = engine_control_q[0:0];  // ENGINE_CONTROL.engine_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -2176,7 +2215,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_RTL007_EVT_OVERFLOW_STATUS: begin rdata_o = rtl007_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_HYSTERESIS: begin rdata_o = rotor_hysteresis_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_CONTROL: begin rdata_o = engine_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ENGINE_STATUS: begin rdata_o = engine_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ENGINE_STATUS: begin rdata_o = engine_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_RPM: begin rdata_o = engine_rpm_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_PERIOD_TICKS: begin rdata_o = engine_period_ticks_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_THRESH_LOW: begin rdata_o = engine_thresh_low_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
@@ -2184,7 +2223,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ENGINE_PULSES_PER_REV: begin rdata_o = engine_pulses_per_rev_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_TIMEOUT_US: begin rdata_o = engine_timeout_us_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_EDGE_FILTER: begin rdata_o = engine_edge_filter_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL008_EVT_OVERFLOW_STATUS: begin rdata_o = rtl008_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL008_EVT_OVERFLOW_STATUS: begin rdata_o = rtl008_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ENGINE_HYSTERESIS: begin rdata_o = engine_hysteresis_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_PULSE0_CONTROL: begin rdata_o = pulse0_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_PULSE0_STATUS: begin rdata_o = pulse0_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end

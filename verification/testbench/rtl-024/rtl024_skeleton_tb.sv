@@ -447,6 +447,82 @@ module rtl024_skeleton_tb;
            "gap on this file's own external rotor_i pin (RPM=500)"},
           (rd_data == 32'd500), 1'b1);
 
+    // ------------------------------------------------------------------
+    // RTL-008 integration checks -- real, added this session, over the
+    // real physical SPI pins and this skeleton's own real, external
+    // engine_i top-level testbench port (the same port ulx3s_dfc_top.sv
+    // wires to the real gp8/J1-8 ECP5 pad on hardware -- the first pin
+    // this project has assigned from the differential-capable range, see
+    // ULX3S_CONNECTION_MAP.md's own new Section 7). RTL-008's own real
+    // status_o.ready (legal configuration, reset-default thresholds)
+    // genuinely reaches the host-visible SUBSYS_READY aggregate (bit 7,
+    // ARCH-002 Appendix C module index 7) through RTL-002's real
+    // module_ready_i[7]. rtl008_integration_tb.sv already covers the
+    // RTL-001<->RTL-008 register bus, the real bit-serial RPM divider, and
+    // the RTL-007/RTL-008 independence requirement (RTL-008_RevA.md SS6)
+    // directly; this proves RTL-008's real readiness holds inside the
+    // actual RTL-024 top-level integration, plus a real, external engine_i
+    // pad-level round trip through this file's own top-level port (not a
+    // hierarchical force) all the way to a real host-readable ENGINE_RPM
+    // value -- using a genuinely different pulse gap/PPR/expected-RPM
+    // combination than the ROTOR_RPM check above, an independent,
+    // real-arithmetic proof this is RTL-008's own divider, not a copy of
+    // RTL-007's result.
+    // ------------------------------------------------------------------
+    check("rtl008 status_o.ready is real (legal configuration, reset-default thresholds)",
+          dut.rtl008_status[dfc_types_pkg::DFC_RTL008_STATUS__READY_HI], 1'b1);
+    check("rtl008 status_o.fault is real (clear, no illegal configuration forced)",
+          dut.rtl008_status[dfc_types_pkg::DFC_RTL008_STATUS__FAULT_HI], 1'b0);
+
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check("host-readable SUBSYS_READY bit 7 (RTL-008) reflects RTL-008's real readiness",
+          rd_data[7], 1'b1);
+
+    // Real, protected SUBSYS_ENABLE write -- genuinely enables the
+    // optional RTL-008 module bit (7) on top of the mandatory mask plus
+    // the already-enabled RTL-007 bit (6), over a real re-armed
+    // PROTECT_KEY sequence.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SUBSYS_ENABLE) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SUBSYS_ENABLE) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SUBSYS_ENABLE, 32'h0080_F8DF, wr_status);  // mandatory mask | bit 6 | bit 7
+    check("SUBSYS_ENABLE SPI write (RTL-008 bit 7 enabled) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_ENGINE_PULSES_PER_REV, 32'd1, wr_status);  // unprotected
+    check("ENGINE_PULSES_PER_REV SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ENGINE_CONTROL, 32'h0000_0003, wr_status);  // ENABLE=1, RISING_EDGE=1
+    check("ENGINE_CONTROL SPI write (ENABLE=1) accepted", |wr_status, 1'b0);
+
+    // Two real rising edges on this file's own external engine_i pin, 1500
+    // CORE_CLK cycles apart, must genuinely produce RPM = 3,000,000,000 /
+    // (1500 * 1) = 2,000,000 -> saturates to 0xFFFF (65535) with
+    // RANGE_ERROR through RTL-008's real bit-serial divider -- a
+    // deliberately different pulse gap/PPR combination than the ROTOR_RPM
+    // check above (RPM=500), proving this is RTL-008's own real,
+    // independent divider result, not a copy of RTL-007's.
+    engine_i = 1'b1;
+    @(posedge core_clk_i); #1;
+    engine_i = 1'b0;
+    repeat (1499) @(posedge core_clk_i);
+    engine_i = 1'b1;
+    @(posedge core_clk_i); #1;
+    engine_i = 1'b0;
+    repeat (100) @(posedge core_clk_i); #1;  // real divider latency margin
+
+    spi_read32(DFC_ADDR_ENGINE_RPM, rd_data, rd_status);
+    check("ENGINE_RPM SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable ENGINE_RPM genuinely reflects the real 1500-cycle pulse ",
+           "gap on this file's own external engine_i pin (saturates to 0xFFFF)"},
+          (rd_data == 32'd65535), 1'b1);
+
+    check({"RTL-007's own ROTOR_RPM state is unaffected by RTL-008's real engine_i ",
+           "pulse train just driven -- confirms independent state per ",
+           "ARCH-RTL008-001 even inside the actual RTL-024 top-level integration"},
+          dut.rtl007_status[dfc_types_pkg::DFC_RTL007_STATUS__ROTOR_RPM__RPM_HI:dfc_types_pkg::DFC_RTL007_STATUS__ROTOR_RPM__RPM_LO] == 16'd500,
+          1'b1);
+
     // The stub topology's remaining mandatory-mask modules (RTL-012
     // through RTL-016, etc.) never report ready, so RTL-002 is expected to
     // run out its full 499,000-cycle mandatory-init timeout and land in
