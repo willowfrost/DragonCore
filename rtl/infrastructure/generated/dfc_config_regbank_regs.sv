@@ -8,6 +8,7 @@
 // Cross-module forwarding: RTL-007 (see tools/reggen/rtl007_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-008 (see tools/reggen/rtl008_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-009 (see tools/reggen/rtl009_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-010 (see tools/reggen/rtl010_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -26,6 +27,8 @@
   // Aggregated real RTL-008 control, replacing the prior disconnected placeholder for: ENGINE_CONTROL, ENGINE_EDGE_FILTER, ENGINE_HYSTERESIS, ENGINE_PULSES_PER_REV, ENGINE_STATUS, ENGINE_THRESH_HIGH, ENGINE_THRESH_LOW, ENGINE_TIMEOUT_US, RTL008_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-009 status, replacing individual ports for: PULSE0_FREQ_Q17_15, PULSE0_PERIOD_TICKS, PULSE0_STATUS, PULSE1_FREQ_Q17_15, PULSE1_PERIOD_TICKS, PULSE1_STATUS, RTL009_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-009 control, replacing the prior disconnected placeholder for: PULSE0_CONTROL, PULSE0_EDGE_FILTER, PULSE0_HYSTERESIS_Q17_15, PULSE0_STATUS, PULSE0_THRESH_HIGH_Q17_15, PULSE0_THRESH_LOW_Q17_15, PULSE0_TIMEOUT_US, PULSE1_CONTROL, PULSE1_EDGE_FILTER, PULSE1_HYSTERESIS_Q17_15, PULSE1_STATUS, PULSE1_THRESH_HIGH_Q17_15, PULSE1_THRESH_LOW_Q17_15, PULSE1_TIMEOUT_US, RTL009_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-010 status, replacing individual ports for: RTL010_EVT_OVERFLOW_STATUS, SENSOR0_CURRENT_AGE_MS, SENSOR0_META, SENSOR0_STATUS, SENSOR0_VALUE, SENSOR1_CURRENT_AGE_MS, SENSOR1_META, SENSOR1_STATUS, SENSOR1_VALUE, SENSOR_STATUS
+  // Aggregated real RTL-010 control, replacing the prior disconnected placeholder for: RTL010_EVT_OVERFLOW_STATUS, SENSOR0_EVENT_IRQ_CFG, SENSOR0_HYSTERESIS, SENSOR0_MAX_AGE_MS, SENSOR0_STATUS, SENSOR0_THRESH_HIGH, SENSOR0_THRESH_LOW, SENSOR1_EVENT_IRQ_CFG, SENSOR1_HYSTERESIS, SENSOR1_MAX_AGE_MS, SENSOR1_STATUS, SENSOR1_THRESH_HIGH, SENSOR1_THRESH_LOW, SENSOR_CONTROL, SENSOR_STATUS, SENSOR_UPDATE_COMMIT, SENSOR_UPDATE_META, SENSOR_UPDATE_SELECT, SENSOR_UPDATE_VALUE
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -111,16 +114,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  route_destination_drop_count_2_3_status_i,
   input  logic [31:0]  route_destination_drop_count_4_status_i,
   input  logic [31:0]  route_active_control_status_i,
-  input  logic [31:0]  sensor_status_status_i,
-  input  logic [31:0]  sensor0_value_status_i,
-  input  logic [31:0]  sensor0_status_status_i,
-  input  logic [31:0]  sensor0_current_age_ms_status_i,
-  input  logic [31:0]  sensor1_value_status_i,
-  input  logic [31:0]  sensor1_status_status_i,
-  input  logic [31:0]  sensor1_current_age_ms_status_i,
-  input  logic [31:0]  rtl010_evt_overflow_status_status_i,
-  input  logic [31:0]  sensor0_meta_status_i,
-  input  logic [31:0]  sensor1_meta_status_i,
   input  logic [31:0]  health_raw_in_status_i,
   input  logic [31:0]  health_sync_in_status_i,
   input  logic [31:0]  health_qual_in_status_i,
@@ -182,7 +175,9 @@ module dfc_config_regbank_regs (
   input  logic [72:0]  rtl008_status_i,
   output logic [135:0] rtl008_control_o,
   input  logic [158:0]  rtl009_status_i,
-  output logic [334:0] rtl009_control_o
+  output logic [334:0] rtl009_control_o,
+  input  logic [224:0]  rtl010_status_i,
+  output logic [345:0] rtl010_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -1332,8 +1327,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) sensor_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR_CONTROL)) sensor_control_q <= wdata_i;
 
-  // SENSOR_STATUS (0x2304) -- external passthrough, owner RTL-010
-  wire [31:0] sensor_status_q = sensor_status_status_i;
+  // SENSOR_STATUS (0x2304) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-010, real
+  //   generation per contract REG-2304, not a permanent tie.
+  logic [31:0] sensor_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) sensor_status_pulse_q <= 32'h0;
+    else sensor_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR_STATUS)) ? wdata_i : 32'h0;
+
+  // SENSOR_STATUS (0x2304) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-2304), not an individual per-register port.
+  wire [31:0] sensor_status_q = {26'h0, rtl010_status_i[8:8], rtl010_status_i[7:7], rtl010_status_i[6:6], rtl010_status_i[5:5], rtl010_status_i[4:4], rtl010_status_i[3:3]};
 
   // SENSOR_UPDATE_SELECT (0x2308) -- Mixed: RW, RSV0, owner RTL-001 / RTL-010
   logic [31:0] sensor_update_select_q;
@@ -1353,14 +1356,30 @@ module dfc_config_regbank_regs (
     if (!rst_ni) sensor_update_meta_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR_UPDATE_META)) sensor_update_meta_q <= wdata_i;
 
-  // SENSOR_UPDATE_COMMIT (0x2314) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR_UPDATE_COMMIT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // SENSOR_UPDATE_COMMIT (0x2314) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-010, real
+  //   generation per contract REG-2314, not a permanent tie.
+  logic [31:0] sensor_update_commit_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) sensor_update_commit_pulse_q <= 32'h0;
+    else sensor_update_commit_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR_UPDATE_COMMIT)) ? wdata_i : 32'h0;
+
+  // SENSOR_UPDATE_COMMIT (0x2314) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-010 via sensor_update_commit_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] sensor_update_commit_q = 32'h00000000;
 
-  // SENSOR0_VALUE (0x2320) -- external passthrough, owner RTL-010
-  wire [31:0] sensor0_value_q = sensor0_value_status_i;
+  // SENSOR0_VALUE (0x2320) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-2320), not an individual per-register port.
+  wire [31:0] sensor0_value_q = {rtl010_status_i[40:9]};
 
-  // SENSOR0_STATUS (0x2324) -- external passthrough, owner RTL-010
-  wire [31:0] sensor0_status_q = sensor0_status_status_i;
+  // SENSOR0_STATUS (0x2324) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-010, real
+  //   generation per contract REG-2324, not a permanent tie.
+  logic [31:0] sensor0_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) sensor0_status_pulse_q <= 32'h0;
+    else sensor0_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR0_STATUS)) ? wdata_i : 32'h0;
+
+  // SENSOR0_STATUS (0x2324) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-2324), not an individual per-register port.
+  wire [31:0] sensor0_status_q = {27'h0, rtl010_status_i[45:45], rtl010_status_i[44:44], rtl010_status_i[43:43], rtl010_status_i[42:42], rtl010_status_i[41:41]};
 
   // SENSOR0_MAX_AGE_MS (0x2328) -- RW, owner RTL-010
   logic [31:0] sensor0_max_age_ms_q;
@@ -1368,8 +1387,8 @@ module dfc_config_regbank_regs (
     if (!rst_ni) sensor0_max_age_ms_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR0_MAX_AGE_MS)) sensor0_max_age_ms_q <= wdata_i;
 
-  // SENSOR0_CURRENT_AGE_MS (0x232C) -- external passthrough, owner RTL-010
-  wire [31:0] sensor0_current_age_ms_q = sensor0_current_age_ms_status_i;
+  // SENSOR0_CURRENT_AGE_MS (0x232C) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-232C), not an individual per-register port.
+  wire [31:0] sensor0_current_age_ms_q = {rtl010_status_i[77:46]};
 
   // SENSOR0_THRESH_LOW (0x2330) -- RW, owner RTL-010
   logic [31:0] sensor0_thresh_low_q;
@@ -1389,11 +1408,19 @@ module dfc_config_regbank_regs (
     if (!rst_ni) sensor0_event_irq_cfg_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR0_EVENT_IRQ_CFG)) sensor0_event_irq_cfg_q <= wdata_i;
 
-  // SENSOR1_VALUE (0x2340) -- external passthrough, owner RTL-010
-  wire [31:0] sensor1_value_q = sensor1_value_status_i;
+  // SENSOR1_VALUE (0x2340) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-2340), not an individual per-register port.
+  wire [31:0] sensor1_value_q = {rtl010_status_i[109:78]};
 
-  // SENSOR1_STATUS (0x2344) -- external passthrough, owner RTL-010
-  wire [31:0] sensor1_status_q = sensor1_status_status_i;
+  // SENSOR1_STATUS (0x2344) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-010, real
+  //   generation per contract REG-2344, not a permanent tie.
+  logic [31:0] sensor1_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) sensor1_status_pulse_q <= 32'h0;
+    else sensor1_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR1_STATUS)) ? wdata_i : 32'h0;
+
+  // SENSOR1_STATUS (0x2344) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-2344), not an individual per-register port.
+  wire [31:0] sensor1_status_q = {27'h0, rtl010_status_i[114:114], rtl010_status_i[113:113], rtl010_status_i[112:112], rtl010_status_i[111:111], rtl010_status_i[110:110]};
 
   // SENSOR1_MAX_AGE_MS (0x2348) -- RW, owner RTL-010
   logic [31:0] sensor1_max_age_ms_q;
@@ -1401,8 +1428,8 @@ module dfc_config_regbank_regs (
     if (!rst_ni) sensor1_max_age_ms_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR1_MAX_AGE_MS)) sensor1_max_age_ms_q <= wdata_i;
 
-  // SENSOR1_CURRENT_AGE_MS (0x234C) -- external passthrough, owner RTL-010
-  wire [31:0] sensor1_current_age_ms_q = sensor1_current_age_ms_status_i;
+  // SENSOR1_CURRENT_AGE_MS (0x234C) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-234C), not an individual per-register port.
+  wire [31:0] sensor1_current_age_ms_q = {rtl010_status_i[146:115]};
 
   // SENSOR1_THRESH_LOW (0x2350) -- RW, owner RTL-010
   logic [31:0] sensor1_thresh_low_q;
@@ -1422,8 +1449,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) sensor1_event_irq_cfg_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR1_EVENT_IRQ_CFG)) sensor1_event_irq_cfg_q <= wdata_i;
 
-  // RTL010_EVT_OVERFLOW_STATUS (0x235C) -- external passthrough, owner RTL-010
-  wire [31:0] rtl010_evt_overflow_status_q = rtl010_evt_overflow_status_status_i;
+  // RTL010_EVT_OVERFLOW_STATUS (0x235C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-010, real
+  //   generation per contract REG-235C, not a permanent tie.
+  logic [31:0] rtl010_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl010_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl010_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL010_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
+  // RTL010_EVT_OVERFLOW_STATUS (0x235C) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-235C), not an individual per-register port.
+  wire [31:0] rtl010_evt_overflow_status_q = {8'h0, rtl010_status_i[224:209], 7'h0, rtl010_status_i[2:2]};
 
   // SENSOR0_HYSTERESIS (0x2360) -- RW, owner RTL-010
   logic [31:0] sensor0_hysteresis_q;
@@ -1431,8 +1466,8 @@ module dfc_config_regbank_regs (
     if (!rst_ni) sensor0_hysteresis_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR0_HYSTERESIS)) sensor0_hysteresis_q <= wdata_i;
 
-  // SENSOR0_META (0x2364) -- external passthrough, owner RTL-010
-  wire [31:0] sensor0_meta_q = sensor0_meta_status_i;
+  // SENSOR0_META (0x2364) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-2364), not an individual per-register port.
+  wire [31:0] sensor0_meta_q = {1'h0, rtl010_status_i[177:154], rtl010_status_i[153:147]};
 
   // SENSOR1_HYSTERESIS (0x2368) -- RW, owner RTL-010
   logic [31:0] sensor1_hysteresis_q;
@@ -1440,8 +1475,8 @@ module dfc_config_regbank_regs (
     if (!rst_ni) sensor1_hysteresis_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SENSOR1_HYSTERESIS)) sensor1_hysteresis_q <= wdata_i;
 
-  // SENSOR1_META (0x236C) -- external passthrough, owner RTL-010
-  wire [31:0] sensor1_meta_q = sensor1_meta_status_i;
+  // SENSOR1_META (0x236C) -- external passthrough, owner RTL-010. Reconstructed from the aggregated rtl010_status_i input (contract REG-236C), not an individual per-register port.
+  wire [31:0] sensor1_meta_q = {1'h0, rtl010_status_i[208:185], rtl010_status_i[184:178]};
 
   // HEALTH_CONTROL (0x2400) -- Mixed: RW, RSV0, owner RTL-011
   logic [31:0] health_control_q;
@@ -2062,6 +2097,40 @@ module dfc_config_regbank_regs (
   assign rtl009_control_o[1] = pulse0_control_q[1:1];  // PULSE0_CONTROL.pulse0_control__rising_edge
   assign rtl009_control_o[0] = pulse0_control_q[0:0];  // PULSE0_CONTROL.pulse0_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl010_control_o -- real forwarding to RTL-010, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl010_control_t defines --
+  // cross-checked at generation time (346/346 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl010_control_o[345] = rtl010_evt_overflow_status_pulse_q[0:0];  // RTL010_EVT_OVERFLOW_STATUS.rtl010_evt_overflow_status__event_overflow
+  assign rtl010_control_o[344:313] = sensor1_hysteresis_q[31:0];  // SENSOR1_HYSTERESIS.sensor1_hysteresis__hysteresis
+  assign rtl010_control_o[312:281] = sensor0_hysteresis_q[31:0];  // SENSOR0_HYSTERESIS.sensor0_hysteresis__hysteresis
+  assign rtl010_control_o[280:277] = sensor1_event_irq_cfg_q[7:4];  // SENSOR1_EVENT_IRQ_CFG.sensor1_event_irq_cfg__irq_enable
+  assign rtl010_control_o[276:273] = sensor1_event_irq_cfg_q[3:0];  // SENSOR1_EVENT_IRQ_CFG.sensor1_event_irq_cfg__event_enable
+  assign rtl010_control_o[272:241] = sensor1_thresh_high_q[31:0];  // SENSOR1_THRESH_HIGH.sensor1_thresh_high__threshold
+  assign rtl010_control_o[240:209] = sensor1_thresh_low_q[31:0];  // SENSOR1_THRESH_LOW.sensor1_thresh_low__threshold
+  assign rtl010_control_o[208:177] = sensor1_max_age_ms_q[31:0];  // SENSOR1_MAX_AGE_MS.sensor1_max_age_ms__max_age_ms
+  assign rtl010_control_o[176] = sensor1_status_pulse_q[4:4];  // SENSOR1_STATUS.sensor1_status__event
+  assign rtl010_control_o[175:172] = sensor0_event_irq_cfg_q[7:4];  // SENSOR0_EVENT_IRQ_CFG.sensor0_event_irq_cfg__irq_enable
+  assign rtl010_control_o[171:168] = sensor0_event_irq_cfg_q[3:0];  // SENSOR0_EVENT_IRQ_CFG.sensor0_event_irq_cfg__event_enable
+  assign rtl010_control_o[167:136] = sensor0_thresh_high_q[31:0];  // SENSOR0_THRESH_HIGH.sensor0_thresh_high__threshold
+  assign rtl010_control_o[135:104] = sensor0_thresh_low_q[31:0];  // SENSOR0_THRESH_LOW.sensor0_thresh_low__threshold
+  assign rtl010_control_o[103:72] = sensor0_max_age_ms_q[31:0];  // SENSOR0_MAX_AGE_MS.sensor0_max_age_ms__max_age_ms
+  assign rtl010_control_o[71] = sensor0_status_pulse_q[4:4];  // SENSOR0_STATUS.sensor0_status__event
+  assign rtl010_control_o[70] = sensor_update_commit_pulse_q[0:0];  // SENSOR_UPDATE_COMMIT.sensor_update_commit__commit
+  assign rtl010_control_o[69:46] = sensor_update_meta_q[31:8];  // SENSOR_UPDATE_META.sensor_update_meta__sequence
+  assign rtl010_control_o[45:39] = sensor_update_meta_q[7:1];  // SENSOR_UPDATE_META.sensor_update_meta__source
+  assign rtl010_control_o[38] = sensor_update_meta_q[0:0];  // SENSOR_UPDATE_META.sensor_update_meta__valid
+  assign rtl010_control_o[37:6] = sensor_update_value_q[31:0];  // SENSOR_UPDATE_VALUE.sensor_update_value__value
+  assign rtl010_control_o[5] = sensor_update_select_q[0:0];  // SENSOR_UPDATE_SELECT.sensor_update_select__channel
+  assign rtl010_control_o[4] = sensor_status_pulse_q[5:5];  // SENSOR_STATUS.sensor_status__updated
+  assign rtl010_control_o[3] = sensor_status_pulse_q[4:4];  // SENSOR_STATUS.sensor_status__update_rejected
+  assign rtl010_control_o[2] = sensor_control_q[2:2];  // SENSOR_CONTROL.sensor_control__irq_enable
+  assign rtl010_control_o[1] = sensor_control_q[1:1];  // SENSOR_CONTROL.sensor_control__event_enable
+  assign rtl010_control_o[0] = sensor_control_q[0:0];  // SENSOR_CONTROL.sensor_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -2300,26 +2369,26 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_RTL009_EVT_OVERFLOW_STATUS: begin rdata_o = rtl009_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_PULSE1_HYSTERESIS_Q17_15: begin rdata_o = pulse1_hysteresis_q17_15_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR_CONTROL: begin rdata_o = sensor_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_SENSOR_STATUS: begin rdata_o = sensor_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_SENSOR_STATUS: begin rdata_o = sensor_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR_UPDATE_SELECT: begin rdata_o = sensor_update_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR_UPDATE_VALUE: begin rdata_o = sensor_update_value_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR_UPDATE_META: begin rdata_o = sensor_update_meta_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR_UPDATE_COMMIT: begin rdata_o = sensor_update_commit_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR0_VALUE: begin rdata_o = sensor0_value_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_SENSOR0_STATUS: begin rdata_o = sensor0_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_SENSOR0_STATUS: begin rdata_o = sensor0_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR0_MAX_AGE_MS: begin rdata_o = sensor0_max_age_ms_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR0_CURRENT_AGE_MS: begin rdata_o = sensor0_current_age_ms_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR0_THRESH_LOW: begin rdata_o = sensor0_thresh_low_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR0_THRESH_HIGH: begin rdata_o = sensor0_thresh_high_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR0_EVENT_IRQ_CFG: begin rdata_o = sensor0_event_irq_cfg_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR1_VALUE: begin rdata_o = sensor1_value_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_SENSOR1_STATUS: begin rdata_o = sensor1_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_SENSOR1_STATUS: begin rdata_o = sensor1_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR1_MAX_AGE_MS: begin rdata_o = sensor1_max_age_ms_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR1_CURRENT_AGE_MS: begin rdata_o = sensor1_current_age_ms_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR1_THRESH_LOW: begin rdata_o = sensor1_thresh_low_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR1_THRESH_HIGH: begin rdata_o = sensor1_thresh_high_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR1_EVENT_IRQ_CFG: begin rdata_o = sensor1_event_irq_cfg_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL010_EVT_OVERFLOW_STATUS: begin rdata_o = rtl010_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL010_EVT_OVERFLOW_STATUS: begin rdata_o = rtl010_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR0_HYSTERESIS: begin rdata_o = sensor0_hysteresis_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR0_META: begin rdata_o = sensor0_meta_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SENSOR1_HYSTERESIS: begin rdata_o = sensor1_hysteresis_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

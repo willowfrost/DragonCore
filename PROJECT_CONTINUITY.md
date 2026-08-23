@@ -1903,8 +1903,128 @@ written in this project going forward, not just a historical note.
     requiring any further change to already-shipped RTL-007/008**, closing
     the risk this document's own prior lessons-learned entry (Section 5)
     flagged before this module was written.
-- **RTL-010 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001 through RTL-009/024, exist and are citation-verified
+- **RTL-010 (Sensor Monitor Interface): real, implemented and integrated
+  into `dfc_rtl024.sv`.** The fourth Monitoring-domain module, and the
+  first with NO physical pin at all — confirmed directly against ARCH-002's
+  own 16-port catalog before any RTL was written; sensor values arrive
+  exclusively through host writes to the staged `SENSOR_UPDATE_SELECT`/
+  `_VALUE`/`_META`/`_COMMIT` registers, not a dedicated external pad.
+  `fpga/ecp5/ulx3s_dfc.lpf` and `ULX3S_CONNECTION_MAP.md` needed NO change
+  for this module — a real, confirmed absence, not an oversight. Two
+  independent signed 32-bit sampled-sensor channels with signed threshold/
+  hysteresis comparison and an age/staleness model (ARCH-MON-006/007), the
+  first module in this project needing genuine signed comparison
+  arithmetic (`$signed()` casts, ordinary IEEE-1800 syntax with no
+  toolchain finding against it). Real cross-module register forwarding for
+  all 25 REG-002 0x2300-0x236C registers via `reggen.py` v4 and
+  `tools/reggen/rtl010_field_map.json` (19 control registers, 10 status
+  registers — every external RTL-010 register's host-READ path closed from
+  the start, same discipline RTL-006 onward established). Real, counted
+  own-diagnostic-event generation (event ID 0x0033, source index 9) shared
+  by both channels PLUS the module-wide accepted/rejected commit events,
+  through ONE pending slot (a 4-way shared-slot arbitration — reject >
+  channel 0 > channel 1 > accept — the first module needing more than a
+  2-way arbitration).
+  - **One real ARCH-002 gap, found and fixed before this module was
+    implemented, approved before implementation (the ninth real instance
+    of this exact gap class):** `dfc_rtl010_control_t` (345 bits) had no
+    clear-request field for `RTL010_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` —
+    grown 345->346 bits, same growth-at-new-highest-bit pattern already
+    established (`OPEN_ISSUES.md` item 36).
+  - **A real, disclosed gap logged but NOT fixed this session** (a real
+    dependency on RTL-021, which does not exist yet): ARCH-MON-007/
+    ARCH-RTL010-001 both describe "host commit precedes ROUTED commit,"
+    but ARCH-002's own 16-port catalog gives RTL-010 no port at all for a
+    routed update — unlike the already-familiar `event_condition_enable_i`/
+    `irq_condition_enable_i` stub pattern, there is no port here to tie off
+    in the first place. `dfc_rtl010.sv` implements only the real host-commit
+    half; the "host wins a same-cycle conflict against a routed commit"
+    half of VP-MON-007 cannot be exercised until RTL-021 exists and
+    ARCH-002 gains a real port for it (`OPEN_ISSUES.md` item 38).
+  - **Resolved without an ARCH-002 edit** (same class as items 1/10/11/13/
+    19/22): `RTL-010_RevA.md`'s own restated summary of Appendix F.3 index 9
+    disagreed with ARCH-002's real table (missing the two module-wide
+    update-accepted/update-rejected condition bits entirely) — resolved in
+    favor of ARCH-002 (`OPEN_ISSUES.md` item 37).
+  - **Four real, disclosed design interpretations**, each forced by a
+    genuine gap rather than guessed: recovery shares its own condition's
+    mask bit (no standalone recovery bit exists in RTL-010's own F.3 row,
+    unlike RTL-007/008/009); layered enable gating derived directly from
+    F.3's own preamble formula (per-channel-per-condition enables REPLACE,
+    not AND with, the module-wide ones); the commit accept/reject
+    precondition is `active`, and "all staged update members" describes
+    atomicity, not a completeness check; and threshold evaluation runs
+    continuously (every active cycle), not only at commit time, since
+    thresholds are plain RW registers independent of the staged commit
+    mechanism (`OPEN_ISSUES.md` item 39).
+  - **Proven via a new, real integration testbench**,
+    `rtl010_integration_tb.sv` (50/50 checks): real host writes via RTL-001's
+    real DRI path genuinely change both channels' configuration
+    independently, a real staged host commit atomically produces real
+    value/valid/source/sequence/age readback, real channel independence
+    checked in both directions, the complete signed representation
+    (negative/zero/positive/INT32_MIN/INT32_MAX) against real signed LOW/
+    HIGH comparison, hysteresis enter/exit at the exact real boundary, the
+    real commit-rejection path (module disabled), a real, live 1 ms age
+    tick proving `SENSOR0_CURRENT_AGE_MS` genuinely advances and
+    `MAX_AGE_MS=0` genuinely disables staleness (not "stale after 0 ms"),
+    the real `RTL010_EVT_OVERFLOW_STATUS` host-read-and-clear round trip,
+    and real illegal-configuration-to-fault detection. **Additionally
+    proven inside the actual RTL-024 top-level integration**:
+    `rtl024_skeleton_tb.sv` was updated with a real SPI read of
+    `SUBSYS_READY` confirming bit 9 (RTL-010) reflects RTL-010's real
+    readiness, a real protected `SUBSYS_ENABLE` write genuinely enabling
+    the optional module-9 bit, and a real staged commit driven entirely
+    over this file's own external SPI pins reaching a real host SPI READ
+    of `SENSOR0_VALUE`, plus a real check that RTL-009's own
+    `PULSE0_FREQ_Q17_15` state is genuinely unaffected by RTL-010's commit.
+  - Every other existing testbench was checked for breakage from RTL-010's
+    two new `dfc_rtl001.sv` ports (`rtl010_control_o`/`rtl010_status_i`,
+    replacing 10 individual stub-tied status ports): `regbank_smoke_tb.sv`
+    needed its Check 3 redirected a ninth time (... -> SENSOR_STATUS ->
+    now HEALTH_RAW_IN, since SENSOR_STATUS is aggregated too as of this
+    session) and `dri_transaction_tb.sv` needed the new ports declared/tied
+    off.
+  - **CONFIRMED, end-to-end, on the person's real machine — a real
+    `gate.ps1` run passed completely clean**: `lint.ps1` PASSED, `sim.ps1`
+    14/14 testbenches (**508/508 checks** — verified by adding up each
+    testbench's own individually-reported count from the real output:
+    12+12+16+28+30+24+37+35+44+47+60+50+100+13=508, not restated from
+    memory), `formal.ps1` both `bmc` and `prove` tasks genuinely PASS (real
+    k-induction against real RTL-001, unaffected by the RTL-010 changes),
+    coverage check ran clean (120/353 registers textually referenced, up
+    from 119/353 before the final SENSOR1_CURRENT_AGE_MS coverage fix).
+    **Two genuine, real build gaps were found and fixed to get there.**
+    First: the initial `build_ecp5.ps1` attempt failed at the Yosys
+    hierarchy-check stage ("Module `\dfc_rtl010' referenced... is not part
+    of the design") because `dfc_rtl010.sv` was missing from both
+    `$SourceFiles` and the synthesis `.ys` script's read order — the same
+    class of gap RTL-002/004/009 each hit before it — fixed by adding it in
+    both places, immediately after `dfc_rtl009.sv`. Second, a real timing
+    regression: two independent place-and-route runs then failed with the
+    IDENTICAL result (47.98 MHz FAIL at 50 MHz), confirmed genuinely
+    reproducible (not placement variance) before touching any RTL. The
+    failing critical path was entirely inside the already-shipped
+    `dfc_rtl024_spi_bridge.sv` (not RTL-010's own logic) — RTL-010's added
+    die area evidently consumed just enough routing headroom to break an
+    already-marginal SPI-bridge path (its own `B_WORD` state read a
+    variable-index array 4 times combinationally in one cycle, feeding a
+    chained CRC computation — the identical class of bug this file's own
+    header already documented fixing once before on the write side).
+    **Approval was sought and given before touching this already-shipped
+    file** (per this session's own task instructions); fixed the same
+    structural way, splitting `B_WORD` into `B_WORD_FETCH`/`B_WORD_CRC` so
+    the array read is a plain register with no same-cycle combinational
+    consumer (`OPEN_ISSUES.md` item 40). Verified end-to-end after the fix:
+    the full 508/508-check regression unchanged, a real `gate.ps1` run
+    clean, and a real `build_ecp5.ps1` run (Build ID `20260822_220658`)
+    reaching **50.30 MHz PASS at 50 MHz required** (TRELLIS_COMB 29%/
+    TRELLIS_FF 19% utilization, no `--timing-allow-fail`) — a narrow
+    margin (under 1% headroom) flagged for RTL-011 onward the same way
+    RTL-007's own narrow margin correctly predicted RTL-008's later
+    regression (item 31).
+- **RTL-011 through RTL-023:** spec-complete (all 24 module specs,
+  including RTL-001 through RTL-010/024, exist and are citation-verified
   against the `-002` baseline) but **not yet implemented as real RTL.**
   This is the actual next phase of work — see Section 5.
 - **Full regression across every real testbench in the project, run for
@@ -2159,15 +2279,22 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-009 are now all real and implemented — RTL-009
-  completes the Monitoring domain's ARCH-MON-002/003/005-derived module
-  family (Pulse/Frequency Measurement, two independent channels sharing
-  one physical port); the next real step is RTL-010 (Sampled Sensor)**,
-  one module at a time, using the exact same real-verification discipline
-  as RTL-001 through RTL-009 (compile, simulate, and only then trust —
-  never claim something works without actually running it). Then Safety,
-  Databus, in that order (Programmable is now out of scope entirely — see
-  the scope-change entry directly above).
+- **RTL-002 through RTL-010 are now all real and implemented — RTL-010
+  completes the Monitoring domain (Sensor Monitor Interface, the first
+  module with no physical pin at all, host-write-only sensor updates); the
+  next real step is RTL-011 (System Health Monitor)**, one module at a
+  time, using the exact same real-verification discipline as RTL-001
+  through RTL-010 (compile, simulate, and only then trust — never claim
+  something works without actually running it). Then Safety, Databus, in
+  that order (Programmable is now out of scope entirely — see the
+  scope-change entry directly above).
+  **RTL-010's own session found a real, narrow timing margin (50.30 MHz,
+  under 1% headroom above the 50 MHz requirement, `OPEN_ISSUES.md` item
+  40) after fixing a real regression in the already-shipped SPI bridge**
+  — read that item before starting RTL-011: a module adding meaningful new
+  combinational depth or die area should expect this margin to need
+  attention again, the same way RTL-007's own narrow margin correctly
+  predicted RTL-008's later regression.
   **RTL-009's own session confirmed the pipelined-multiply pattern
   (`OPEN_ISSUES.md` items 26/27/30/31) generalizes cleanly to two channels
   in one module** — see Section 4's own RTL-009 entry below for the real

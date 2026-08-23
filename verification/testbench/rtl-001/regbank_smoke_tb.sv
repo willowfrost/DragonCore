@@ -108,6 +108,15 @@ module regbank_smoke_tb;
   // ports.
   logic [dfc_types_pkg::DFC_RTL009_STATUS_WIDTH-1:0]  rtl009_status_i;
   logic [dfc_types_pkg::DFC_RTL009_CONTROL_WIDTH-1:0] rtl009_control_o;
+  // RTL-010's real cross-module register bus, aggregated this session
+  // (reggen.py v4 from tools/reggen/rtl010_field_map.json) --
+  // sensor_status_status_i, sensor0_value_status_i, sensor0_status_status_i,
+  // sensor0_current_age_ms_status_i, sensor1_value_status_i,
+  // sensor1_status_status_i, sensor1_current_age_ms_status_i,
+  // rtl010_evt_overflow_status_status_i, sensor0_meta_status_i, and
+  // sensor1_meta_status_i no longer exist as individual ports.
+  logic [dfc_types_pkg::DFC_RTL010_STATUS_WIDTH-1:0]  rtl010_status_i;
+  logic [dfc_types_pkg::DFC_RTL010_CONTROL_WIDTH-1:0] rtl010_control_o;
   logic [31:0] host_status_status_i;
   logic [31:0] host_last_result_status_i;
   logic [31:0] host_last_address_status_i;
@@ -159,16 +168,6 @@ module regbank_smoke_tb;
   logic [31:0] route_active_filter_mask_status_i;
   logic [31:0] route_entry_status_status_i;
   logic [31:0] rtl021_evt_overflow_status_status_i;
-  logic [31:0] sensor_status_status_i;
-  logic [31:0] sensor0_value_status_i;
-  logic [31:0] sensor0_status_status_i;
-  logic [31:0] sensor0_current_age_ms_status_i;
-  logic [31:0] sensor1_value_status_i;
-  logic [31:0] sensor1_status_status_i;
-  logic [31:0] sensor1_current_age_ms_status_i;
-  logic [31:0] rtl010_evt_overflow_status_status_i;
-  logic [31:0] sensor0_meta_status_i;
-  logic [31:0] sensor1_meta_status_i;
   logic [31:0] health_raw_in_status_i;
   logic [31:0] health_sync_in_status_i;
   logic [31:0] health_qual_in_status_i;
@@ -308,16 +307,8 @@ module regbank_smoke_tb;
     .rtl008_control_o(rtl008_control_o),
     .rtl009_status_i(rtl009_status_i),
     .rtl009_control_o(rtl009_control_o),
-    .sensor_status_status_i(sensor_status_status_i),
-    .sensor0_value_status_i(sensor0_value_status_i),
-    .sensor0_status_status_i(sensor0_status_status_i),
-    .sensor0_current_age_ms_status_i(sensor0_current_age_ms_status_i),
-    .sensor1_value_status_i(sensor1_value_status_i),
-    .sensor1_status_status_i(sensor1_status_status_i),
-    .sensor1_current_age_ms_status_i(sensor1_current_age_ms_status_i),
-    .rtl010_evt_overflow_status_status_i(rtl010_evt_overflow_status_status_i),
-    .sensor0_meta_status_i(sensor0_meta_status_i),
-    .sensor1_meta_status_i(sensor1_meta_status_i),
+    .rtl010_status_i(rtl010_status_i),
+    .rtl010_control_o(rtl010_control_o),
     .health_raw_in_status_i(health_raw_in_status_i),
     .health_sync_in_status_i(health_sync_in_status_i),
     .health_qual_in_status_i(health_qual_in_status_i),
@@ -420,16 +411,7 @@ module regbank_smoke_tb;
     rtl007_status_i = '0;
     rtl008_status_i = '0;
     rtl009_status_i = '0;
-    sensor_status_status_i = 32'h0;
-    sensor0_value_status_i = 32'h0;
-    sensor0_status_status_i = 32'h0;
-    sensor0_current_age_ms_status_i = 32'h0;
-    sensor1_value_status_i = 32'h0;
-    sensor1_status_status_i = 32'h0;
-    sensor1_current_age_ms_status_i = 32'h0;
-    rtl010_evt_overflow_status_status_i = 32'h0;
-    sensor0_meta_status_i = 32'h0;
-    sensor1_meta_status_i = 32'h0;
+    rtl010_status_i = '0;
     health_raw_in_status_i = 32'h0;
     health_sync_in_status_i = 32'h0;
     health_qual_in_status_i = 32'h0;
@@ -493,22 +475,23 @@ module regbank_smoke_tb;
     // then to TIME_STATUS (RTL-003 integration), then to EVT_STATUS
     // (RTL-004 integration), then to GPIO_RAW_IN (RTL-005 integration), then
     // to ROTOR_STATUS (RTL-006 integration), then to ENGINE_STATUS (RTL-007
-    // integration), then to PULSE0_STATUS (RTL-008 integration), and now
-    // redirected an eighth time this session to SENSOR_STATUS: PULSE0_
-    // STATUS's own status_i is no longer an individual port either (it's
-    // now aggregated into rtl009_status_i, real cross-module wiring covered
-    // by rtl009_integration_tb.sv instead). SENSOR_STATUS (RTL-010, not yet
+    // integration), then to PULSE0_STATUS (RTL-008 integration), then to
+    // SENSOR_STATUS (RTL-009 integration), and now redirected a ninth time
+    // this session to HEALTH_RAW_IN: SENSOR_STATUS's own status_i is no
+    // longer an individual port either (it's now aggregated into
+    // rtl010_status_i, real cross-module wiring covered by
+    // rtl010_integration_tb.sv instead). HEALTH_RAW_IN (RTL-011, not yet
     // real) is untouched by that change and still uses the original generic
     // per-register status_i mechanism this check is actually meant to
     // exercise.
-    sensor_status_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_SENSOR_STATUS;
+    health_raw_in_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_HEALTH_RAW_IN;
     #1;
-    check("SENSOR_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("SENSOR_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    sensor_status_status_i = 32'h0000_0041;
+    check("HEALTH_RAW_IN mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("HEALTH_RAW_IN write_illegal (external)", write_illegal_o, 1'b1);
+    health_raw_in_status_i = 32'h0000_0041;
     #1;
-    check("SENSOR_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("HEALTH_RAW_IN tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

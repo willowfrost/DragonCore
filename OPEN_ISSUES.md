@@ -796,3 +796,146 @@ incomplete, logged here rather than silently resolved or guessed.
       surfaced it. Any future module's testbench inlining a pulse sequence
       rather than calling a shared task must include this same trailing
       settle delay.
+
+## RTL-010 (Sensor Monitor Interface) integration
+
+36. **RESOLVED (2026-08-22), approved before implementation, same pattern
+    as items 2/7/8/12/20/24/28/32 (the ninth real instance of this exact
+    gap class).** `dfc_rtl010_control_t` (345 bits) had no clear-request
+    field for `RTL010_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-002 0x235C
+    bit 0, a real W1C field). Fixed: ARCH-002 grew the struct 345->346
+    bits, adding `rtl010_evt_overflow_status__event_overflow` at the new
+    highest bit (345) -- every pre-existing field's bit position confirmed
+    unchanged via a real `regenerate.ps1` run. `tools/reggen/rtl010_field_map.json`
+    carries the corresponding `control_registers` entry, and its
+    `status_registers` section closes the RTL-002/003/004-style readback
+    gap (item 21) for every external RTL-010 register from the start, same
+    discipline already established for RTL-006 through RTL-009.
+
+37. **Resolved without an ARCH-002 edit, same resolution style as items
+    1/10/11/13/19/22.** `RTL-010_RevA.md` SS1 describes Appendix F.3 index 9
+    as "0-3 sensor 0 low/high/stale/invalid, and by the documented pattern
+    4-7 sensor 1 same order, 8 event-slot overflow". ARCH-002's own real F.3
+    table (the owning document, CHTR-DOC-003) instead gives "0-3 sensor 0
+    low/high/stale/invalid; 8-11 sensor 1 in the same order; 16 update
+    accepted; 17 update rejected; 18 event-slot overflow" -- a genuinely
+    different bit layout, not merely a restatement. Resolved in favor of
+    ARCH-002; `dfc_rtl010.sv` implements ARCH-002's real layout (including
+    the two module-wide update-accepted/update-rejected condition bits
+    RTL-010_RevA.md's own summary omits entirely), not RTL-010_RevA.md's
+    own restated (and here, wrong) summary of it.
+
+38. **Real, disclosed gap -- logged, NOT fixed this session (a real
+    architectural dependency on a module that does not exist yet, out of
+    scope for RTL-010's own integration).** `ARCH-MON-007`/`ARCH-RTL010-001`
+    both describe a "host commit precedes ROUTED commit" priority, implying
+    RTL-021 (Databus Routing Engine) can also commit a sensor update.
+    ARCH-002's own 16-port catalog for RTL-010 gives this module NO port at
+    all for a routed update -- unlike `event_condition_enable_i`/
+    `irq_condition_enable_i` (real ports simply tied to a disclosed stub,
+    item 6), there is no port here to tie off in the first place; RTL-021
+    itself does not exist yet either. `dfc_rtl010.sv` therefore implements
+    ONLY the real, real-port host-commit half of `ARCH-MON-007`/
+    `VP-MON-007`: `SENSOR_UPDATE_SELECT`/`_VALUE`/`_META`/`_COMMIT` always
+    wins by construction, because nothing else can ever compete for the
+    same cycle -- confirmed via `rtl010_integration_tb.sv`'s own atomicity
+    check (Part 7), which explicitly notes it cannot exercise the "host
+    wins a same-cycle conflict against a routed commit" half of
+    `VP-MON-007` for the same reason. No routed-commit input is invented
+    (CHTR-DOC-006). **Real, disclosed future work:** when RTL-021 is
+    implemented, ARCH-002 will need a real port added to RTL-010's own
+    16-port catalog (and REG-002's register set may need a real staging
+    path distinct from the host's own `SENSOR_UPDATE_*` registers, since
+    REG-002 currently defines only one staging area) before the routed half
+    of `VP-MON-007` can be exercised end-to-end.
+
+39. **Real, disclosed design interpretations -- no ARCH-002 edit needed,
+    each forced by a genuine gap in the owning documents rather than a
+    guess (CHTR-DOC-006).**
+    - **Recovery shares its own condition's mask bit.** RTL-007/008/009's
+      own F.3 rows each give "recovery" its OWN condition-mask bit, separate
+      from "low"/"high". RTL-010's F.3 row (index 9, see item 37) does NOT
+      -- no standalone recovery bit exists anywhere in it, even though
+      Appendix C.7's own 0x0033 event-subtype row lists "5 recovery" as a
+      distinct subtype. Since no field exists to attach a separate
+      recovery-enable meaning to, `dfc_rtl010.sv` has each condition's own
+      mask bit (`SENSORn_EVENT_IRQ_CFG.EVENT_ENABLE`/`IRQ_ENABLE[i]`,
+      `event_condition_enable_i`/`irq_condition_enable_i[F3 bit]`) gate BOTH
+      that condition's entry (LOW/HIGH/STALE/INVALID) and its own exit
+      (packed as the shared RECOVERY subtype).
+    - **Layered enable gating, derived directly from Appendix F.3's own
+      preamble formula.** `SENSOR_CONTROL.ENABLE` (with `module_enable_i`)
+      gates whether the module does ANY processing at all. `SENSOR_CONTROL.
+      EVENT_ENABLE`/`IRQ_ENABLE` (module-wide) serve as `MODULE_EVENT_ENABLE`/
+      `MODULE_IRQ_ENABLE` only for the two F.3 conditions with no channel
+      master (update-accepted/update-rejected, bits 16/17).
+      `SENSORn_EVENT_IRQ_CFG.EVENT_ENABLE`/`IRQ_ENABLE[3:0]` (ARCH-MON-007's
+      own "four independent... bits [0]-[3]") REPLACE (not AND with) the
+      module-wide enables for their own four per-channel F.3 bits, per the
+      preamble's literal "the corresponding channel master replaces
+      MODULE_*_ENABLE" text.
+    - **Commit accept/reject precondition.** REG-2314's own generic WO-CMD
+      boilerplate ("unmet precondition ... rejects") plus ARCH-VAL-010's
+      "commit requires all staged update members" are read together as: the
+      precondition is `active` (module must be enabled for a commit to take
+      effect), and "all staged update members" describes the commit's
+      ATOMICITY (value/valid/source/sequence/age=0 all replace together,
+      never partially -- ARCH-MON-007's own text), not an additional
+      "has-been-staged" completeness check (no such tracking field exists
+      anywhere in the real register set).
+    - **Continuous threshold evaluation, not commit-gated.** Unlike
+      RTL-007/008/009 (whose measured value only changes at a divider APPLY
+      cycle), RTL-010's `THRESH_LOW`/`THRESH_HIGH`/`HYSTERESIS` are plain RW
+      registers a host can change at any time independent of a value
+      commit. `ARCH-RTL010-001`'s fixed pipeline order is read as running
+      every active cycle, not only on a commit cycle -- a value held steady
+      across a live threshold/hysteresis change is re-evaluated the very
+      next cycle, matching `ARCH-MON-006`'s own live "enters at / exits at"
+      wording. All four interpretations are proven via real, dedicated
+      checks in `rtl010_integration_tb.sv` (channel independence, signed
+      boundary values, hysteresis enter/exit at the exact boundary, the
+      disabled-module commit-rejection path, and the age/stale model).
+
+40. **RESOLVED (2026-08-22), a real timing regression in an already-shipped
+    file, approval sought and given before touching it (per this session's
+    own task instructions).** `build_ecp5.ps1` failed timing TWICE in a
+    row with the IDENTICAL result (47.98 MHz, FAIL at 50 MHz required;
+    3.38 ns logic / 17.47 ns routing) on two independent place-and-route
+    runs (different default seeds) after RTL-010 was added -- confirmed
+    genuinely reproducible, not placement variance, before touching any
+    RTL (same "retry before assuming a real problem" discipline as items
+    7/18). The failing critical path was entirely inside the already-
+    shipped `dfc_rtl024_spi_bridge.sv` (`word_idx_q`/`exec_write_q`/
+    `rdata_words_q` chain) -- it does not touch any RTL-010 signal.
+    Device utilization was only 29-30% COMB / 19% FF (not resource-
+    exhausted), so RTL-010's added die area evidently consumed just enough
+    routing headroom to break an already-marginal SPI-bridge path, the
+    same general class as RTL-007/008's own timing-margin regression (item
+    31), but here in a different already-shipped file. Root cause: this
+    file's own `B_WORD` state (SPI response building) read the variable-
+    index `rdata_words_q[build_word_idx_q]` array FOUR times combinationally
+    in the same cycle, each feeding directly into a chained `crc16_update()`
+    call and into `rsp_bytes_q` -- the identical underlying principle this
+    file's own header already documented fixing once before on the WRITE
+    side ("too much work committed in one cycle... manifesting as
+    placement/routing spread"), just never applied to this READ side.
+    Fixed the same structural way: `B_WORD` split into `B_WORD_FETCH` (a
+    plain registered array read, `build_word_data_q <= rdata_words_q[
+    build_word_idx_q]`, no combinational consumer that cycle) and
+    `B_WORD_CRC` (the CRC/byte-packing work, sourced from the now-plain
+    `build_word_data_q` register). Adds one more CORE_CLK cycle per word
+    (32 cycles total for a full 16-word response instead of 16) --
+    negligible against DFC-INTF-0013's 100kHz-10MHz SPI rate, same
+    justification already established for the write-side fix. Verified
+    end-to-end: a full regression (14/14 testbenches, 508/508 checks,
+    unchanged -- confirming this is a pure timing/refactor change with no
+    functional regression, `spi_bridge_tb.sv` itself included), a real
+    `gate.ps1` run (lint/sim/formal bmc+prove/coverage all clean), and a
+    real `build_ecp5.ps1` run (Build ID `20260822_220658`, **50.30 MHz
+    PASS at 50 MHz required**, TRELLIS_COMB 29%/TRELLIS_FF 19%
+    utilization, no `--timing-allow-fail` needed). **Lesson for RTL-011
+    onward, same spirit as item 31's own warning:** this margin (50.30 MHz)
+    is narrow -- under 1% headroom above the 50 MHz requirement. A future
+    module adding meaningful new combinational depth or die area should
+    expect this margin to need attention again, the same way RTL-007's own
+    narrow margin correctly predicted RTL-008's later regression.

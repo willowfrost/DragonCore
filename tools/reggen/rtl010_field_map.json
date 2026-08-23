@@ -1,0 +1,207 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x2300-0x236C), cited by contract ID below -- same disclosed scope/rationale as every prior field-map file's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). RTL010_EVT_OVERFLOW_STATUS's status_registers entry below (EVENT_OVERFLOW/DROP_COUNT mapped to the generic status_o.event_overflow/event_drop_count fields dfc_rtl010_status_t carries) closes the readback gap from the start, same discipline rtl006/007/008/009_field_map.json established (OPEN_ISSUES.md item 21). SENSOR0_STATUS/SENSOR1_STATUS/SENSOR_STATUS each appear in BOTH control_registers (their real W1C clear-request fields) AND status_registers (their real RO/W1C-readback fields) -- same dual-appearance pattern already used for RTL-007/008/009's own per-channel STATUS registers. dfc_rtl010_control_t grew 345->346 bits this session (approved before implementation) to add rtl010_evt_overflow_status__event_overflow at the new highest bit (345), closing the ninth real instance of the EVENT_OVERFLOW-clear-field gap class (items 2/7/8/12/20/24/28/32). SENSOR_UPDATE_SELECT/SENSOR_UPDATE_VALUE/SENSOR_UPDATE_META are plain internal_reg staging registers (host writes land directly in RTL-001's own storage and are forwarded into control_i every cycle, matching REG-002's own 'staged fields do not alter active state until commit' text) -- no status_registers entry needed since a host read simply returns what RTL-001 itself stored, not an RTL-010 echo. SENSOR_UPDATE_COMMIT is a WO-CMD register (readback=zero in dfc_registers_pkg.json); its COMMIT bit is forwarded as a real one-cycle command pulse via reggen.py's existing WO-CMD pulse-capture mechanism, identical in kind to SENSOR009/007/008's own RTL009_EVT_OVERFLOW_STATUS-class W1C forwarding. SENSOR0_MAX_AGE_MS/SENSOR0_THRESH_LOW/SENSOR0_THRESH_HIGH/SENSOR0_EVENT_IRQ_CFG/SENSOR0_HYSTERESIS (and the SENSOR1 equivalents) are plain internal_reg RW registers: control-only, no status_registers entry (a host read returns RTL-001's own stored value, not an RTL-010 echo, same pattern as every other module's plain configuration RW register e.g. PULSE0_THRESH_LOW_Q17_15). Confirmed directly against dfc_registers_pkg.json: SENSOR_STATUS/SENSOR0_VALUE/SENSOR0_STATUS/SENSOR0_CURRENT_AGE_MS/SENSOR1_VALUE/SENSOR1_STATUS/SENSOR1_CURRENT_AGE_MS/RTL010_EVT_OVERFLOW_STATUS/SENSOR0_META/SENSOR1_META are all readback=external; SENSOR_CONTROL/SENSOR_UPDATE_SELECT/SENSOR_UPDATE_VALUE/SENSOR_UPDATE_META/SENSOR0_MAX_AGE_MS/SENSOR0_THRESH_LOW/SENSOR0_THRESH_HIGH/SENSOR0_EVENT_IRQ_CFG/SENSOR1_MAX_AGE_MS/SENSOR1_THRESH_LOW/SENSOR1_THRESH_HIGH/SENSOR1_EVENT_IRQ_CFG/SENSOR0_HYSTERESIS/SENSOR1_HYSTERESIS are all readback=internal_reg; SENSOR_UPDATE_COMMIT is readback=zero.",
+  "consumer_module": "RTL-010",
+  "control_struct": "dfc_rtl010_control_t",
+  "status_struct": "dfc_rtl010_status_t",
+  "control_registers": [
+    {
+      "register": "SENSOR_CONTROL", "contract_id": "REG-2300",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "sensor_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "sensor_control__event_enable"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "sensor_control__irq_enable"}
+      ]
+    },
+    {
+      "register": "SENSOR_STATUS", "contract_id": "REG-2304",
+      "fields": [
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "sensor_status__update_rejected"},
+        {"reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "sensor_status__updated"}
+      ]
+    },
+    {
+      "register": "SENSOR_UPDATE_SELECT", "contract_id": "REG-2308",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "sensor_update_select__channel"}
+      ]
+    },
+    {
+      "register": "SENSOR_UPDATE_VALUE", "contract_id": "REG-230C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor_update_value__value"}
+      ]
+    },
+    {
+      "register": "SENSOR_UPDATE_META", "contract_id": "REG-2310",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "sensor_update_meta__valid"},
+        {"reg_hi": 7, "reg_lo": 1, "class": "RW", "struct_field": "sensor_update_meta__source"},
+        {"reg_hi": 31, "reg_lo": 8, "class": "RW", "struct_field": "sensor_update_meta__sequence"}
+      ]
+    },
+    {
+      "register": "SENSOR_UPDATE_COMMIT", "contract_id": "REG-2314",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "sensor_update_commit__commit"}
+      ]
+    },
+    {
+      "register": "SENSOR0_STATUS", "contract_id": "REG-2324",
+      "fields": [
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "sensor0_status__event"}
+      ]
+    },
+    {
+      "register": "SENSOR0_MAX_AGE_MS", "contract_id": "REG-2328",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor0_max_age_ms__max_age_ms"}
+      ]
+    },
+    {
+      "register": "SENSOR0_THRESH_LOW", "contract_id": "REG-2330",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor0_thresh_low__threshold"}
+      ]
+    },
+    {
+      "register": "SENSOR0_THRESH_HIGH", "contract_id": "REG-2334",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor0_thresh_high__threshold"}
+      ]
+    },
+    {
+      "register": "SENSOR0_EVENT_IRQ_CFG", "contract_id": "REG-2338",
+      "fields": [
+        {"reg_hi": 3, "reg_lo": 0, "class": "RW", "struct_field": "sensor0_event_irq_cfg__event_enable"},
+        {"reg_hi": 7, "reg_lo": 4, "class": "RW", "struct_field": "sensor0_event_irq_cfg__irq_enable"}
+      ]
+    },
+    {
+      "register": "SENSOR1_STATUS", "contract_id": "REG-2344",
+      "fields": [
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "sensor1_status__event"}
+      ]
+    },
+    {
+      "register": "SENSOR1_MAX_AGE_MS", "contract_id": "REG-2348",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor1_max_age_ms__max_age_ms"}
+      ]
+    },
+    {
+      "register": "SENSOR1_THRESH_LOW", "contract_id": "REG-2350",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor1_thresh_low__threshold"}
+      ]
+    },
+    {
+      "register": "SENSOR1_THRESH_HIGH", "contract_id": "REG-2354",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor1_thresh_high__threshold"}
+      ]
+    },
+    {
+      "register": "SENSOR1_EVENT_IRQ_CFG", "contract_id": "REG-2358",
+      "fields": [
+        {"reg_hi": 3, "reg_lo": 0, "class": "RW", "struct_field": "sensor1_event_irq_cfg__event_enable"},
+        {"reg_hi": 7, "reg_lo": 4, "class": "RW", "struct_field": "sensor1_event_irq_cfg__irq_enable"}
+      ]
+    },
+    {
+      "register": "RTL010_EVT_OVERFLOW_STATUS", "contract_id": "REG-235C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl010_evt_overflow_status__event_overflow"}
+      ]
+    },
+    {
+      "register": "SENSOR0_HYSTERESIS", "contract_id": "REG-2360",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor0_hysteresis__hysteresis"}
+      ]
+    },
+    {
+      "register": "SENSOR1_HYSTERESIS", "contract_id": "REG-2368",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "sensor1_hysteresis__hysteresis"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "SENSOR_STATUS", "contract_id": "REG-2304",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "sensor_status__any_invalid"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "sensor_status__any_stale"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "sensor_status__any_low"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "sensor_status__any_high"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "sensor_status__update_rejected"},
+        {"reg_hi": 5, "reg_lo": 5, "struct_field": "sensor_status__updated"}
+      ]
+    },
+    {
+      "register": "SENSOR0_VALUE", "contract_id": "REG-2320",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "sensor0_value__value"}
+      ]
+    },
+    {
+      "register": "SENSOR0_STATUS", "contract_id": "REG-2324",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "sensor0_status__valid"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "sensor0_status__stale"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "sensor0_status__low"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "sensor0_status__high"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "sensor0_status__event"}
+      ]
+    },
+    {
+      "register": "SENSOR0_CURRENT_AGE_MS", "contract_id": "REG-232C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "sensor0_current_age_ms__current_age_ms"}
+      ]
+    },
+    {
+      "register": "SENSOR1_VALUE", "contract_id": "REG-2340",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "sensor1_value__value"}
+      ]
+    },
+    {
+      "register": "SENSOR1_STATUS", "contract_id": "REG-2344",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "sensor1_status__valid"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "sensor1_status__stale"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "sensor1_status__low"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "sensor1_status__high"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "sensor1_status__event"}
+      ]
+    },
+    {
+      "register": "SENSOR1_CURRENT_AGE_MS", "contract_id": "REG-234C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "sensor1_current_age_ms__current_age_ms"}
+      ]
+    },
+    {
+      "register": "RTL010_EVT_OVERFLOW_STATUS", "contract_id": "REG-235C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    },
+    {
+      "register": "SENSOR0_META", "contract_id": "REG-2364",
+      "fields": [
+        {"reg_hi": 6, "reg_lo": 0, "struct_field": "sensor0_meta__source"},
+        {"reg_hi": 30, "reg_lo": 7, "struct_field": "sensor0_meta__sequence"}
+      ]
+    },
+    {
+      "register": "SENSOR1_META", "contract_id": "REG-236C",
+      "fields": [
+        {"reg_hi": 6, "reg_lo": 0, "struct_field": "sensor1_meta__source"},
+        {"reg_hi": 30, "reg_lo": 7, "struct_field": "sensor1_meta__sequence"}
+      ]
+    }
+  ]
+}

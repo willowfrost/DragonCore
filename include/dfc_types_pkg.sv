@@ -959,8 +959,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL009_STATUS__EVENT_DROP_COUNT_HI = 158;
   localparam int unsigned DFC_RTL009_STATUS__EVENT_DROP_COUNT_LO = 143;
 
-  // ARCH-002 Appendix B dfc_rtl010_control_t (345 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl010_control_t (346 bits, rich format)
   typedef struct packed {
+    logic rtl010_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic [31:0] sensor1_hysteresis__hysteresis;  // signed reset=0x00000000 :: control_value
     logic [31:0] sensor0_hysteresis__hysteresis;  // signed reset=0x00000000 :: control_value
     logic [3:0] sensor1_event_irq_cfg__irq_enable;  //  reset=0 :: control_value
@@ -987,9 +988,9 @@ package dfc_types_pkg;
     logic sensor_control__event_enable;  //  reset=0 :: control_value
     logic sensor_control__enable;  //  reset=0 :: control_value
   } dfc_rtl010_control_t;
-  // total width: 345 bits
+  // total width: 346 bits
 
-  localparam int unsigned DFC_RTL010_CONTROL_WIDTH = 345;
+  localparam int unsigned DFC_RTL010_CONTROL_WIDTH = 346;
   localparam int unsigned DFC_RTL010_CONTROL__SENSOR_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL010_CONTROL__SENSOR_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL010_CONTROL__SENSOR_CONTROL__EVENT_ENABLE_HI = 1;
@@ -1040,6 +1041,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL010_CONTROL__SENSOR0_HYSTERESIS__HYSTERESIS_LO = 281;
   localparam int unsigned DFC_RTL010_CONTROL__SENSOR1_HYSTERESIS__HYSTERESIS_HI = 344;
   localparam int unsigned DFC_RTL010_CONTROL__SENSOR1_HYSTERESIS__HYSTERESIS_LO = 313;
+  localparam int unsigned DFC_RTL010_CONTROL__RTL010_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 345;
+  localparam int unsigned DFC_RTL010_CONTROL__RTL010_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 345;
 
   // ARCH-002 Appendix B dfc_rtl010_status_t (225 bits, rich format)
   typedef struct packed {

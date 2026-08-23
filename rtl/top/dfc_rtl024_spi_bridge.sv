@@ -501,12 +501,41 @@ module dfc_rtl024_spi_bridge (
   logic [7:0] out_shift_q;
   logic       rsp_building_q;
 
-  typedef enum logic [1:0] { B_IDLE, B_WORD, B_FINISH } build_state_e;
+  // TIMING FIX #2 (found via real place-and-route critical path analysis
+  // during RTL-010's own integration, not simulation): B_WORD used to read
+  // the variable-index `rdata_words_q[build_word_idx_q]` array FOUR TIMES
+  // combinationally in the same cycle, each feeding directly into a
+  // chained `crc16_update()` call (c0/c1/c2/c3) and into `rsp_bytes_q`.
+  // RTL-010's added die area left just enough less routing headroom to
+  // push this already-real cost over 50 MHz: `build_ecp5.ps1` failed
+  // twice in a row with the IDENTICAL result (47.98 MHz, 3.38 ns logic /
+  // 17.47 ns routing) on two independent place-and-route runs (different
+  // default seeds) -- confirmed genuinely reproducible, not placement
+  // variance, before touching this file (same "retry before assuming a
+  // real problem" discipline as OPEN_ISSUES.md items 7/18). The dominant
+  // cost is ROUTING, not raw logic depth, matching this file's OWN
+  // already-documented lesson just above for the write side ("too much
+  // work committed in one cycle... manifesting as placement/routing
+  // spread") -- the same underlying class of bug, now on the read side.
+  // Fixed the same structural way: split B_WORD into B_WORD_FETCH (a
+  // plain registered array read, `build_word_data_q <= rdata_words_q[
+  // build_word_idx_q]`, no combinational consumer in the same cycle) and
+  // B_WORD_CRC (the CRC/byte-packing work, sourced from the now-plain
+  // `build_word_data_q` register instead of a live array mux). This gives
+  // the placer a real cut point between the array-read fanout and the CRC
+  // logic instead of one combinational blob that has to be placed as a
+  // single unit spanning both. Adds one more CORE_CLK cycle per word (32
+  // cycles total for a full 16-word response instead of 16) -- negligible
+  // against DFC-INTF-0013's 100kHz-10MHz SPI rate, same justification
+  // already established for the write-side fix above.
+  typedef enum logic [1:0] { B_IDLE, B_WORD_FETCH, B_WORD_CRC, B_FINISH } build_state_e;
   build_state_e bstate_q;
   logic [3:0]  build_word_idx_q;
   logic [6:0]  build_n_q;
   logic [15:0] build_crc_q;
   logic        build_done_q;
+  logic [31:0] build_word_data_q;
+  logic        build_include_q;
   // Free-running byte-boundary tracker, driven only by real sclk_fall
   // events, independent of the command-side bit_cnt_q (reusing that
   // counter for a second purpose is exactly the class of bug already
@@ -532,6 +561,8 @@ module dfc_rtl024_spi_bridge (
       build_crc_q      <= 16'hFFFF;
       build_done_q     <= 1'b0;
       frame_bit_cnt_q  <= 3'd0;
+      build_word_data_q <= 32'd0;
+      build_include_q   <= 1'b0;
     end else begin
       unique case (bstate_q)
         B_IDLE: begin
@@ -551,10 +582,10 @@ module dfc_rtl024_spi_bridge (
             build_crc_q      <= c3;
             build_n_q        <= 7'd4;
             build_word_idx_q <= 4'd0;
-            bstate_q         <= B_WORD;
+            bstate_q         <= B_WORD_FETCH;
           end
         end
-        B_WORD: begin
+        B_WORD_FETCH: begin
           logic include_word;
           if (!exec_write_q && final_status_q == STAT_OK)
             include_word = (build_word_idx_q <= count_m1_q);
@@ -562,23 +593,36 @@ module dfc_rtl024_spi_bridge (
             include_word = (build_word_idx_q < completed_count_q);  // DFC-INTF-0025
           else
             include_word = 1'b0;  // WRITE response never carries read data
-          if (include_word) begin
+          build_include_q   <= include_word;
+          build_word_data_q <= rdata_words_q[build_word_idx_q];  // plain
+                                                                   // registered array read -- no
+                                                                   // combinational consumer this cycle
+          bstate_q          <= B_WORD_CRC;
+        end
+        B_WORD_CRC: begin
+          if (build_include_q) begin
             logic [15:0] c0, c1, c2, c3;
-            rsp_bytes_q[build_n_q]      <= rdata_words_q[build_word_idx_q][31:24];
-            rsp_bytes_q[build_n_q+7'd1] <= rdata_words_q[build_word_idx_q][23:16];
-            rsp_bytes_q[build_n_q+7'd2] <= rdata_words_q[build_word_idx_q][15:8];
-            rsp_bytes_q[build_n_q+7'd3] <= rdata_words_q[build_word_idx_q][7:0];
+            rsp_bytes_q[build_n_q]      <= build_word_data_q[31:24];
+            rsp_bytes_q[build_n_q+7'd1] <= build_word_data_q[23:16];
+            rsp_bytes_q[build_n_q+7'd2] <= build_word_data_q[15:8];
+            rsp_bytes_q[build_n_q+7'd3] <= build_word_data_q[7:0];
             // 4 short CRC rounds (this word's bytes) per cycle -- same
-            // bounded-depth discipline as the header above.
-            c0 = crc16_update(build_crc_q, rdata_words_q[build_word_idx_q][31:24]);
-            c1 = crc16_update(c0, rdata_words_q[build_word_idx_q][23:16]);
-            c2 = crc16_update(c1, rdata_words_q[build_word_idx_q][15:8]);
-            c3 = crc16_update(c2, rdata_words_q[build_word_idx_q][7:0]);
+            // bounded-depth discipline as the header above. Sourced from
+            // the plain build_word_data_q register (TIMING FIX #2 above),
+            // not a live array mux.
+            c0 = crc16_update(build_crc_q, build_word_data_q[31:24]);
+            c1 = crc16_update(c0, build_word_data_q[23:16]);
+            c2 = crc16_update(c1, build_word_data_q[15:8]);
+            c3 = crc16_update(c2, build_word_data_q[7:0]);
             build_crc_q <= c3;
             build_n_q   <= build_n_q + 7'd4;
           end
-          if (build_word_idx_q == 4'd15) bstate_q <= B_FINISH;
-          else build_word_idx_q <= build_word_idx_q + 4'd1;
+          if (build_word_idx_q == 4'd15) begin
+            bstate_q <= B_FINISH;
+          end else begin
+            build_word_idx_q <= build_word_idx_q + 4'd1;
+            bstate_q         <= B_WORD_FETCH;
+          end
         end
         B_FINISH: begin
           rsp_bytes_q[build_n_q]      <= build_crc_q[15:8];

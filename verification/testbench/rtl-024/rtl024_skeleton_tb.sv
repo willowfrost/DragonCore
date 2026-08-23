@@ -613,6 +613,77 @@ module rtl024_skeleton_tb;
           dut.rtl008_status[dfc_types_pkg::DFC_RTL008_STATUS__ENGINE_RPM__RPM_HI:dfc_types_pkg::DFC_RTL008_STATUS__ENGINE_RPM__RPM_LO] == 16'd65535,
           1'b1);
 
+    // ------------------------------------------------------------------
+    // RTL-010 integration checks -- real, added this session, over the
+    // real physical SPI pins. RTL-010 has NO physical pin at all (confirmed
+    // against ARCH-002's own 16-port catalog before dfc_rtl010.sv was
+    // written -- see that file's own header): unlike RTL-007/008/009,
+    // there is no pad-level round trip to prove here. RTL-010's own real
+    // status_o.ready (both channels' configuration legal) genuinely reaches
+    // the host-visible SUBSYS_READY aggregate (bit 9, ARCH-002 Appendix C
+    // module index 9) through RTL-002's real module_ready_i[9].
+    // rtl010_integration_tb.sv already covers the RTL-001<->RTL-010
+    // register bus, both channels' own real signed threshold/hysteresis/
+    // age logic, and the staged commit mechanism directly; this proves
+    // RTL-010's real readiness holds inside the actual RTL-024 top-level
+    // integration, plus a real, external SPI round trip through the
+    // staged SENSOR_UPDATE_SELECT/_VALUE/_META/_COMMIT mechanism all the
+    // way to a real host-readable SENSOR0_VALUE/SENSOR0_STATUS result.
+    // ------------------------------------------------------------------
+    check("rtl010 status_o.ready is real (legal configuration, reset-default thresholds)",
+          dut.rtl010_status[dfc_types_pkg::DFC_RTL010_STATUS__READY_HI], 1'b1);
+    check("rtl010 status_o.fault is real (clear, no illegal configuration forced)",
+          dut.rtl010_status[dfc_types_pkg::DFC_RTL010_STATUS__FAULT_HI], 1'b0);
+
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check("host-readable SUBSYS_READY bit 9 (RTL-010) reflects RTL-010's real readiness",
+          rd_data[9], 1'b1);
+
+    // Real, protected SUBSYS_ENABLE write -- genuinely enables the
+    // optional RTL-010 module bit (9) on top of the mandatory mask plus
+    // the already-enabled RTL-007/RTL-008/RTL-009 bits (6/7/8), over a
+    // real re-armed PROTECT_KEY sequence.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SUBSYS_ENABLE) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SUBSYS_ENABLE) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SUBSYS_ENABLE, 32'h0080_FBDF, wr_status);  // mandatory mask | bit 6 | bit 7 | bit 8 | bit 9
+    check("SUBSYS_ENABLE SPI write (RTL-010 bit 9 enabled) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_SENSOR_CONTROL, 32'h0000_0007, wr_status);  // ENABLE|EVENT_ENABLE|IRQ_ENABLE
+    check("SENSOR_CONTROL SPI write (ENABLE=1) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SENSOR0_THRESH_LOW,  32'hFFFF_FC18, wr_status);  // -1000
+    check("SENSOR0_THRESH_LOW SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SENSOR0_THRESH_HIGH, 32'h0000_03E8, wr_status);  // +1000
+    check("SENSOR0_THRESH_HIGH SPI write accepted", |wr_status, 1'b0);
+
+    // A real staged host commit through this file's own real, external SPI
+    // pins -- the only real path this module accepts a new value through
+    // (see dfc_rtl010.sv's own header: no physical pin exists to drive
+    // instead).
+    spi_write32(DFC_ADDR_SENSOR_UPDATE_SELECT, 32'h0, wr_status);          // channel 0
+    check("SENSOR_UPDATE_SELECT SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SENSOR_UPDATE_VALUE, 32'd500, wr_status);         // in-range value
+    check("SENSOR_UPDATE_VALUE SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SENSOR_UPDATE_META, {24'd42, 7'd3, 1'b1}, wr_status);  // VALID=1, SOURCE=3, SEQUENCE=42
+    check("SENSOR_UPDATE_META SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SENSOR_UPDATE_COMMIT, 32'h1, wr_status);
+    check("SENSOR_UPDATE_COMMIT SPI write accepted", |wr_status, 1'b0);
+    repeat (4) @(posedge core_clk_i); #1;  // commit settle margin
+
+    spi_read32(DFC_ADDR_SENSOR0_VALUE, rd_data, rd_status);
+    check("SENSOR0_VALUE SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable SENSOR0_VALUE genuinely reflects the real staged commit driven ",
+           "over this file's own real, external SPI pins"},
+          (rd_data == 32'd500), 1'b1);
+
+    check({"RTL-009's own PULSE0_FREQ_Q17_15 state is unaffected by RTL-010's real ",
+           "SPI-staged commit just driven -- confirms independent state even inside the ",
+           "actual RTL-024 top-level integration"},
+          dut.rtl009_status[dfc_types_pkg::DFC_RTL009_STATUS__PULSE0_FREQ_Q17_15__FREQUENCY_Q17_15_HI:dfc_types_pkg::DFC_RTL009_STATUS__PULSE0_FREQ_Q17_15__FREQUENCY_Q17_15_LO] == 32'd819_200_000,
+          1'b1);
+
     // The stub topology's remaining mandatory-mask modules (RTL-012
     // through RTL-016, etc.) never report ready, so RTL-002 is expected to
     // run out its full 499,000-cycle mandatory-init timeout and land in

@@ -2490,8 +2490,8 @@
     },
     {
       "name": "dfc_rtl010_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl010_control_t (345 bits, rich format)",
-      "width": 345,
+      "trace": "ARCH-002 Appendix B dfc_rtl010_control_t (346 bits, rich format)",
+      "width": 346,
       "fields": [
         {
           "name": "sensor_control__enable",
@@ -2717,6 +2717,15 @@
           "signed": true,
           "reset": "0x00000000",
           "semantic": "control_value"
+        },
+        {
+          "name": "rtl010_evt_overflow_status__event_overflow",
+          "hi": 345,
+          "lo": 345,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },
