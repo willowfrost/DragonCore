@@ -328,36 +328,37 @@ module dfc_rtl024_spi_bridge (
   logic [3:0]  word_idx_q;
   logic [3:0]  completed_count_q;
   logic [7:0]  final_status_q;
-  logic [31:0] rdata_words_q [0:15];
   logic        exec_write_q;
   logic [31:0] exec_addr_q;
 
-  // TIMING FIX (found via real place-and-route critical path analysis,
-  // not simulation): the direct write `rdata_words_q[word_idx_q] <=
-  // dri_rsp_rdata_i` combined a combinationally-derived read value
-  // (dri_rsp_rdata_i traces back through RTL-001's full register-bank
-  // read mux, since dfc_rtl001.sv drives it via a plain `assign`, not a
-  // flop) with a variable-array-index write (word_idx_q selects 1 of 16
-  // slots, synthesizing a 16-way write-enable demux) IN THE SAME CYCLE.
-  // Measured critical path: 20.16 ns (required: 20.00 ns @ 50 MHz),
-  // ~17 ns of which was routing delay from the demux structure's pieces
-  // landing spread across the die -- a routing-spread problem, the same
-  // underlying principle as the earlier CRC timing bug (too much work
-  // committed in one cycle) but manifesting as placement/routing spread
-  // rather than logic depth this time. Deliberately NOT relying on a
-  // luckier placement seed to "fix" this: as more modules are added in
-  // future revisions, placement pressure only increases, and a path this
-  // marginal would likely resurface. Fixed structurally instead: the
-  // array write is deferred by exactly one CORE_CLK cycle via these
-  // staging registers, so nothing ever combines a combinationally-
-  // derived value with a variable-index array write in a single cycle
-  // again. Adds one cycle of latency per read word (max 16 cycles for a
-  // full 16-word read) -- negligible against DFC-INTF-0013's 100kHz-
-  // 10MHz SPI rate, where even the fastest legal bit period is ~50x
-  // longer than one CORE_CLK cycle.
-  logic [31:0] capture_data_q;
-  logic [3:0]  capture_idx_q;
-  logic        capture_pending_q;
+  // ARCHITECTURAL FIX (supersedes the two reactive TIMING FIXes this file
+  // used to carry -- the write-side one that used to sit here, and TIMING
+  // FIX #2 further down -- rather than adding a third pipeline stage on
+  // top of them). Root cause, confirmed by direct reading of this file's
+  // own control flow, not assumed: word_idx_q above and build_word_idx_q
+  // further down (the response builder's own fetch index) are BOTH
+  // purely sequential counters over the same 16-word read-data set --
+  // each starts at 0, advances by exactly 1 per use, counts up to the
+  // transaction's own word count, and resets; neither ever jumps to an
+  // arbitrary position. A 16-entry register array addressed by a
+  // variable index (this file used to declare `rdata_words_q [0:15]`
+  // right here) is genuine RAM-shaped hardware -- a 16-way write demux on
+  // the capture side, a 16-way read mux on the build side -- for access
+  // that is actually strictly sequential. Both earlier fixes paid a real
+  // pipeline-latency cost to route AROUND that mux without ever removing
+  // it; this revision removes the array (and the capture_data_q/
+  // capture_idx_q/capture_pending_q staging registers the write-side fix
+  // needed only because of it) and replaces it with a genuine 16-deep
+  // shift register, rdata_shift_q, declared further down next to the
+  // response builder (see that declaration's own header for why capture
+  // and build now share one write process, and for the alignment scheme
+  // that lets both sides use a single FIXED read/write point with no
+  // address decode at all).
+  //
+  // shift_count_q counts real read-word captures for the CURRENT
+  // transaction only (0-16, so 5 bits) -- reset alongside every other
+  // per-transaction counter in X_IDLE below.
+  logic [4:0]  shift_count_q;
 
   always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
     if (!core_rst_n_i) begin
@@ -373,40 +374,32 @@ module dfc_rtl024_spi_bridge (
       dri_req_wdata_o   <= 32'd0;
       dri_req_wstrb_o   <= 4'b0000;
       dri_rsp_ready_o   <= 1'b0;
-      capture_data_q    <= 32'd0;
-      capture_idx_q     <= 4'd0;
-      capture_pending_q <= 1'b0;
+      shift_count_q     <= 5'd0;
     end else begin
-      // Deferred array write: exactly one cycle behind capture, fully
-      // decoupled from xstate_q's own progression (the executor may
-      // already have moved on to the next word's X_ISSUE by the time
-      // this fires -- harmless, since this writes the PREVIOUS word's
-      // slot, independent of whatever the next word is doing).
-      if (capture_pending_q) begin
-        rdata_words_q[capture_idx_q] <= capture_data_q;
-        capture_pending_q            <= 1'b0;
-      end
-
       unique case (xstate_q)
         X_IDLE: begin
           dri_req_valid_o <= 1'b0;
           if (invalid_op_q) begin
             final_status_q    <= STAT_INVALID_OP;
             completed_count_q <= 4'd0;
+            shift_count_q     <= 5'd0;
             xstate_q          <= X_DONE;
           end else if (invalid_len_q) begin
             final_status_q    <= STAT_INVALID_LEN;
             completed_count_q <= 4'd0;
+            shift_count_q     <= 5'd0;
             xstate_q          <= X_DONE;
           end else if (crc_bad_q) begin
             final_status_q    <= STAT_CRC_ERROR;
             completed_count_q <= 4'd0;
+            shift_count_q     <= 5'd0;
             xstate_q          <= X_DONE;
           end else if (accepted_q) begin
             exec_write_q      <= is_write_q;
             exec_addr_q       <= addr_q;
             word_idx_q        <= 4'd0;
             completed_count_q <= 4'd0;
+            shift_count_q     <= 5'd0;
             xstate_q          <= X_ISSUE;
           end
         end
@@ -428,9 +421,12 @@ module dfc_rtl024_spi_bridge (
             unique case (dri_rsp_code_i)
               3'b000: begin  // OK
                 if (!exec_write_q) begin
-                  capture_data_q    <= dri_rsp_rdata_i;
-                  capture_idx_q     <= word_idx_q;
-                  capture_pending_q <= 1'b1;
+                  // The real data shift is performed by the dedicated
+                  // rdata_shift_q process below (its own always_comb picks
+                  // up this exact same condition) -- this just tracks how
+                  // many real words this transaction has captured so far,
+                  // for the response builder's shift-register alignment.
+                  shift_count_q <= shift_count_q + 5'd1;
                 end
                 completed_count_q <= completed_count_q + 4'd1;
                 if (word_idx_q == count_m1_q) begin
@@ -501,34 +497,46 @@ module dfc_rtl024_spi_bridge (
   logic [7:0] out_shift_q;
   logic       rsp_building_q;
 
-  // TIMING FIX #2 (found via real place-and-route critical path analysis
-  // during RTL-010's own integration, not simulation): B_WORD used to read
-  // the variable-index `rdata_words_q[build_word_idx_q]` array FOUR TIMES
-  // combinationally in the same cycle, each feeding directly into a
-  // chained `crc16_update()` call (c0/c1/c2/c3) and into `rsp_bytes_q`.
-  // RTL-010's added die area left just enough less routing headroom to
-  // push this already-real cost over 50 MHz: `build_ecp5.ps1` failed
-  // twice in a row with the IDENTICAL result (47.98 MHz, 3.38 ns logic /
-  // 17.47 ns routing) on two independent place-and-route runs (different
-  // default seeds) -- confirmed genuinely reproducible, not placement
-  // variance, before touching this file (same "retry before assuming a
-  // real problem" discipline as OPEN_ISSUES.md items 7/18). The dominant
-  // cost is ROUTING, not raw logic depth, matching this file's OWN
-  // already-documented lesson just above for the write side ("too much
-  // work committed in one cycle... manifesting as placement/routing
-  // spread") -- the same underlying class of bug, now on the read side.
-  // Fixed the same structural way: split B_WORD into B_WORD_FETCH (a
-  // plain registered array read, `build_word_data_q <= rdata_words_q[
-  // build_word_idx_q]`, no combinational consumer in the same cycle) and
-  // B_WORD_CRC (the CRC/byte-packing work, sourced from the now-plain
-  // `build_word_data_q` register instead of a live array mux). This gives
-  // the placer a real cut point between the array-read fanout and the CRC
-  // logic instead of one combinational blob that has to be placed as a
-  // single unit spanning both. Adds one more CORE_CLK cycle per word (32
-  // cycles total for a full 16-word response instead of 16) -- negligible
-  // against DFC-INTF-0013's 100kHz-10MHz SPI rate, same justification
-  // already established for the write-side fix above.
-  typedef enum logic [1:0] { B_IDLE, B_WORD_FETCH, B_WORD_CRC, B_FINISH } build_state_e;
+  // ARCHITECTURAL FIX (supersedes the reactive TIMING FIX #2 that used to
+  // live here -- see the ARCHITECTURAL FIX note above shift_count_q's own
+  // declaration for the full root-cause account). B_WORD_FETCH no longer
+  // reads a variable-index `rdata_words_q[build_word_idx_q]` array; that
+  // array is gone. In its place: rdata_shift_q, a genuine 16-deep shift
+  // register shared with the capture side above, with exactly one write
+  // process (this one, below) so both sides can drive it legally.
+  // Insertion is always at a FIXED position (index 0); every other
+  // position is a static shift chain (`rdata_shift_q[i] <=
+  // rdata_shift_q[i-1]`) -- point-to-point wiring between adjacent
+  // registers, no address decode of any kind, so there is no mux left
+  // here to place or route.
+  //
+  // Alignment: a transaction can capture anywhere from 0 to 16 real
+  // words, so the FIRST word captured does not sit at a fixed array
+  // position on its own -- after N real shifts it is at position (N-1),
+  // which depends on N. The fix used here is the same idea a shift-
+  // register FIFO always uses: always perform exactly 16 total shifts
+  // before the first real read. B_ALIGN (below) pads with don't-care
+  // zero-shifts for whatever fewer than 16 words were actually captured
+  // (shift_count_q, captured above, says how many that was). After
+  // exactly 16 total shifts, the first captured word is ALWAYS at
+  // rdata_shift_q[15] -- one single, fixed, architecturally-constant read
+  // point, regardless of the transaction's real word count. Consuming it
+  // in B_WORD_FETCH performs one more shift the same cycle (old values,
+  // ordinary nonblocking-assignment semantics), which brings the second
+  // word into that same fixed position for the next fetch, and so on --
+  // "read the fixed front register, then shift" for every word in turn.
+  //
+  // B_WORD_FETCH/B_WORD_CRC stay split exactly as TIMING FIX #2 left them:
+  // that split's own remaining value (a clean pipeline cut between the
+  // register read and the 4-round CRC chain) doesn't depend on whether a
+  // mux used to feed it, and un-splitting them was no part of what this
+  // fix was asked to do -- see OPEN_ISSUES.md for the full account of why
+  // only the addressed array itself was replaced, not this pipelining.
+  // B_ALIGN's own padding is new latency, bounded and justified the same
+  // way both prior fixes justified theirs (see its own header just above
+  // the state machine below for the real worst-case-cycle accounting
+  // against DFC-INTF-0013's 100kHz-10MHz SPI rate).
+  typedef enum logic [2:0] { B_IDLE, B_ALIGN, B_WORD_FETCH, B_WORD_CRC, B_FINISH } build_state_e;
   build_state_e bstate_q;
   logic [3:0]  build_word_idx_q;
   logic [6:0]  build_n_q;
@@ -536,6 +544,7 @@ module dfc_rtl024_spi_bridge (
   logic        build_done_q;
   logic [31:0] build_word_data_q;
   logic        build_include_q;
+  logic [4:0]  pad_remaining_q;  // B_ALIGN's own countdown, 0-16
   // Free-running byte-boundary tracker, driven only by real sclk_fall
   // events, independent of the command-side bit_cnt_q (reusing that
   // counter for a second purpose is exactly the class of bug already
@@ -546,6 +555,52 @@ module dfc_rtl024_spi_bridge (
   // removes bit-level phase ambiguity entirely rather than hoping one
   // specific edge lines up.
   logic [2:0]  frame_bit_cnt_q;
+
+  // Shared 16-deep response-data shift register. Exactly one write
+  // process (immediately below), because rdata_shift_q must have exactly
+  // one writer, and it now serves both the capture side above (real DRI
+  // read words shift in) and the build side below (padding shifts, then
+  // drain shifts) -- see the ARCHITECTURAL FIX comment above for the full
+  // design. Declared here, after bstate_q/B_ALIGN/B_WORD_FETCH, so the
+  // always_comb just below can reference them without a forward
+  // reference (this project's own real Icarus has already been found,
+  // more than once, to reject a plain signal reference to something
+  // declared later in the same file -- see PROJECT_CONTINUITY.md Section
+  // 2's account of the evt_pending_q forward-reference bug).
+  logic [31:0] rdata_shift_q [0:15];
+  logic        rdata_shift_en;
+  logic [31:0] rdata_shift_in;
+
+  always_comb begin
+    rdata_shift_en = 1'b0;
+    rdata_shift_in = 32'd0;
+    if (xstate_q == X_WAIT && dri_rsp_valid_i && dri_rsp_ready_o &&
+        dri_rsp_code_i == 3'b000 && !exec_write_q) begin
+      // Real capture: a read word just landed OK. Shift it into a FIXED
+      // destination (index 0) -- an ordinary register load, not a
+      // variable-index write, so there is nothing here for a future
+      // TIMING FIX #3 to ever need to pipeline around.
+      rdata_shift_en = 1'b1;
+      rdata_shift_in = dri_rsp_rdata_i;
+    end else if (bstate_q == B_ALIGN || bstate_q == B_WORD_FETCH) begin
+      // Padding (B_ALIGN) or draining a word out through the fixed
+      // rdata_shift_q[15] read point (B_WORD_FETCH) -- both are the same
+      // shift, just with nothing meaningful entering index 0.
+      rdata_shift_en = 1'b1;
+      rdata_shift_in = 32'd0;
+    end
+  end
+
+  always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
+    if (!core_rst_n_i) begin
+      // Contents deliberately not cleared -- same precedent already set
+      // by data_words_q elsewhere in this file (never read before
+      // written).
+    end else if (rdata_shift_en) begin
+      for (int i = 15; i > 0; i--) rdata_shift_q[i] <= rdata_shift_q[i-1];
+      rdata_shift_q[0] <= rdata_shift_in;
+    end
+  end
 
   always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
     if (!core_rst_n_i) begin
@@ -560,6 +615,7 @@ module dfc_rtl024_spi_bridge (
       build_n_q        <= 7'd0;
       build_crc_q      <= 16'hFFFF;
       build_done_q     <= 1'b0;
+      pad_remaining_q  <= 5'd0;
       frame_bit_cnt_q  <= 3'd0;
       build_word_data_q <= 32'd0;
       build_include_q   <= 1'b0;
@@ -582,8 +638,37 @@ module dfc_rtl024_spi_bridge (
             build_crc_q      <= c3;
             build_n_q        <= 7'd4;
             build_word_idx_q <= 4'd0;
-            bstate_q         <= B_WORD_FETCH;
+            // Align the shift register so the first captured word is at
+            // the fixed rdata_shift_q[15] read point before B_WORD_FETCH
+            // ever samples it -- see rdata_shift_q's own header comment.
+            // shift_count_q of 0 (a WRITE, or a transaction rejected
+            // before any word was captured) or 16 (a full 16-word READ)
+            // both already need zero padding cycles.
+            if (shift_count_q == 5'd0 || shift_count_q == 5'd16) begin
+              bstate_q <= B_WORD_FETCH;
+            end else begin
+              pad_remaining_q <= 5'd16 - shift_count_q;
+              bstate_q        <= B_ALIGN;
+            end
           end
+        end
+        // B_ALIGN: worst case 15 cycles (a 1-word transaction; a genuine
+        // 0- or 16-word transaction skips this state entirely, see above).
+        // The actual shift each cycle is performed by the dedicated
+        // rdata_shift_q process (gated on bstate_q==B_ALIGN); this just
+        // counts down how many more padding shifts are needed before
+        // B_WORD_FETCH may start sampling rdata_shift_q[15] for real.
+        // Combined worst case for the whole builder with this state
+        // included: 1 (B_IDLE) + 15 (B_ALIGN) + 32 (B_WORD_FETCH/
+        // B_WORD_CRC, 16 words x 2 cycles, unchanged from TIMING FIX #2)
+        // + 1 (B_FINISH) = 49 CORE_CLK cycles = 980 ns @ 50 MHz -- still
+        // comfortably inside DFC-INTF-0024's 0-2 whole-byte wait-fill
+        // allowance at the fastest legal 10 MHz SCLK (1600 ns budget,
+        // same reference point TIMING FIX/TIMING FIX #2 above already
+        // used), and far more margin at any slower legal SCLK rate.
+        B_ALIGN: begin
+          if (pad_remaining_q == 5'd1) bstate_q <= B_WORD_FETCH;
+          else pad_remaining_q <= pad_remaining_q - 5'd1;
         end
         B_WORD_FETCH: begin
           logic include_word;
@@ -594,9 +679,13 @@ module dfc_rtl024_spi_bridge (
           else
             include_word = 1'b0;  // WRITE response never carries read data
           build_include_q   <= include_word;
-          build_word_data_q <= rdata_words_q[build_word_idx_q];  // plain
-                                                                   // registered array read -- no
-                                                                   // combinational consumer this cycle
+          // Fixed, single read point: rdata_shift_q[15] is always the
+          // current front of the queue by construction (see its own
+          // header comment) -- no array indexing, no mux. The dedicated
+          // rdata_shift_q process shifts this same cycle too, bringing
+          // the NEXT word into this same fixed position for the
+          // following fetch.
+          build_word_data_q <= rdata_shift_q[15];
           bstate_q          <= B_WORD_CRC;
         end
         B_WORD_CRC: begin
@@ -608,8 +697,9 @@ module dfc_rtl024_spi_bridge (
             rsp_bytes_q[build_n_q+7'd3] <= build_word_data_q[7:0];
             // 4 short CRC rounds (this word's bytes) per cycle -- same
             // bounded-depth discipline as the header above. Sourced from
-            // the plain build_word_data_q register (TIMING FIX #2 above),
-            // not a live array mux.
+            // the plain build_word_data_q register loaded in B_WORD_FETCH
+            // from the fixed rdata_shift_q[15] read point, not a live
+            // array mux.
             c0 = crc16_update(build_crc_q, build_word_data_q[31:24]);
             c1 = crc16_update(c0, build_word_data_q[23:16]);
             c2 = crc16_update(c1, build_word_data_q[15:8]);

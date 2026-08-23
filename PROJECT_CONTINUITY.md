@@ -2023,6 +2023,76 @@ written in this project going forward, not just a historical note.
     margin (under 1% headroom) flagged for RTL-011 onward the same way
     RTL-007's own narrow margin correctly predicted RTL-008's later
     regression (item 31).
+  - **A later, dedicated fix-and-reverify session (2026-08-23) closed the
+    real, root-cause architectural gap behind item 40's own narrow margin
+    — not another reactive pipeline stage, and no new module work was
+    started.** Confirmed directly by reading the file: `word_idx_q` (the
+    write/capture-side index) and `build_word_idx_q` (the response-
+    build-side index) into `rdata_words_q [0:15]` were BOTH purely
+    sequential counters (start at 0, advance by exactly 1 per use, count
+    up to the transaction's own word count, reset — never an arbitrary
+    jump), meaning the array's real 16-way write demux and 16-way read
+    mux existed only to serve access that was actually strictly
+    sequential. Both of this file's own prior fixes (the original write-
+    side capture-staging fix and item 40's `B_WORD_FETCH`/`B_WORD_CRC`
+    split) had paid a real pipeline-latency cost to route AROUND that
+    mux without ever removing it — which is exactly why RTL-010's own
+    session hit a fresh regression in this same file at all (`OPEN_ISSUES.md`
+    item 40): each new module's die area keeps eating into the same fixed
+    routing budget the mux keeps consuming. **Replaced the array with a
+    genuine 16-deep shift register** (`rdata_shift_q`, one single write
+    process shared by both the capture and build sides, since the array
+    used to be written from one process and read from the other): fixed
+    insertion at index 0, a static point-to-point shift chain for every
+    other position — no address decode of any kind. The former
+    `capture_data_q`/`capture_idx_q`/`capture_pending_q` staging
+    registers (which existed only to tolerate the now-removed write-side
+    mux) are gone. **The one genuinely new piece of design**: since a
+    transaction can capture 0-16 real words, the first word captured
+    doesn't sit at a fixed position by itself, so a new response-builder
+    state (`B_ALIGN`) pads the shift register with don't-care shifts
+    (tracked by a new `shift_count_q` counter) until exactly 16 total
+    shifts have occurred, after which the first captured word is ALWAYS
+    at the fixed `rdata_shift_q[15]` — skipped entirely for a 0- or
+    16-word transaction, which already need no padding. `B_WORD_FETCH`/
+    `B_WORD_CRC` deliberately stay split exactly as item 40 left them
+    (that pipeline cut's own value doesn't depend on whether a mux used
+    to feed it, and un-splitting them was out of scope). New latency is
+    bounded and justified the same way both prior fixes justified theirs:
+    worst case 49 CORE_CLK cycles (980 ns @ 50 MHz) for the whole
+    builder, comfortably inside DFC-INTF-0024's 1600 ns wait-fill budget
+    at the fastest legal 10 MHz SCLK — and the write side is actually
+    FASTER than before (the former 1-cycle capture-staging delay is gone,
+    since the shift destination is now fixed rather than variable-
+    indexed). **Verified the mux was actually removed, not just that
+    timing happened to pass**, via a real, direct `nextpnr-ecp5` `Info:
+    Device utilisation:` comparison against the immediately-preceding
+    real build (`20260822_220658`): TRELLIS_COMB dropped from 25044 to
+    24865 cells (both /83640) and TRELLIS_FF from 16432 to 16406 — real,
+    absolute-count reductions, not a coincidence of placement (both
+    builds used the same default, unseeded `build_ecp5.ps1` invocation);
+    the rounded percentages read identically (29%/19%) in both builds,
+    confirming why the raw counts, not the percentages, had to be the
+    actual evidence. Verified end-to-end: a full Icarus regression
+    (14/14 testbenches, **508/508 checks, unchanged** — a pure
+    architectural refactor with zero functional regression, confirmed by
+    hand-summing every testbench's own reported count:
+    12+12+16+28+30+24+37+35+44+47+60+50+100+13=508), a real `gate.ps1`
+    run (lint/sim/formal `bmc`+`prove`/coverage all clean, coverage
+    unchanged at 120/353 — expected, since this fix touches no
+    register-visible behavior), and a real `build_ecp5.ps1` run (Build
+    ID `20260823_081313`, **53.69 MHz PASS at 50 MHz required** — a
+    wider margin than item 40's own 50.30 MHz, not a narrow recovery).
+    Full account, including the exact before/after utilisation table,
+    in `OPEN_ISSUES.md` item 41. **Lesson for RTL-011 onward, superseding
+    item 40's own "expect this margin to need attention again" warning:**
+    where a variable-index array turns out to be addressed only
+    sequentially (confirm this directly from the index variables' own
+    update logic, never assumed), replacing it with a shift register
+    removes the mux/demux at its root instead of buying temporary
+    headroom by pipelining around it — worth checking for on any future
+    module whose own per-word/per-slot storage looks superficially like
+    genuine random access but, on inspection, never actually is.
 - **RTL-011 through RTL-023:** spec-complete (all 24 module specs,
   including RTL-001 through RTL-010/024, exist and are citation-verified
   against the `-002` baseline) but **not yet implemented as real RTL.**
@@ -2290,11 +2360,23 @@ written in this project going forward, not just a historical note.
   scope-change entry directly above).
   **RTL-010's own session found a real, narrow timing margin (50.30 MHz,
   under 1% headroom above the 50 MHz requirement, `OPEN_ISSUES.md` item
-  40) after fixing a real regression in the already-shipped SPI bridge**
-  — read that item before starting RTL-011: a module adding meaningful new
-  combinational depth or die area should expect this margin to need
-  attention again, the same way RTL-007's own narrow margin correctly
-  predicted RTL-008's later regression.
+  40) after fixing a real regression in the already-shipped SPI bridge —
+  a LATER, dedicated session (2026-08-23) then closed the actual root
+  cause behind that narrow margin for real, not just RTL-010's own
+  regression: the SPI bridge's `rdata_words_q [0:15]` array (addressed by
+  `word_idx_q`/`build_word_idx_q`, both confirmed purely sequential
+  counters, never genuine random access) was replaced with a real
+  16-deep shift register, removing the 16-way mux/demux at its root
+  instead of pipelining around it again. Real, verified result: TRELLIS_COMB/
+  TRELLIS_FF both genuinely dropped (25044→24865 / 16432→16406 cells) and
+  timing closed at 53.69 MHz — wider margin than before, not a narrow
+  recovery. Full account in `OPEN_ISSUES.md` item 41 and this document's
+  own RTL-010 entry in Section 4 above.** Read item 41 before starting
+  RTL-011 anyway, for its own generalizable lesson: any future module
+  whose own per-word/per-slot storage looks like random access but, on
+  direct inspection of its index variables, is actually only ever
+  accessed sequentially is a candidate for the same shift-register
+  treatment before a timing regression forces the question.
   **RTL-009's own session confirmed the pipelined-multiply pattern
   (`OPEN_ISSUES.md` items 26/27/30/31) generalizes cleanly to two channels
   in one module** — see Section 4's own RTL-009 entry below for the real

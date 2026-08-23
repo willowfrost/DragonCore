@@ -939,3 +939,137 @@ incomplete, logged here rather than silently resolved or guessed.
     module adding meaningful new combinational depth or die area should
     expect this margin to need attention again, the same way RTL-007's own
     narrow margin correctly predicted RTL-008's later regression.
+
+41. **RESOLVED (2026-08-23), a real architectural correction to
+    `dfc_rtl024_spi_bridge.sv`, not a third reactive timing pipeline stage
+    stacked on top of items above -- requested and approved before
+    implementation.** Both prior fixes to this file (the write-side
+    capture staging documented in this file's own former "TIMING FIX"
+    comment, and TIMING FIX #2/item 40 above on the read side) paid a
+    real pipeline-latency cost to route AROUND a genuine root cause they
+    never actually removed: `rdata_words_q [0:15]`, a 16-entry register
+    array addressed by a *variable* index on both sides
+    (`word_idx_q` writing it during DRI-read capture, `build_word_idx_q`
+    reading it during response building) -- a 16-way write demux and a
+    16-way read mux, i.e. genuine RAM-shaped hardware, for access that a
+    direct reading of both index variables confirms is actually strictly
+    sequential: each starts at 0, advances by exactly 1 per use, counts up
+    to the transaction's own word count (1-16), and resets -- neither ever
+    jumps to an arbitrary position. No genuine random-access need was
+    found anywhere in the file for this array; the two prior fixes only
+    ever pipelined around the resulting mux's routing cost, never removed
+    it, which is exactly why RTL-010's own timing regression (item 40)
+    happened at all: each new module's die area eats into the same fixed
+    routing budget this mux keeps consuming.
+    - **Replaced the array with a genuine 16-deep shift register**
+      (`rdata_shift_q`), one single write process (previously the array
+      was written from the executor's own process and read from the
+      builder's; the new design needs exactly one writer, so both sides'
+      shifting now live in one dedicated `always_comb`/`always_ff` pair
+      declared next to the response builder). Insertion is always at a
+      FIXED position (index 0); every other position is a static
+      point-to-point shift chain (`rdata_shift_q[i] <= rdata_shift_q[i-1]`)
+      -- no address decode of any kind, so there is no mux left to place
+      or route. The former `capture_data_q`/`capture_idx_q`/
+      `capture_pending_q` staging registers (which existed only to
+      tolerate the now-removed write-side mux) are gone entirely, along
+      with the array itself.
+    - **Alignment scheme, the one genuinely new piece of design this fix
+      needed:** a transaction can capture anywhere from 0 to 16 real
+      words, so the FIRST word captured does not sit at a fixed shift
+      position by itself -- after N real shifts it is at position (N-1),
+      which depends on N. Fixed the same way a shift-register FIFO always
+      handles this: always perform exactly 16 total shifts before the
+      first real read. A new response-builder state, `B_ALIGN`, pads with
+      don't-care zero-shifts for whatever fewer than 16 words were really
+      captured (a new dedicated counter, `shift_count_q`, tracks the real
+      count per transaction). After exactly 16 total shifts, the first
+      captured word is ALWAYS at `rdata_shift_q[15]` -- one single, fixed,
+      architecturally-constant read point, regardless of the transaction's
+      real word count. `B_ALIGN` is skipped entirely (straight to
+      `B_WORD_FETCH`) when `shift_count_q` is 0 (a WRITE, or a transaction
+      rejected before any word was captured) or 16 (a full 16-word READ),
+      since both already need zero padding.
+    - **`B_WORD_FETCH`/`B_WORD_CRC` deliberately stay split**, exactly as
+      item 40 left them -- that split's own remaining value (a clean
+      pipeline cut between the register read and the 4-round CRC chain)
+      doesn't depend on whether a mux used to feed it, and un-splitting
+      them was no part of what this fix was asked to do. `B_WORD_FETCH`
+      now loads `build_word_data_q` from the fixed `rdata_shift_q[15]`
+      point (and the dedicated shift process advances the register the
+      same cycle), instead of an indexed array read.
+    - **New, bounded, justified latency, same discipline as both prior
+      fixes' own accounting:** `B_ALIGN`'s worst case is 15 cycles (a
+      1-word transaction; 0- and 16-word transactions skip it). Combined
+      worst-case builder latency: 1 (`B_IDLE`) + 15 (`B_ALIGN`) + 32
+      (`B_WORD_FETCH`/`B_WORD_CRC`, unchanged from item 40) + 1
+      (`B_FINISH`) = 49 CORE_CLK cycles = 980 ns @ 50 MHz -- still
+      comfortably inside DFC-INTF-0024's 0-2 whole-byte wait-fill
+      allowance at the fastest legal 10 MHz SCLK (1600 ns budget, the
+      same reference point both prior fixes used), and far more margin at
+      any slower legal SCLK rate. The write-side capture latency is
+      actually LOWER than before (the former 1-cycle staging delay is
+      gone, since the shift's destination is now fixed rather than
+      variable-indexed) -- this fix is cheaper on that side, not just
+      safer, matching what was asked.
+    - **Verified the fix actually removed the mux, not just that timing
+      happened to pass**, by direct comparison of the real
+      `nextpnr-ecp5` `Info: Device utilisation:` block between the
+      immediately-preceding real build (`20260822_220658`, item 40's own
+      result) and this fix's real build (`20260823_081313`), same
+      toolchain, same target:
+      | | before (`...220658`) | after (`...081313`) |
+      |---|---|---|
+      | TRELLIS_COMB | 25044/83640 | 24865/83640 |
+      | TRELLIS_FF | 16432/83640 | 16406/83640 |
+      | Max frequency (final, post-route) | 50.30 MHz PASS | 53.69 MHz PASS |
+
+      TRELLIS_COMB genuinely dropped by 179 cells and TRELLIS_FF by 26 --
+      both real, absolute-count reductions in synthesized logic, not
+      merely an unchanged design getting a luckier placement (both builds
+      used `build_ecp5.ps1`'s own default, unseeded invocation). The
+      rounded percentages both still read 29%/19% -- confirming why a
+      percentage alone is not sufficient evidence and the raw counts had
+      to be compared directly, exactly as this fix's own task instructions
+      required.
+    - Verified end-to-end: a full Icarus regression (14/14 testbenches,
+      **508/508 checks, unchanged** -- confirming this is a pure
+      architectural refactor with no functional regression,
+      `spi_bridge_tb.sv` and `rtl024_skeleton_tb.sv` both included,
+      counted by hand from the real per-testbench totals:
+      12+12+16+28+30+24+37+35+44+47+60+50+100+13=508); a real `gate.ps1`
+      run (lint/sim/formal `bmc`+`prove`/coverage all clean, coverage
+      unchanged at 120/353 registers referenced -- expected, since this
+      fix touches no register-visible behavior); and the real
+      `build_ecp5.ps1` run above (Build ID `20260823_081313`, **53.69 MHz
+      PASS at 50 MHz required** -- a wider margin than item 40's own
+      50.30 MHz, not just a narrow recovery). **Lesson for RTL-011
+      onward, superseding item 40's own "expect this margin to need
+      attention again" warning with a more durable fix than another
+      pipeline stage would have been:** where a variable-index array
+      turns out to be addressed only sequentially (confirm this directly
+      by reading the index variables' own update logic before assuming
+      it), replacing the array with a shift register removes the
+      mux/demux at its root instead of buying temporary headroom by
+      pipelining around it -- a real margin improvement, not merely a
+      deferred version of the same regression RTL-007/008 and RTL-010
+      already hit twice.
+
+42. **Real, disclosed, out-of-scope observation found while confirming
+    item 41's own sequential-access claim -- NOT fixed, since this
+    session's task named only `word_idx_q`/`build_word_idx_q`/
+    `rdata_words_q` specifically, not this sibling structure.**
+    `data_words_q [0:15]` (the OUTGOING write-data array, filled
+    sequentially by `data_word_idx_q` during F_DATA frame collection and
+    read sequentially by `word_idx_q` during `X_ISSUE`'s DRI writes) has
+    the identical shape as the array item 41 just replaced -- a 16-entry
+    register array addressed by indices that, by the same direct reading
+    applied to `rdata_words_q`'s own indices, also appear to be purely
+    sequential. This was deliberately left untouched: it was not named in
+    the task that produced item 41's fix, and converting it was never
+    asked for. Logged here so a future session doesn't need to
+    rediscover the parallel -- if `data_words_q` is ever implicated in a
+    real timing finding the way `rdata_words_q` was (items 40/41 and the
+    original write-side fix), the same shift-register replacement is the
+    candidate fix, subject to the same direct-reading confirmation this
+    item's own sibling fix required before touching anything.
