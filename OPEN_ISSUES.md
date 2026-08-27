@@ -1159,3 +1159,98 @@ incomplete, logged here rather than silently resolved or guessed.
     RTL-006/007 (Sections 5/6). Any future module needing a physical pin
     (RTL-017/019/020, or whichever module needs one next) must use one of
     these 3 WiFi-shared positions -- there is no unshared option left.
+
+## Timing/floorplanning investigation (item 42 follow-up)
+
+48. **Real, disclosed investigation -- NOT fixed, no RTL/LPF/toolchain change
+    made. Read-only per this session's own task instructions; a decision on
+    whether to act on any of this is deferred, not resolved here.** Ran a
+    real `build_ecp5.ps1` (Build ID `20260826_182249`, byte-identical
+    placement/routing to the immediately preceding real build
+    `20260826_171940` from the same day, confirmed via direct `diff` --
+    deterministic default placement for this exact netlist). Final result:
+    **50.12 MHz PASS at 50.00 MHz required**, 30% TRELLIS_COMB / 19%
+    TRELLIS_FF.
+    - **`data_words_q` (item 42's own subject): confirmed present in the
+      netlist in the identical risky shape `rdata_words_q` had before item
+      41's fix, but NOT on either of this build's two worst measured
+      paths.** `grep -c data_words_q` on the real P&R log
+      (`ecp5_pnr_20260826_182249.log`) returns 0; it appears only in the
+      synthesis log (83 hits), all from Yosys's real memory-to-register-array
+      conversion message ("`Replacing memory \data_words_q with list of
+      registers`", `dfc_rtl024_spi_bridge.sv:284`). For comparison,
+      `rdata_shift_q` (the already-fixed signal) DOES survive Yosys's
+      name-mangling into hop-level cell names on a real reported critical
+      path, confirming mangling doesn't hide a signal that's actually on a
+      worst path -- so this is a real, not merely inconclusive, absence.
+      **Conclusion: item 42's concern is real in shape but currently
+      dormant, not urgent** -- worth revisiting if a future module's growth
+      ever implicates it directly, per item 42's own original framing.
+    - **The real limiting path (the one that sets 50.12 MHz) touches four
+      modules in one chain**, confirmed from the real nextpnr-ecp5 JSON
+      report (`--report`, `ecp5_pnr_report_20260826_182249.json`):
+      `rtl009_status` (25,18) -> `u_rtl006.illegal_config` (24,18) ->
+      `rtl002_status` (48,29) -> `rtl009_status`, a DIFFERENT bit (95,27) ->
+      `u_rtl005.store_q[54]` (61,36). 19.95ns total, 3.13ns logic / 16.30ns
+      routing -- **routing is 82% of the path**. nextpnr-ecp5 does not
+      produce a Vivado-style ranked top-N-distinct-paths report; it reports
+      exactly one full source-to-sink chain per clock-domain-crossing
+      category (3 total for this design), decomposed hop-by-hop -- 24 real
+      routing hops across all three, ranked by delay, span 0.22ns/0 tiles up
+      to 3.68ns/37 tiles.
+    - **Real, computed distance-vs-delay correlation across those 24 routing
+      hops: Pearson r = 0.957** (dist 0-49 tiles, delay 0.22-3.68ns; linear
+      fit `delay ~= 0.062*dist + 0.57`). Physical distance is a real, strong
+      driver of the worst delays in this build -- not a theoretical
+      concern.
+    - **But the worst hops are wide fan-in/fan-out HUB nodes, not clean
+      pairwise module-to-module relationships, confirmed directly in RTL**:
+      `dfc_rtl002.sv:362-366`'s `mandatory_fault_now`/`init_ready_now` are
+      24-wide OR/AND reductions over every module's `module_fault_i`/
+      `module_ready_i` bit (line 934's `status_comb` then passes the full
+      24-bit `module_fault_i` straight into RTL-002's own status word);
+      `dfc_rtl003.sv:213`'s `raw = irq_source_i[23:0] | ...` is the same
+      24-wide OR for interrupts; `dfc_rtl005.sv:479`'s
+      `store_q[tail_q] <= slot_record_q[push_idx]` is a runtime-indexed 24:1
+      mux over every event-producer's registered record, feeding directly
+      into the flop (`store_q[54]`) that ends the worst path above;
+      `dfc_config_regbank_regs.sv:2181`'s 353-way `case(addr_i)` register
+      readback mux touches essentially every module's state. The placement
+      data itself shows why this doesn't map onto pairwise clustering:
+      **`rtl009_status` appears at two physically unrelated locations** --
+      (25,18) for one bit, (95,27) for a different bit of the same 336-bit
+      status word -- because each bit is placed near ITS OWN downstream
+      consumer, not near "RTL-009" as a single physical object. A region
+      constraint clustering "RTL-009 near RTL-005" would help only the bits
+      actually feeding RTL-005, doing nothing (or displacing the problem)
+      for the other bits of that same signal feeding the register-readback
+      mux or RTL-002's fault OR-tree.
+    - **Real, disclosed assessment, not assumed either direction, per this
+      session's own task instructions: the evidence supports "distance
+      matters" but not "pairwise region constraints are the fix."** With
+      20+ modules each reaching 2-4 shared aggregation hubs (RTL-001's
+      readback mux, RTL-002's fault/ready OR-trees, RTL-003's IRQ OR-tree,
+      RTL-005's event mux) on a roughly 127x100-tile die, some inputs to any
+      given hub will always be physically far away -- 20+ scattered sources
+      cannot all be simultaneously adjacent to one point. This is also a
+      more parsimonious explanation for the project's own observed margin
+      volatility than "this specific pair happened to land far apart this
+      time": real utilization has climbed steadily and monotonically across
+      builds (RTL-005 19% COMB -> RTL-006 20% -> RTL-010 29% -> RTL-011
+      30%, all from real build manifests already in this document), and
+      each new module adds another input to the SAME wide OR-trees/muxes
+      above, not a new independent pairwise relationship.
+    - **Real, separate problem with the specific mechanism a floorplanning
+      fix would need: this toolchain has no LPF-level internal-logic
+      region/area constraint syntax.** Confirmed directly: every one of the
+      153 real lines in `fpga/ecp5/ulx3s_dfc.lpf` is `LOCATE COMP "<port>"
+      SITE "<pin>"` -- I/O pin/pad placement only -- and a real
+      `nextpnr-ecp5 --help` confirms there is no LPF-based region/cluster
+      constraint flag. A real region constraint in nextpnr-ecp5 requires a
+      `--pre-place` Python script calling `ctx.constrainCellsToRegion(...)`
+      -- a genuinely new, more invasive toolchain integration (new script,
+      new `build_ecp5.ps1` wiring), not a `.lpf` edit.
+    - **No action taken.** Whether to pursue a region-constraint mechanism,
+      restructure any of the four wide-fanin hubs above, or leave this as a
+      standing, monitored margin risk is a decision for a future session,
+      not resolved by this investigation.
