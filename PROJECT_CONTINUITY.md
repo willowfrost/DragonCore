@@ -2263,6 +2263,56 @@ written in this project going forward, not just a historical note.
   This is the actual next phase of work — see Section 5. RTL-011 completes
   the Monitoring domain (RTL-007 through RTL-011); Safety (RTL-012,
   Watchdog Manager) is next.
+- **Build script structural fix (2026-08-26): `build_ecp5.ps1`'s
+  `$SourceFiles` list is no longer hardcoded.** This exact gap had been
+  hit and reactively fixed 4 separate times (RTL-002, RTL-004, RTL-009,
+  RTL-011 -- `OPEN_ISSUES.md` items and the Section 3/4 lessons above) —
+  a new module's `.sv` file forgotten from the list on the first build
+  attempt every time, always caught the same way (a Yosys hierarchy-check
+  failure: "Module ... referenced ... is not part of the design"). Fixed
+  for real, not just for the currently-known module set: `build_ecp5.ps1`
+  now discovers every real module source file at run time via
+  `Get-ChildItem` — every `rtl\<domain>\src\*.sv` for each domain
+  directory under `rtl\` except `top` (so a brand-new domain directory,
+  or a currently-empty one like `rtl\safety\`/`rtl\databus\`/
+  `rtl\programmable\` gaining its first real module, needs no script
+  change at all), plus `rtl\top\*.sv` directly (the top-level integration
+  and SPI bridge live there with no `src\` subfolder). `rtl\<domain>\
+  generated\` is deliberately excluded from this scan since
+  `dfc_config_regbank_regs.sv` is already covered by the fixed,
+  always-included file list (the three `include\dfc_*_pkg.sv` packages
+  RTL-001+ actually reference, the generated regbank, and the three
+  `fpga\ecp5\` platform files). The synthesis `.ys` script's own
+  `read_verilog` list — the *other* half of this exact recurring gap per
+  every one of the four prior incidents' own wording ("missing from both
+  `$SourceFiles` and the synthesis `.ys` script's read order") — is now
+  generated FROM `$SourceFiles` rather than a second, independently
+  hardcoded list, closing both halves of the gap at once instead of only
+  the one this task named. **Verified for real, not just "doesn't
+  error":** the auto-discovered list was compared programmatically
+  against the exact prior explicit list and confirmed identical as a set
+  (all 20 files — RTL-001 through RTL-011, the SPI bridge, the top-level
+  wrapper, and every fixed file — no module missing, nothing extra
+  pulled in); the only difference found was the relative order of the
+  two `rtl\top` files (`dfc_rtl024.sv` now sorts before
+  `dfc_rtl024_spi_bridge.sv`, the reverse of the old hardcoded order) —
+  a real, subsequent `build_ecp5.ps1` run with this reordering in place
+  (Build ID `20260826_171940`) reproduced **50.12 MHz PASS at 50 MHz
+  required** bit-for-bit against the last confirmed RTL-011 build (same
+  TRELLIS_COMB 30%/TRELLIS_FF 19%/MULT18X18D 7% utilization), confirming
+  empirically that Yosys/nextpnr's result here does not depend on
+  `read_verilog` file order — this was a genuine, purely mechanical
+  change with zero effect on synthesis output, not merely an untested
+  assumption. The manifest's own "Source files" section (already driven
+  by `$SourceFiles`, unchanged) continues to print the full, correct
+  20-file list. **The RTL-002/004/009/010/011 checklist item this
+  document itself carried ("add the new module to both `$SourceFiles`
+  and the synthesis script") is retired as of this fix** — see the
+  RTL-004 lessons entry below for the now-obsolete text, kept struck
+  through rather than deleted so a future session sees why it no longer
+  applies. RTL-012 onward: adding a new module's `.sv` file under the
+  correct `rtl\<domain>\src\` path is sufficient by itself; no
+  `build_ecp5.ps1` edit is needed for source discovery.
 - *(Historical entries below this point predate RTL-006 and are kept for*
   *the record, not current status — see the RTL-006 through RTL-011*
   *entries above for the project's real, current state.)*
@@ -2669,8 +2719,17 @@ written in this project going forward, not just a historical note.
   source-file gap RTL-002 first hit (see this document's own Section 4
   lesson on it); the fix shape (add to both `$SourceFiles` and the
   synthesis `.ys` script's read order, immediately after the previous
-  module) is now a checklist item for every module going forward, not
-  something to rediscover fresh each time.
+  module) was a checklist item for every module going forward, not
+  something to rediscover fresh each time. **OBSOLETE as of 2026-08-26 --
+  see the "Build script structural fix" entry near the end of Section 4:
+  `build_ecp5.ps1` now discovers every `rtl\<domain>\src\*.sv` and
+  `rtl\top\*.sv` file automatically at run time, in both `$SourceFiles`
+  and the synthesis `.ys` script's read order (the latter is now
+  generated FROM `$SourceFiles`, not a second hardcoded list), so this
+  checklist item no longer applies to RTL-012 onward. Do not hand-edit
+  `$SourceFiles` for a new module going forward -- adding the new
+  module's `.sv` file under the correct `rtl\<domain>\src\` (or
+  `rtl\top\`) path is sufficient by itself.**
 - **RTL-008 (Engine RPM Monitor): COMPLETE TASK SPECIFICATION — STATUS:
   DONE, verified for real (see the RTL-008 entry in Section 4 above for
   the actual `gate.ps1`/`build_ecp5.ps1` results: 12/12 testbenches,

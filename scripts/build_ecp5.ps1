@@ -138,24 +138,53 @@ Write-Host "  ecppack      : $EcppackVersion"
 # ---- (avoids the two ever drifting apart -- same reasoning as ----
 # ---- RTLSTD-GEN-003: a value owned in one place shall not be a ----
 # ---- second, independently-maintained copy elsewhere.) ----
+#
+# AUTO-DISCOVERED, not hand-maintained. This closes a real, recurring gap
+# hit on first build attempt for RTL-002, RTL-004, RTL-009, RTL-010, and
+# RTL-011 (OPEN_ISSUES.md items 2/9/32/40/46): a hardcoded list here
+# requires a manual edit every time a new module lands, and that edit was
+# forgotten five separate times. Every real module source file is instead
+# discovered directly from the tree at run time:
+#   - rtl\<domain>\src\*.sv for every domain directory under rtl\ except
+#     `top` (confirmed against the real tree 2026-08-26: `infrastructure`
+#     and `monitoring` hold real module sources today; `databus`,
+#     `programmable`, and `safety` exist as empty domain directories with
+#     no `src\` yet -- Test-Path below skips a domain cleanly until it has
+#     one, and a brand-new domain directory added later needs no change
+#     here either, since Get-ChildItem enumerates directories, not names).
+#   - rtl\top\*.sv directly (the top-level integration + SPI bridge live
+#     there with no `src\` subfolder, per PROJECT_CONTINUITY.md Section 3).
+# `rtl\<domain>\generated\` is deliberately excluded from this scan --
+# its one real file (dfc_config_regbank_regs.sv) is already covered by
+# the fixed list below, and RTLSTD-ORG-003 generated output belongs
+# there, not discovered as if it were hand-authored RTL. Sorted by name
+# within each location so the list stays deterministic run to run.
+$RtlDomainDirs = Get-ChildItem -Path "rtl" -Directory |
+    Where-Object { $_.Name -ne "top" } |
+    Sort-Object Name
+
+$DiscoveredModuleFiles = @()
+foreach ($domainDir in $RtlDomainDirs) {
+    $srcDir = Join-Path $domainDir.FullName "src"
+    if (Test-Path $srcDir) {
+        $DiscoveredModuleFiles += Get-ChildItem -Path $srcDir -Filter "*.sv" -File |
+            Sort-Object Name |
+            ForEach-Object { $_.FullName.Substring($RepoRoot.Length + 1) }
+    }
+}
+
+$DiscoveredTopFiles = Get-ChildItem -Path "rtl\top" -Filter "*.sv" -File |
+    Sort-Object Name |
+    ForEach-Object { $_.FullName.Substring($RepoRoot.Length + 1) }
+
+# Fixed, non-RTL files that always belong in the build regardless of how
+# many modules exist -- never subject to per-module discovery.
 $SourceFiles = @(
     "include\dfc_constants_pkg.sv",
     "include\dfc_types_pkg.sv",
     "include\dfc_registers_pkg.sv",
-    "rtl\infrastructure\generated\dfc_config_regbank_regs.sv",
-    "rtl\infrastructure\src\dfc_rtl001.sv",
-    "rtl\infrastructure\src\dfc_rtl002.sv",
-    "rtl\infrastructure\src\dfc_rtl003.sv",
-    "rtl\infrastructure\src\dfc_rtl004.sv",
-    "rtl\infrastructure\src\dfc_rtl005.sv",
-    "rtl\infrastructure\src\dfc_rtl006.sv",
-    "rtl\monitoring\src\dfc_rtl007.sv",
-    "rtl\monitoring\src\dfc_rtl008.sv",
-    "rtl\monitoring\src\dfc_rtl009.sv",
-    "rtl\monitoring\src\dfc_rtl010.sv",
-    "rtl\monitoring\src\dfc_rtl011.sv",
-    "rtl\top\dfc_rtl024_spi_bridge.sv",
-    "rtl\top\dfc_rtl024.sv",
+    "rtl\infrastructure\generated\dfc_config_regbank_regs.sv"
+) + $DiscoveredModuleFiles + $DiscoveredTopFiles + @(
     "fpga\ecp5\ulx3s_dfc_top.sv",
     "fpga\ecp5\dfc_ecp5_pll.v",
     "fpga\ecp5\ulx3s_dfc.lpf"
@@ -204,28 +233,25 @@ try {
     # intended normal build path.
     $Abc9Arg = if ($NoAbc9) { "-noabc9" } else { "" }
     if ($NoAbc9) { Write-Host "  (ABC9 technology mapping disabled -- diagnostic run)" }
-    $synthScript = @"
-read_verilog -sv dfc_constants_pkg.sv;
-read_verilog -sv dfc_types_pkg.sv;
-read_verilog -sv dfc_registers_pkg.sv;
-read_verilog -sv dfc_config_regbank_regs.sv;
-read_verilog -sv dfc_rtl001.sv;
-read_verilog -sv dfc_rtl002.sv;
-read_verilog -sv dfc_rtl003.sv;
-read_verilog -sv dfc_rtl004.sv;
-read_verilog -sv dfc_rtl005.sv;
-read_verilog -sv dfc_rtl006.sv;
-read_verilog -sv dfc_rtl007.sv;
-read_verilog -sv dfc_rtl008.sv;
-read_verilog -sv dfc_rtl009.sv;
-read_verilog -sv dfc_rtl010.sv;
-read_verilog -sv dfc_rtl011.sv;
-read_verilog -sv dfc_rtl024_spi_bridge.sv;
-read_verilog -sv dfc_rtl024.sv;
-read_verilog dfc_ecp5_pll.v;
-read_verilog -sv ulx3s_dfc_top.sv;
-synth_ecp5 -top $Top -json ulx3s_dfc.json $Abc9Arg
-"@
+    # Derived from $SourceFiles, not a second, independently-maintained
+    # hardcoded list -- this was the other half of the exact recurring gap
+    # (OPEN_ISSUES.md items 2/9/32/40/46): a new module's file going
+    # missing from BOTH $SourceFiles and this read_verilog order on the
+    # same first build attempt. Deriving this list mechanically from
+    # $SourceFiles closes it for both places at once, not just one.
+    # `.lpf` is skipped -- it's a place-and-route constraint file, never a
+    # Yosys read input. `.sv` files get `-sv`; the one plain `.v` file
+    # (dfc_ecp5_pll.v) does not, matching this project's prior behavior.
+    $SynthReadLines = foreach ($f in $SourceFiles) {
+        if ($f -match '\.lpf$') { continue }
+        $leaf = Split-Path -Leaf $f
+        if ($f -match '\.sv$') {
+            "read_verilog -sv $leaf;"
+        } else {
+            "read_verilog $leaf;"
+        }
+    }
+    $synthScript = ($SynthReadLines -join "`n") + "`nsynth_ecp5 -top $Top -json ulx3s_dfc.json $Abc9Arg"
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     # cmd /c redirection, not a bare `yosys -p ...` call -- see lint.ps1's
