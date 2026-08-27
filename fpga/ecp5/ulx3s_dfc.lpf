@@ -97,6 +97,40 @@ LOCATE COMP "gp10" SITE "C4";
 IOBUF PORT "gp9" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gp10" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 
+# ---- System Health Monitor (RTL-011): J2 gp14-gp21, 8 real external
+# health-discrete inputs. Real board file (emard/ulx3s,
+# doc/constraints/ulx3s_v20.lpf), "DIFF"-tagged differential-capable
+# section -- confirmed free via a direct curl+grep of the real raw file
+# content against the exact "gp14".."gp21" LOCATE lines: none of the eight
+# carry a wifi-sharing comment (unlike gp11-gp13's "wifi_gpio26"/
+# "wifi_gpio33"/"wifi_gpio35"). This is the ENTIRE remaining unshared
+# differential-capable range -- chosen over the numerically-earlier but
+# WiFi-shared gp11-gp13, same "prefer unshared over shared" precedent
+# RTL-009 already established, and it happens to exactly and completely
+# exhaust what was left. After this module, gp11-gp13 (WiFi-shared) are
+# the only differential-capable positions still open -- see
+# ULX3S_CONNECTION_MAP.md's own new Section 9 for the full accounting.
+# Each is a plain single-ended input (no tristate) -- dfc_rtl011.sv owns
+# its own real two-flop CDC-HEALTH synchronizer per channel.
+# health_i[0]=gp14 health_i[1]=gp15 health_i[2]=gp16 health_i[3]=gp17
+# health_i[4]=gp18 health_i[5]=gp19 health_i[6]=gp20 health_i[7]=gp21
+LOCATE COMP "gp14" SITE "U18";
+LOCATE COMP "gp15" SITE "N17";
+LOCATE COMP "gp16" SITE "N16";
+LOCATE COMP "gp17" SITE "L16";
+LOCATE COMP "gp18" SITE "H18";
+LOCATE COMP "gp19" SITE "F17";
+LOCATE COMP "gp20" SITE "D18";
+LOCATE COMP "gp21" SITE "C18";
+IOBUF PORT "gp14" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp15" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp16" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp17" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp18" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp19" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp20" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gp21" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

@@ -2990,8 +2990,8 @@
     },
     {
       "name": "dfc_rtl011_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl011_control_t (121 bits, rich format)",
-      "width": 121,
+      "trace": "ARCH-002 Appendix B dfc_rtl011_control_t (122 bits, rich format)",
+      "width": 122,
       "fields": [
         {
           "name": "health_control__enable",
@@ -3136,6 +3136,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "W1C mask for sticky per-channel qualification failure"
+        },
+        {
+          "name": "rtl011_evt_overflow_status__event_overflow",
+          "hi": 121,
+          "lo": 121,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask for RTL011_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-2430 bit 0)"
         }
       ]
     },

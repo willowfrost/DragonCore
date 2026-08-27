@@ -2093,10 +2093,179 @@ written in this project going forward, not just a historical note.
     headroom by pipelining around it — worth checking for on any future
     module whose own per-word/per-slot storage looks superficially like
     genuine random access but, on inspection, never actually is.
-- **RTL-011 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001 through RTL-010/024, exist and are citation-verified
+- **RTL-011 (System Health Monitor): real, implemented and integrated into
+  `dfc_rtl024.sv`.** The fifth and final Monitoring-domain module,
+  completing that domain. Confirmed before any code was written that its
+  real architecture parallels RTL-006 (GPIO)'s own two-flop-synchronizer/
+  millisecond-qualification-timer skeleton, not RTL-007-010's divider
+  architecture — adapted for 8 dedicated health-discrete channels with
+  ARCH-MON-008's own two-counter qualification-attempt-failure mechanism
+  (a genuinely new piece of design RTL-006 never needed) and sticky
+  active/recovered evidence (independently timed and cleared — recovery
+  does not clear sticky-asserted, per RTL-011_RevA.md SS3's own explicit
+  warning). Real cross-module register forwarding for all 15 REG-002
+  0x2400-0x2438 registers (`HEALTH_CONTROL`/`HEALTH_POLARITY`/
+  `HEALTH_FAULT_ENABLE`/`HEALTH_EVENT_ENABLE`/`HEALTH_IRQ_ENABLE`/
+  `HEALTH_QUAL_0_3`/`_4_7`/`HEALTH_STICKY`/`RTL011_EVT_OVERFLOW_STATUS`
+  control forwarding; `HEALTH_RAW_IN`/`HEALTH_SYNC_IN`/`HEALTH_QUAL_IN`/
+  `HEALTH_ACTIVE`/`HEALTH_STICKY`/`RTL011_EVT_OVERFLOW_STATUS`/
+  `HEALTH_QUALIFICATION`/`HEALTH_STATUS` status forwarding) via `reggen.py`
+  v4 and `tools/reggen/rtl011_field_map.json`. Real, counted own-diagnostic
+  event generation (event ID 0x0034, source index 10, subtypes asserted/
+  qualification-failure/recovery per ARCH-002 Appendix C.7's own row for
+  this ID).
+  - **THE REAL, CONFIRMED HEALTH PHYSICAL-PIN GAP IS CLOSED:** `health_i[7:0]`
+    (previously hard-tied `8'h00`) now genuinely reaches the real external
+    `gp14`-`gp21`/J2-14 through J2-21 pads — confirmed to need 8 real
+    physical pins (not zero, unlike RTL-010) directly against ARCH-002's
+    own 17-port catalog and the CDC-HEALTH table entry before writing any
+    RTL. This consumes the ENTIRE remaining unshared differential-capable
+    pin range in one module — see `ULX3S_CONNECTION_MAP.md`'s own new
+    Section 9 for the fetched-not-memorized site confirmation
+    (U18/N17/N16/L16/H18/F17/D18/C18) and the explicit flag that only the
+    WiFi-shared `gp11`-`gp13` remain open afterward (`OPEN_ISSUES.md` item
+    47). RTL-011's own `irq_req_o` now genuinely reaches RTL-003's real
+    `irq_source_i[12]`, and its `evt_valid_o`/`evt_record_o` now genuinely
+    reach RTL-005's real `evt_valid_i[10]`/`evt_record_i[10]`.
+    `fault_req_o` is a real output left genuinely unconsumed (its
+    architected destination, RTL-013.fault_source_i[4], "System-health
+    aggregate fault," does not exist yet), same disclosed pattern as every
+    other not-yet-connected `fault_req_o` in this integration.
+  - **One real ARCH-002 gap, found and fixed before this module was
+    implemented, approved before implementation (the tenth real instance
+    of this exact gap class):** `dfc_rtl011_control_t` (121 bits) had no
+    clear-request field for `RTL011_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` —
+    grown 121->122 bits, same growth-at-new-highest-bit pattern already
+    established. `rtl011_field_map.json`'s own `status_registers` section
+    also closes the RTL-002/003/004-style host-READ gap (`OPEN_ISSUES.md`
+    item 21) for every external RTL-011 register from the start, same
+    discipline RTL-006 through RTL-010 already established.
+  - **Resolved without an ARCH-002 edit, same resolution style as items
+    1/10/11/13/19/22/37:** `RTL-011_RevA.md`'s own restated register count
+    (13) disagreed with REG-002's real, owning 15-register block summary —
+    resolved in favor of REG-002 (`OPEN_ISSUES.md` item 44).
+  - **A real, disclosed architectural finding, confirmed by direct
+    algebraic analysis before the testbench was ever written, not
+    discovered by a failing guess:** for a 1-bit-per-channel input,
+    qualification-ATTEMPT-FAILURE (ARCH-MON-008's own "no commit within
+    `min(255,4xQ)` samples" condition) is mathematically unreachable via
+    any external drive pattern — `attempt_limit` is provably always `>= Q`
+    for the same live Q, so a continuously-disagreeing 1-bit channel always
+    commits at or before its own attempt window closes. The mechanism
+    itself is still real and correct by construction (confirmed via a
+    related, genuine same-cycle race this analysis surfaced and fixed at
+    the sole Q=255 tie boundary); `rtl011_integration_tb.sv` cannot
+    externally trigger it, same disclosed reachability-gap class as
+    RTL-010's own untestable routed-commit half of VP-MON-007. Full
+    derivation in `dfc_rtl011.sv`'s own header and `OPEN_ISSUES.md` item
+    45.
+  - **Proven via a new, real integration testbench**,
+    `rtl011_integration_tb.sv` (60/60 checks): real host writes via
+    RTL-001's real DRI path genuinely change RTL-011's real behavior across
+    all 8 channels, and real simulated external transitions on `health_i`
+    genuinely produce correct synchronized/qualified/sticky-latched results
+    — including a real, genuinely-too-short transition correctly rejected
+    and a genuinely-qualifying one correctly accepted (matching RTL-006's
+    own precedent), RTL-011_RevA.md SS5's own dedicated case (force active
+    → sticky sets → force inactive → confirm recovered pulses once AND
+    sticky remains set until an explicit clear, with the "pulses once, not
+    a level" claim confirmed by clearing RECOVERED and proving it stays
+    clear), polarity inversion, the aggregate-fault equation (a
+    fault-disabled active channel doesn't contribute; a fault-enabled one
+    does, live not sticky), real event/irq generation with bit-exact
+    subtype/channel/detail-field packing, the real `RTL011_EVT_OVERFLOW_
+    STATUS` host-read-and-clear round trip, and real illegal-configuration-
+    to-fault detection (deliberately distinct from the aggregate fault
+    signal — see the module's own header). Two real testbench-authoring
+    lessons were found and fixed during this file's own bring-up, kept
+    here since they generalize: (1) a register write that reconfigures a
+    channel's own polarity away from its RESET-DEFAULT value can itself
+    produce a real, genuine active-to-inactive transition (since the
+    default polarity is active-LOW and every channel starts at a
+    zero/low qualified value) — any future module whose own reset-default
+    configuration interacts with a live input value this way should clear
+    resulting sticky evidence before relying on a "clean" baseline in a
+    later test part; (2) a real register write that requires PROTECT_KEY
+    authorization (confirmed directly against the generated regbank's own
+    `protected_o` output per register, not assumed from REG-002's prose
+    alone) silently no-ops without it — checking only the LAST of several
+    back-to-back writes' own response code missed this. **Additionally
+    proven inside the actual RTL-024 top-level integration**:
+    `rtl024_skeleton_tb.sv` was updated with a real SPI read of
+    `SUBSYS_READY` confirming bit 10 (RTL-011) reflects RTL-011's real
+    readiness, a real protected `SUBSYS_ENABLE` write genuinely enabling
+    the optional module-10 bit, and a real transition on this file's own
+    external `health_i[0]` top-level pin genuinely reaching a real host SPI
+    read of `HEALTH_SYNC_IN`/`HEALTH_ACTIVE`, plus a real check that
+    RTL-010's own `SENSOR0_VALUE` state is genuinely unaffected by RTL-011's
+    commit.
+  - Every other existing testbench was checked for breakage from RTL-011's
+    two new `dfc_rtl001.sv` ports (`rtl011_control_o`/`rtl011_status_i`,
+    replacing 8 individual stub-tied status ports — `health_raw_in`/
+    `health_sync_in`/`health_qual_in`/`health_active`/`health_sticky`/
+    `rtl011_evt_overflow_status`/`health_qualification`/`health_status`):
+    `regbank_smoke_tb.sv` needed its Check 3 redirected a tenth time
+    (... -> HEALTH_RAW_IN -> now WDOG_STATUS, since HEALTH_RAW_IN is
+    aggregated too as of this session) and its own individual RTL-011
+    status_i declarations/connections removed entirely; `dri_transaction_tb.sv`
+    (`.*` wildcard instantiation) needed the new ports declared/tied off.
+    `rtl002` through `rtl010_integration_tb.sv`'s own `dfc_rtl001`
+    instantiations were checked directly and confirmed NOT to break (named
+    port connections, not `.*` wildcards — an unconnected new port is
+    legal Verilog, not a compile error) — they simply don't exercise
+    RTL-011's own register pair, a disclosed, pre-existing, non-breaking
+    gap already true of RTL-010's own pair in those same files before this
+    session, not something this session introduced.
+  - **CONFIRMED, end-to-end, on the person's real machine — a real
+    `gate.ps1` run passed completely clean**: `lint.ps1` PASSED, `sim.ps1`
+    15/15 testbenches (**581/581 checks** — verified by adding up each
+    testbench's own individually-reported count from the real output:
+    12+12+16+28+30+24+37+35+44+47+60+50+60+113+13=581, not restated from
+    memory), `formal.ps1` both `bmc` and `prove` tasks genuinely PASS (real
+    k-induction against real RTL-001, unaffected by the RTL-011 changes),
+    coverage check ran clean (134/353 registers textually referenced, up
+    from 120/353, expected given RTL-011's own 15 registers are now
+    exercised).
+    **One genuine, real build gap was found and fixed to get a clean
+    build**, the same class of gap RTL-002/004/009/010 each hit before it:
+    the first `build_ecp5.ps1` attempt failed at the Yosys hierarchy-check
+    stage ("Module `\dfc_rtl011' referenced... is not part of the design")
+    because `dfc_rtl011.sv` was missing from both `$SourceFiles` and the
+    synthesis `.ys` script's read order — fixed by adding it in both
+    places, immediately after `dfc_rtl010.sv` (`OPEN_ISSUES.md` item 46).
+    Once fixed, a real `build_ecp5.ps1` run (Build ID `20260826_152459`,
+    default invocation, no special flags) passed completely clean:
+    **50.12 MHz PASS at 50 MHz required** (real critical path 2.18 ns
+    logic + 10.81 ns routing = 12.99 ns, confirmed from the real, final,
+    post-route "Max frequency" line — an EARLIER, pessimistic pre-route
+    estimate in the same log read 41.44 MHz FAIL, same "earlier lines can
+    be pessimistic" caveat this project's own build manifest always
+    carries), **TRELLIS_COMB 25221/83640 (30%) / TRELLIS_FF 16641/83640
+    (19%)** utilization, 12/156 (7%) MULT18X18D, "Program finished
+    normally," no `--timing-allow-fail` needed. **A real, narrow-margin
+    flag, not glossed over:** this is only 0.12 MHz (0.24%) above the 50
+    MHz requirement — narrower than RTL-010's own already-narrow 50.30 MHz
+    (item 40) despite that session's later, dedicated root-cause fix
+    (item 41) widening the SPI bridge's own margin to 53.69 MHz beforehand
+    — meaning RTL-011's own added die area consumed essentially all of
+    that regained headroom by itself. The build genuinely passed with no
+    workaround, so no further action was taken this session per this
+    project's own standing rule (only investigate/fix when a build
+    actually fails) — but per the identical "expect this margin to need
+    attention again" lesson RTL-007's own narrow margin already proved
+    correct once (predicting RTL-008's later regression) and RTL-010's own
+    narrow margin proved correct a second time (this module), **RTL-012
+    onward should expect this margin to need real attention very soon,
+    not treat 50.12 MHz as comfortable working room.**
+- **RTL-012 through RTL-023:** spec-complete (all 24 module specs,
+  including RTL-001 through RTL-011/024, exist and are citation-verified
   against the `-002` baseline) but **not yet implemented as real RTL.**
-  This is the actual next phase of work — see Section 5.
+  This is the actual next phase of work — see Section 5. RTL-011 completes
+  the Monitoring domain (RTL-007 through RTL-011); Safety (RTL-012,
+  Watchdog Manager) is next.
+- *(Historical entries below this point predate RTL-006 and are kept for*
+  *the record, not current status — see the RTL-006 through RTL-011*
+  *entries above for the project's real, current state.)*
 - **Full regression across every real testbench in the project, run for
   real this session (both individually and via `gate.ps1`'s own `sim.ps1`
   step), all green — 120/120 checks, 0 failures:**
@@ -2349,34 +2518,39 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-010 are now all real and implemented — RTL-010
-  completes the Monitoring domain (Sensor Monitor Interface, the first
-  module with no physical pin at all, host-write-only sensor updates); the
-  next real step is RTL-011 (System Health Monitor)**, one module at a
-  time, using the exact same real-verification discipline as RTL-001
-  through RTL-010 (compile, simulate, and only then trust — never claim
-  something works without actually running it). Then Safety, Databus, in
+- **RTL-002 through RTL-011 are now all real and implemented — RTL-011
+  completes the Monitoring domain (System Health Monitor, the fifth and
+  last Monitoring module); the next real step is RTL-012 (Watchdog
+  Manager), the first Safety-domain module**, one module at a time, using
+  the exact same real-verification discipline as RTL-001 through RTL-011
+  (compile, simulate, and only then trust — never claim something works
+  without actually running it). Then the rest of Safety, then Databus, in
   that order (Programmable is now out of scope entirely — see the
   scope-change entry directly above).
-  **RTL-010's own session found a real, narrow timing margin (50.30 MHz,
-  under 1% headroom above the 50 MHz requirement, `OPEN_ISSUES.md` item
-  40) after fixing a real regression in the already-shipped SPI bridge —
-  a LATER, dedicated session (2026-08-23) then closed the actual root
-  cause behind that narrow margin for real, not just RTL-010's own
-  regression: the SPI bridge's `rdata_words_q [0:15]` array (addressed by
-  `word_idx_q`/`build_word_idx_q`, both confirmed purely sequential
-  counters, never genuine random access) was replaced with a real
-  16-deep shift register, removing the 16-way mux/demux at its root
-  instead of pipelining around it again. Real, verified result: TRELLIS_COMB/
-  TRELLIS_FF both genuinely dropped (25044→24865 / 16432→16406 cells) and
-  timing closed at 53.69 MHz — wider margin than before, not a narrow
-  recovery. Full account in `OPEN_ISSUES.md` item 41 and this document's
-  own RTL-010 entry in Section 4 above.** Read item 41 before starting
-  RTL-011 anyway, for its own generalizable lesson: any future module
-  whose own per-word/per-slot storage looks like random access but, on
-  direct inspection of its index variables, is actually only ever
-  accessed sequentially is a candidate for the same shift-register
-  treatment before a timing regression forces the question.
+  **RTL-011's own session reconfirmed the SPI bridge's own real timing
+  margin is a live, recurring risk, not settled once and for all: a real
+  `build_ecp5.ps1` run closed at only 50.12 MHz, 0.12 MHz (0.24%) above
+  the 50 MHz requirement — narrower than RTL-010's own already-narrow
+  50.30 MHz (item 40), despite item 41's later, dedicated root-cause fix
+  (the `rdata_words_q` shift-register replacement) having widened that
+  same margin to 53.69 MHz first. RTL-011's own added die area alone
+  consumed essentially all of that regained headroom. The build genuinely
+  passed with no `--timing-allow-fail`, so no further action was taken
+  this session per this project's own standing rule (only investigate/fix
+  when a build actually fails) — but this is now the THIRD time a
+  narrow-margin flag has correctly predicted the next module would eat
+  the remaining headroom (RTL-007's 52.87 MHz predicted RTL-008's
+  regression; RTL-010's 50.30 MHz predicted this one). Full account in
+  `OPEN_ISSUES.md` item 47 and this document's own RTL-011 entry in
+  Section 4 above. **RTL-012 onward should treat this as a live, standing
+  risk to check at the start of its own session, not something to
+  rediscover the hard way a fourth time** — read items 17/31/40/41 for the
+  full pattern (registered-mask arbiters instead of per-cycle arithmetic;
+  pipelined multiplies instead of same-cycle combinational chains; a
+  variable-index array that's actually only ever accessed sequentially
+  replaced with a shift register) before assuming a fresh timing failure
+  needs a brand-new fix shape rather than one of these already-proven
+  ones.
   **RTL-009's own session confirmed the pipelined-multiply pattern
   (`OPEN_ISSUES.md` items 26/27/30/31) generalizes cleanly to two channels
   in one module** — see Section 4's own RTL-009 entry below for the real

@@ -61,12 +61,19 @@
 //     independent CDC-PULSE synchronizer instances internally; this
 //     wrapper only maps the two board pins onto the one logical 2-bit
 //     pulse_i port dfc_rtl024.sv already declares.
+//   - System Health Monitor (RTL-011): mapped to J2 gp14-gp21, the entire
+//     remaining unshared differential-capable range (confirmed free per the
+//     real board constraint file -- see ULX3S_CONNECTION_MAP.md's own new
+//     Section 9). Eight plain single-ended inputs, same idiom as
+//     gp8/gp9/gp10/gp27 above -- dfc_rtl011.sv owns all eight channels' own
+//     independent two-flop CDC-HEALTH synchronizer instances internally;
+//     this wrapper only maps the eight board pins onto the one logical
+//     8-bit health_i port dfc_rtl024.sv already declares.
 //
 // NOT WIRED (tied safe, matching dfc_rtl024's own disclosed skeleton
-// scope -- RTL-010 through RTL-023 don't exist yet):
-//   ARINC, CAN, UART, health monitoring inputs, user I/O, production-test
-//   pins, safety outputs. See dfc_rtl024.sv's own header for exactly
-//   what's stubbed and why.
+// scope -- RTL-012 through RTL-023 don't exist yet):
+//   ARINC, CAN, UART, user I/O, production-test pins, safety outputs. See
+//   dfc_rtl024.sv's own header for exactly what's stubbed and why.
 // ============================================================================
 
 module ulx3s_dfc_top (
@@ -88,6 +95,14 @@ module ulx3s_dfc_top (
   input  logic gp8,   // Engine RPM tachometer pulse input (RTL-008)
   input  logic gp9,   // Pulse/Frequency channel 0 input (RTL-009)
   input  logic gp10,  // Pulse/Frequency channel 1 input (RTL-009)
+  input  logic gp14,  // System Health channel 0 input (RTL-011)
+  input  logic gp15,  // System Health channel 1 input (RTL-011)
+  input  logic gp16,  // System Health channel 2 input (RTL-011)
+  input  logic gp17,  // System Health channel 3 input (RTL-011)
+  input  logic gp18,  // System Health channel 4 input (RTL-011)
+  input  logic gp19,  // System Health channel 5 input (RTL-011)
+  input  logic gp20,  // System Health channel 6 input (RTL-011)
+  input  logic gp21,  // System Health channel 7 input (RTL-011)
   output logic [7:0] led
 );
 
@@ -183,7 +198,7 @@ module ulx3s_dfc_top (
     .rotor_i   (gp27),
     .engine_i  (gp8),
     .pulse_i   ({gp10, gp9}),
-    .health_i  (8'h00),
+    .health_i  ({gp21, gp20, gp19, gp18, gp17, gp16, gp15, gp14}),
 
     .safety_out_o (),
 

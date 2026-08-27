@@ -107,22 +107,25 @@ the real `.lpf` addition, confirm the J1/J2 position against the real
 board, and cite the source for each fact rather than assume it.
 
 Positions still open on the GPIO headers for this purpose: **J1-11 through
-J1-13** plus **J2-14 through J2-21** (11 positions, all differential-
-capable) — see Section 6 below for where the last single-ended-only
-position (`gp27`/J2-27) went, Section 7 for where the first
-differential-capable position (`gp8`/J1-8) went, and Section 8 for where
-the next two differential-capable positions (`gp9`/J1-9, `gp10`/J1-10)
-went. `gn8`/`gn9`/`gn10` (J1-8/J1-9/J1-10's own differential counterparts,
-SITEs A5/B1/B4) are now implicitly unavailable for a true LVDS pair, since
-`gp8`/`gp9`/`gp10` are each committed to an ordinary single-ended signal —
-see Sections 7/8's own notes. None of the remaining differential-capable
-positions are committed to any specific future signal yet; do not treat
-any position number here as a preassigned plan. **J1-11 through J1-13 are
-shared with the onboard WiFi module** in the real board file's own comments
-(`wifi_gpio26`/`wifi_gpio33`/`wifi_gpio35`) — confirmed directly, not a
-preferred choice for a future module needing an unshared pin, though still
-usable if the remaining 8 J2 positions (J2-14 through J2-21) are ever
-exhausted first.
+J1-13 only** (3 positions, differential-capable, WiFi-shared) — see
+Section 6 below for where the last single-ended-only position (`gp27`/
+J2-27) went, Section 7 for where the first differential-capable position
+(`gp8`/J1-8) went, Section 8 for where the next two differential-capable
+positions (`gp9`/J1-9, `gp10`/J1-10) went, and **Section 9 for where the
+entire remaining unshared differential-capable range (`gp14`-`gp21`/J2-14
+through J2-21, 8 positions) went** — RTL-011's own 8 health-discrete
+channels consumed all of it in one module. `gn8`/`gn9`/`gn10`/`gn14`-`gn21`
+(the differential counterparts of every position committed so far) are now
+implicitly unavailable for a true LVDS pair, since each `gp<N>` above is
+committed to an ordinary single-ended signal — see Sections 7/8/9's own
+notes. **J1-11 through J1-13 are shared with the onboard WiFi module** in
+the real board file's own comments (`wifi_gpio26`/`wifi_gpio33`/
+`wifi_gpio35`) — confirmed directly, and now the ONLY differential-capable
+positions left at all, not merely the least-preferred choice: any future
+module needing a physical pin (RTL-017/019/020, or whichever module ends up
+needing one next) must use one of these 3 WiFi-shared positions, since
+every unshared differential-capable position is now committed. Flagged
+explicitly here, not discovered silently later.
 **Corrected, complete picture of the real electrical distinction (an
 earlier draft of this section was incomplete — verified directly against
 ULX3S's own official manual, not just the schematic excerpt used
@@ -145,13 +148,13 @@ Logical signals awaiting a physical assignment:
 `arinc_rx_i`/
 `arinc_tx_ctrl_o`/`arinc_rx_adapter_error_i`/`arinc_tx_adapter_error_i`
 (RTL-017/018), `can_rx_i`/`can_tx_o`/`can_transceiver_error_i` (RTL-019),
-`uart_rx_i`/`uart_tx_o` (RTL-020), `health_i[7:0]` (RTL-011),
+`uart_rx_i`/`uart_tx_o` (RTL-020),
 `safety_out_o[3:0]` (RTL-016), `user_i`/`o`/`oe[3:0]` (out of scope --
 RTL-022/023 dropped from this build per the demo-scope decision, see
 `PROJECT_CONTINUITY.md` Section 5). `gpio_i`/`gpio_o`/`gpio_oe_o`
-(RTL-006), `rotor_i` (RTL-007), `engine_i` (RTL-008), and `pulse_i[1:0]`
-(RTL-009) are no longer in this list — see Sections 5, 6, 7, and 8, their
-physical assignments are now real.
+(RTL-006), `rotor_i` (RTL-007), `engine_i` (RTL-008), `pulse_i[1:0]`
+(RTL-009), and `health_i[7:0]` (RTL-011) are no longer in this list — see
+Sections 5, 6, 7, 8, and 9, their physical assignments are now real.
 
 ---
 
@@ -381,3 +384,84 @@ from memory or accepted from a single summarizing pass. The `gp9`/`gp10` →
 "J1, position 9"/"J1, position 10" correspondence follows the same
 silkscreen-position convention already established and confirmed in
 Section 1.
+
+---
+
+## 9. System Health Monitor (RTL-011) — J2 gp14-gp21, 8 channels
+
+RTL-011 is the fifth module in the Monitoring domain with a real, physical
+interface — 8 independent, synchronized/qualified/polarity-adjusted
+external health-discrete inputs (`health_i[7:0]`), each requiring its own
+real physical pin (confirmed directly against ARCH-002's own 17-port
+catalog and the CDC-HEALTH table entry before writing `dfc_rtl011.sv` — the
+producer is `RTL-024.health_in_o` but the real two-flop synchronizer is
+owned by RTL-011 itself, the same "module owns its own synchronizer on the
+raw pad" precedent already established by `gpio_i`/`rotor_i`/`engine_i`/
+`pulse_i` in Sections 5-8, not a "pre-synchronized by RTL-024" case).
+
+| `health_i` channel | `gp<N>` | J1/J2 position | Row | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|---|
+| 0 | `gp14` | J2-14 | Outer (`+` / GP) | U18 | Input |
+| 1 | `gp15` | J2-15 | Outer (`+` / GP) | N17 | Input |
+| 2 | `gp16` | J2-16 | Outer (`+` / GP) | N16 | Input |
+| 3 | `gp17` | J2-17 | Outer (`+` / GP) | L16 | Input |
+| 4 | `gp18` | J2-18 | Outer (`+` / GP) | H18 | Input |
+| 5 | `gp19` | J2-19 | Outer (`+` / GP) | F17 | Input |
+| 6 | `gp20` | J2-20 | Outer (`+` / GP) | D18 | Input |
+| 7 | `gp21` | J2-21 | Outer (`+` / GP) | C18 | Input |
+
+**Choice rationale, and an explicit flag, not a silent choice:** per
+Section 4's own note, the differential-capable range still open before this
+module was **J1-11 through J1-13 (WiFi-shared) plus J2-14 through J2-21
+(unshared)** — 11 positions total. RTL-011 needs exactly 8. Rather than
+"exhaust in strict position order" (which would reach into the WiFi-shared
+J1-11-13 first, since they're numerically earlier), this module's 8
+channels are placed at `gp14`-`gp21` — the entire unshared J2-14-through-21
+range — following the same "prefer unshared over shared" precedent
+Section 8 already established for RTL-009 (`gp9`/`gp10` chosen over
+spilling into `gp11`-`gp13`). **This is a materially bigger consequence
+than any prior single choice in this table: it consumes the ENTIRE
+remaining unshared differential-capable range in one module.** After
+RTL-011, `gp11`-`gp13` (WiFi-shared) are the ONLY differential-capable
+positions left at all — any future module needing a physical pin no longer
+has an unshared option to prefer; it must use one of these 3 WiFi-shared
+positions. This is flagged here explicitly, exactly as the task that
+produced this section required, even though the choice itself (using the
+unshared range fully before ever touching the WiFi-shared one) is correct
+and consistent with every prior section's own stated preference.
+
+All 8 are plain single-ended inputs (no tristate/output logic needed, same
+idiom as Sections 6/7/8's `rotor_i`/`engine_i`/`pulse_i[1:0]`) —
+`ulx3s_dfc_top.sv` reads the eight pads directly into `dfc_rtl024.sv`'s own
+`health_i[7:0]` port, which `dfc_rtl011.sv` then synchronizes with its own
+8 independent two-flop CDC-HEALTH synchronizer instances (one per channel)
+before any use — entirely separate hardware from every other monitoring
+module's own synchronizers.
+
+**This is the fourth through eleventh pins this project has assigned from
+the differential-capable range** (after `gp8`/RTL-008 in Section 7 and
+`gp9`/`gp10`/RTL-009 in Section 8). Per Section 4's own corrected note (and
+ULX3S's own official manual), `gp14`-`gp21` are each physically paired with
+their own `gn14`-`gn21` counterpart for true LVDS differential signaling —
+assigning `gp14`-`gp21` alone to ordinary single-ended signals means
+**`gn14`-`gn21` (SITEs U17/P16/M17/L17/H17/G18/E17/D17) are now implicitly
+unavailable for a true differential pair** with their respective `gp<N>`,
+same disclosed consequence as every earlier differential-capable
+assignment in this project. `gn14`-`gn21` themselves remain physically
+real, unused pins (not committed to anything) — the constraint only
+affects their ability to be paired with their own `gp<N>` as a matched
+differential signal; any could still be assigned as an independent
+single-ended pin of its own, the same way `gn8`/`gn9`/`gn10` are in
+Sections 7/8.
+
+**Provenance:** the `gp14`-`gp21` → FPGA site mapping
+(U18/N17/N16/L16/H18/F17/D18/C18) is fetched directly from the real board
+constraint file (`emard/ulx3s`, `doc/constraints/ulx3s_v20.lpf` — the same
+source every earlier section's own mappings were fetched from), confirmed
+via a direct `curl`+`grep` of the raw file content against the exact
+`LOCATE COMP "gp14"` through `"gp21"` lines (and their `gn14`-`gn21`
+counterparts, to directly confirm none carry a wifi-sharing comment, unlike
+`gp11`-`gp13`), not recalled from memory or accepted from a single
+summarizing pass. The `gp14`-`gp21` → "J2, position 14" through "J2,
+position 21" correspondence follows the same silkscreen-position convention
+already established and confirmed in Section 1.

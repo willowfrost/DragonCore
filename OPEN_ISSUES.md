@@ -1073,3 +1073,89 @@ incomplete, logged here rather than silently resolved or guessed.
     original write-side fix), the same shift-register replacement is the
     candidate fix, subject to the same direct-reading confirmation this
     item's own sibling fix required before touching anything.
+
+## RTL-011 (System Health Monitor) integration
+
+43. **RESOLVED (2026-08-26), approved before implementation, same pattern
+    as items 2/7/8/12/20/24/28/32/36 (the tenth real instance of this exact
+    gap class).** `dfc_rtl011_control_t` (121 bits) had no clear-request
+    field for `RTL011_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-2430 bit 0,
+    a real W1C field). Fixed: ARCH-002 grew the struct 121->122 bits,
+    adding `rtl011_evt_overflow_status__event_overflow` at the new highest
+    bit (121) -- every pre-existing field's bit position confirmed
+    unchanged via a real `regenerate.ps1` run. `tools/reggen/
+    rtl011_field_map.json` carries the corresponding `control_registers`
+    entry, and its `status_registers` section closes the RTL-002/003/004-
+    style readback gap (item 21) for every external RTL-011 register from
+    the start, same discipline already established for RTL-006 through
+    RTL-010.
+
+44. **Resolved without an ARCH-002 edit, same resolution style as items
+    1/10/11/13/19/22/37.** `RTL-011_RevA.md` SS1/SS4 both describe this
+    module's System Health block as "13 registers." REG-002's own SS23
+    block-summary table (the owning document, CHTR-DOC-003) says 15 and
+    lists all 15 (`HEALTH_CONTROL`, `HEALTH_RAW_IN`, `HEALTH_SYNC_IN`,
+    `HEALTH_QUAL_IN`, `HEALTH_ACTIVE`, `HEALTH_STICKY`, `HEALTH_POLARITY`,
+    `HEALTH_FAULT_ENABLE`, `HEALTH_EVENT_ENABLE`, `HEALTH_IRQ_ENABLE`,
+    `HEALTH_QUAL_0_3`, `HEALTH_QUAL_4_7`, `RTL011_EVT_OVERFLOW_STATUS`,
+    `HEALTH_QUALIFICATION`, `HEALTH_STATUS`). Resolved in favor of REG-002
+    -- `dfc_rtl011.sv` implements and forwards all 15.
+
+45. **Real, disclosed architectural finding, confirmed by direct algebraic
+    analysis before writing the integration testbench, not discovered by a
+    failing test guess -- logged, not silently worked around.** For a
+    single-BIT-per-channel input (`health_i`'s real width per ARCH-002's
+    own 17-port catalog), the qualification-ATTEMPT-FAILURE condition
+    ARCH-MON-008 defines ("no qualified-state commit occurs within
+    `min(255, 4 x Q)` consecutive 1 ms samples") is mathematically
+    UNREACHABLE via any external drive pattern, static or dynamically
+    reconfigured. Reasoning: for a 1-bit signal there are only two possible
+    sample values, so the stability run-length's "new, different candidate"
+    branch is dead code after an attempt's own first disagreeing sample --
+    every sample either matches the current qualified value (cleanly
+    ending the attempt, no failure) or matches the already-tracked
+    candidate (advancing the SAME run toward commit). A continuous
+    single-candidate disagreement therefore always accumulates its
+    run-length in lockstep with the independent attempt counter, and since
+    `attempt_limit = min(255, 4xQ)` is provably `>= Q` for every legal Q
+    (0-255) -- strictly greater for Q<255, exactly equal only at the single
+    boundary point Q=255 -- the run-length COMMIT condition is always
+    satisfied at or before the attempt counter could ever reach its own
+    failure threshold. `dfc_rtl011.sv` fixes a related, genuine same-cycle
+    race this analysis surfaced (at the sole Q=255 tie, both conditions
+    would otherwise fire the identical ms_tick sample; a `commit_this_cycle`
+    term makes the tie resolve as a commit, not a failure, per the spec's
+    own "if no commit occurs" wording) -- but the underlying reachability
+    finding itself is a property of ARCH-MON-008's own algorithm applied to
+    a 1-bit signal, not an implementation defect, and no RTL/spec change is
+    proposed. `rtl011_integration_tb.sv` accordingly cannot exercise a
+    genuine, externally-triggered `HEALTH_STICKY.QUALIFICATION_FAILURE`
+    assertion -- the mechanism itself (both counters, the clear-request
+    field, the F.3 condition-mask gating, and the
+    `HEALTH_QUALIFICATION.IN_PROGRESS` live readback) is still real and,
+    per this analysis, correct by construction, just not reachable from
+    outside this module for a 1-bit channel -- same class of disclosed
+    testing-reachability gap as RTL-010's own untestable routed-commit half
+    of VP-MON-007 (item 38).
+
+46. **RESOLVED (2026-08-26), same class of gap RTL-002/004/009/010 each hit
+    before it (PROJECT_CONTINUITY.md Section 2's own standing lesson).**
+    The first `build_ecp5.ps1` attempt after RTL-011 was added failed
+    cleanly at the Yosys hierarchy-check stage ("Module `\dfc_rtl011'
+    referenced... is not part of the design") because `dfc_rtl011.sv` was
+    missing from both `$SourceFiles` and the synthesis `.ys` script's read
+    order. Fixed by adding it in both places, immediately after
+    `dfc_rtl010.sv`, matching the existing pattern exactly.
+
+47. **Real, disclosed consequence of RTL-011's own physical pin assignment
+    -- flagged explicitly per this session's own task instructions, not
+    discovered silently later.** RTL-011's 8 health-discrete channels
+    consumed the ENTIRE remaining unshared differential-capable pin range
+    (`gp14`-`gp21`/J2-14 through J2-21) in one module -- see
+    `ULX3S_CONNECTION_MAP.md`'s own new Section 9. After this module, only
+    `gp11`-`gp13` (J1-11 through J1-13, WiFi-shared per the real board
+    file's own comments) remain open on the differential-capable range at
+    all; the single-ended-only range was already fully exhausted by
+    RTL-006/007 (Sections 5/6). Any future module needing a physical pin
+    (RTL-017/019/020, or whichever module needs one next) must use one of
+    these 3 WiFi-shared positions -- there is no unshared option left.

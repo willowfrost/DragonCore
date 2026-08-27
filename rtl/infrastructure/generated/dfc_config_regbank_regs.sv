@@ -9,6 +9,7 @@
 // Cross-module forwarding: RTL-008 (see tools/reggen/rtl008_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-009 (see tools/reggen/rtl009_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-010 (see tools/reggen/rtl010_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-011 (see tools/reggen/rtl011_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -29,6 +30,8 @@
   // Aggregated real RTL-009 control, replacing the prior disconnected placeholder for: PULSE0_CONTROL, PULSE0_EDGE_FILTER, PULSE0_HYSTERESIS_Q17_15, PULSE0_STATUS, PULSE0_THRESH_HIGH_Q17_15, PULSE0_THRESH_LOW_Q17_15, PULSE0_TIMEOUT_US, PULSE1_CONTROL, PULSE1_EDGE_FILTER, PULSE1_HYSTERESIS_Q17_15, PULSE1_STATUS, PULSE1_THRESH_HIGH_Q17_15, PULSE1_THRESH_LOW_Q17_15, PULSE1_TIMEOUT_US, RTL009_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-010 status, replacing individual ports for: RTL010_EVT_OVERFLOW_STATUS, SENSOR0_CURRENT_AGE_MS, SENSOR0_META, SENSOR0_STATUS, SENSOR0_VALUE, SENSOR1_CURRENT_AGE_MS, SENSOR1_META, SENSOR1_STATUS, SENSOR1_VALUE, SENSOR_STATUS
   // Aggregated real RTL-010 control, replacing the prior disconnected placeholder for: RTL010_EVT_OVERFLOW_STATUS, SENSOR0_EVENT_IRQ_CFG, SENSOR0_HYSTERESIS, SENSOR0_MAX_AGE_MS, SENSOR0_STATUS, SENSOR0_THRESH_HIGH, SENSOR0_THRESH_LOW, SENSOR1_EVENT_IRQ_CFG, SENSOR1_HYSTERESIS, SENSOR1_MAX_AGE_MS, SENSOR1_STATUS, SENSOR1_THRESH_HIGH, SENSOR1_THRESH_LOW, SENSOR_CONTROL, SENSOR_STATUS, SENSOR_UPDATE_COMMIT, SENSOR_UPDATE_META, SENSOR_UPDATE_SELECT, SENSOR_UPDATE_VALUE
+  // Aggregated real RTL-011 status, replacing individual ports for: HEALTH_ACTIVE, HEALTH_QUALIFICATION, HEALTH_QUAL_IN, HEALTH_RAW_IN, HEALTH_STATUS, HEALTH_STICKY, HEALTH_SYNC_IN, RTL011_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-011 control, replacing the prior disconnected placeholder for: HEALTH_CONTROL, HEALTH_EVENT_ENABLE, HEALTH_FAULT_ENABLE, HEALTH_IRQ_ENABLE, HEALTH_POLARITY, HEALTH_QUAL_0_3, HEALTH_QUAL_4_7, HEALTH_STICKY, RTL011_EVT_OVERFLOW_STATUS
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -114,14 +117,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  route_destination_drop_count_2_3_status_i,
   input  logic [31:0]  route_destination_drop_count_4_status_i,
   input  logic [31:0]  route_active_control_status_i,
-  input  logic [31:0]  health_raw_in_status_i,
-  input  logic [31:0]  health_sync_in_status_i,
-  input  logic [31:0]  health_qual_in_status_i,
-  input  logic [31:0]  health_active_status_i,
-  input  logic [31:0]  health_sticky_status_i,
-  input  logic [31:0]  rtl011_evt_overflow_status_status_i,
-  input  logic [31:0]  health_qualification_status_i,
-  input  logic [31:0]  health_status_status_i,
   input  logic [31:0]  wdog_status_status_i,
   input  logic [31:0]  wdog_elapsed_us_status_i,
   input  logic [31:0]  rtl012_evt_overflow_status_status_i,
@@ -177,7 +172,9 @@ module dfc_config_regbank_regs (
   input  logic [158:0]  rtl009_status_i,
   output logic [334:0] rtl009_control_o,
   input  logic [224:0]  rtl010_status_i,
-  output logic [345:0] rtl010_control_o
+  output logic [345:0] rtl010_control_o,
+  input  logic [83:0]  rtl011_status_i,
+  output logic [121:0] rtl011_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -1484,20 +1481,28 @@ module dfc_config_regbank_regs (
     if (!rst_ni) health_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_HEALTH_CONTROL)) health_control_q <= wdata_i;
 
-  // HEALTH_RAW_IN (0x2404) -- external passthrough, owner RTL-011
-  wire [31:0] health_raw_in_q = health_raw_in_status_i;
+  // HEALTH_RAW_IN (0x2404) -- external passthrough, owner RTL-011. Reconstructed from the aggregated rtl011_status_i input (contract REG-2404), not an individual per-register port.
+  wire [31:0] health_raw_in_q = {24'h0, rtl011_status_i[10:3]};
 
-  // HEALTH_SYNC_IN (0x2408) -- external passthrough, owner RTL-011
-  wire [31:0] health_sync_in_q = health_sync_in_status_i;
+  // HEALTH_SYNC_IN (0x2408) -- external passthrough, owner RTL-011. Reconstructed from the aggregated rtl011_status_i input (contract REG-2408), not an individual per-register port.
+  wire [31:0] health_sync_in_q = {24'h0, rtl011_status_i[18:11]};
 
-  // HEALTH_QUAL_IN (0x240C) -- external passthrough, owner RTL-011
-  wire [31:0] health_qual_in_q = health_qual_in_status_i;
+  // HEALTH_QUAL_IN (0x240C) -- external passthrough, owner RTL-011. Reconstructed from the aggregated rtl011_status_i input (contract REG-240C), not an individual per-register port.
+  wire [31:0] health_qual_in_q = {24'h0, rtl011_status_i[26:19]};
 
-  // HEALTH_ACTIVE (0x2410) -- external passthrough, owner RTL-011
-  wire [31:0] health_active_q = health_active_status_i;
+  // HEALTH_ACTIVE (0x2410) -- external passthrough, owner RTL-011. Reconstructed from the aggregated rtl011_status_i input (contract REG-2410), not an individual per-register port.
+  wire [31:0] health_active_q = {24'h0, rtl011_status_i[34:27]};
 
-  // HEALTH_STICKY (0x2414) -- external passthrough, owner RTL-011
-  wire [31:0] health_sticky_q = health_sticky_status_i;
+  // HEALTH_STICKY (0x2414) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-011, real
+  //   generation per contract REG-2414, not a permanent tie.
+  logic [31:0] health_sticky_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) health_sticky_pulse_q <= 32'h0;
+    else health_sticky_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_HEALTH_STICKY)) ? wdata_i : 32'h0;
+
+  // HEALTH_STICKY (0x2414) -- external passthrough, owner RTL-011. Reconstructed from the aggregated rtl011_status_i input (contract REG-2414), not an individual per-register port.
+  wire [31:0] health_sticky_q = {8'h0, rtl011_status_i[82:75], rtl011_status_i[50:43], rtl011_status_i[42:35]};
 
   // HEALTH_POLARITY (0x2418) -- Mixed: RW, RSV0, owner RTL-011
   logic [31:0] health_polarity_q;
@@ -1535,14 +1540,22 @@ module dfc_config_regbank_regs (
     if (!rst_ni) health_qual_4_7_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_HEALTH_QUAL_4_7)) health_qual_4_7_q <= wdata_i;
 
-  // RTL011_EVT_OVERFLOW_STATUS (0x2430) -- external passthrough, owner RTL-011
-  wire [31:0] rtl011_evt_overflow_status_q = rtl011_evt_overflow_status_status_i;
+  // RTL011_EVT_OVERFLOW_STATUS (0x2430) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-011, real
+  //   generation per contract REG-2430, not a permanent tie.
+  logic [31:0] rtl011_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl011_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl011_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL011_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // HEALTH_QUALIFICATION (0x2434) -- external passthrough, owner RTL-011
-  wire [31:0] health_qualification_q = health_qualification_status_i;
+  // RTL011_EVT_OVERFLOW_STATUS (0x2430) -- external passthrough, owner RTL-011. Reconstructed from the aggregated rtl011_status_i input (contract REG-2430), not an individual per-register port.
+  wire [31:0] rtl011_evt_overflow_status_q = {8'h0, rtl011_status_i[66:51], 7'h0, rtl011_status_i[2:2]};
 
-  // HEALTH_STATUS (0x2438) -- external passthrough, owner RTL-011
-  wire [31:0] health_status_q = health_status_status_i;
+  // HEALTH_QUALIFICATION (0x2434) -- external passthrough, owner RTL-011. Reconstructed from the aggregated rtl011_status_i input (contract REG-2434), not an individual per-register port.
+  wire [31:0] health_qualification_q = {24'h0, rtl011_status_i[74:67]};
+
+  // HEALTH_STATUS (0x2438) -- external passthrough, owner RTL-011. Reconstructed from the aggregated rtl011_status_i input (contract REG-2438), not an individual per-register port.
+  wire [31:0] health_status_q = {31'h0, rtl011_status_i[83:83]};
 
   // WDOG_CONTROL (0x3000) -- Mixed: RW, RSV0, owner RTL-012
   logic [31:0] wdog_control_q;
@@ -2131,6 +2144,31 @@ module dfc_config_regbank_regs (
   assign rtl010_control_o[1] = sensor_control_q[1:1];  // SENSOR_CONTROL.sensor_control__event_enable
   assign rtl010_control_o[0] = sensor_control_q[0:0];  // SENSOR_CONTROL.sensor_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl011_control_o -- real forwarding to RTL-011, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl011_control_t defines --
+  // cross-checked at generation time (122/122 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl011_control_o[121] = rtl011_evt_overflow_status_pulse_q[0:0];  // RTL011_EVT_OVERFLOW_STATUS.rtl011_evt_overflow_status__event_overflow
+  assign rtl011_control_o[120:113] = health_sticky_pulse_q[23:16];  // HEALTH_STICKY.health_sticky__qualification_failure
+  assign rtl011_control_o[112:105] = health_qual_4_7_q[31:24];  // HEALTH_QUAL_4_7.health_qual_4_7__ch7_ms
+  assign rtl011_control_o[104:97] = health_qual_4_7_q[23:16];  // HEALTH_QUAL_4_7.health_qual_4_7__ch6_ms
+  assign rtl011_control_o[96:89] = health_qual_4_7_q[15:8];  // HEALTH_QUAL_4_7.health_qual_4_7__ch5_ms
+  assign rtl011_control_o[88:81] = health_qual_4_7_q[7:0];  // HEALTH_QUAL_4_7.health_qual_4_7__ch4_ms
+  assign rtl011_control_o[80:73] = health_qual_0_3_q[31:24];  // HEALTH_QUAL_0_3.health_qual_0_3__ch3_ms
+  assign rtl011_control_o[72:65] = health_qual_0_3_q[23:16];  // HEALTH_QUAL_0_3.health_qual_0_3__ch2_ms
+  assign rtl011_control_o[64:57] = health_qual_0_3_q[15:8];  // HEALTH_QUAL_0_3.health_qual_0_3__ch1_ms
+  assign rtl011_control_o[56:49] = health_qual_0_3_q[7:0];  // HEALTH_QUAL_0_3.health_qual_0_3__ch0_ms
+  assign rtl011_control_o[48:41] = health_irq_enable_q[7:0];  // HEALTH_IRQ_ENABLE.health_irq_enable__irq_enable
+  assign rtl011_control_o[40:33] = health_event_enable_q[7:0];  // HEALTH_EVENT_ENABLE.health_event_enable__event_enable
+  assign rtl011_control_o[32:25] = health_fault_enable_q[7:0];  // HEALTH_FAULT_ENABLE.health_fault_enable__fault_enable
+  assign rtl011_control_o[24:17] = health_polarity_q[7:0];  // HEALTH_POLARITY.health_polarity__active_high
+  assign rtl011_control_o[16:9] = health_sticky_pulse_q[15:8];  // HEALTH_STICKY.health_sticky__recovered
+  assign rtl011_control_o[8:1] = health_sticky_pulse_q[7:0];  // HEALTH_STICKY.health_sticky__asserted
+  assign rtl011_control_o[0] = health_control_q[0:0];  // HEALTH_CONTROL.health_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -2398,14 +2436,14 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_HEALTH_SYNC_IN: begin rdata_o = health_sync_in_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_QUAL_IN: begin rdata_o = health_qual_in_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_ACTIVE: begin rdata_o = health_active_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_HEALTH_STICKY: begin rdata_o = health_sticky_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_HEALTH_STICKY: begin rdata_o = health_sticky_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_POLARITY: begin rdata_o = health_polarity_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_FAULT_ENABLE: begin rdata_o = health_fault_enable_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_EVENT_ENABLE: begin rdata_o = health_event_enable_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_IRQ_ENABLE: begin rdata_o = health_irq_enable_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_QUAL_0_3: begin rdata_o = health_qual_0_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_QUAL_4_7: begin rdata_o = health_qual_4_7_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL011_EVT_OVERFLOW_STATUS: begin rdata_o = rtl011_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL011_EVT_OVERFLOW_STATUS: begin rdata_o = rtl011_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_QUALIFICATION: begin rdata_o = health_qualification_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_HEALTH_STATUS: begin rdata_o = health_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_WDOG_CONTROL: begin rdata_o = wdog_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end

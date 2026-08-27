@@ -1135,8 +1135,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL010_STATUS__EVENT_DROP_COUNT_HI = 224;
   localparam int unsigned DFC_RTL010_STATUS__EVENT_DROP_COUNT_LO = 209;
 
-  // ARCH-002 Appendix B dfc_rtl011_control_t (121 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl011_control_t (122 bits, rich format)
   typedef struct packed {
+    logic rtl011_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask for RTL011_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-2430 bit 0)
     logic [7:0] health_sticky__qualification_failure;  //  reset=0 :: W1C mask for sticky per-channel qualification failure
     logic [7:0] health_qual_4_7__ch7_ms;  //  reset=0 :: control_value
     logic [7:0] health_qual_4_7__ch6_ms;  //  reset=0 :: control_value
@@ -1154,9 +1155,9 @@ package dfc_types_pkg;
     logic [7:0] health_sticky__asserted;  //  reset=0 :: clear_mask
     logic health_control__enable;  //  reset=0 :: control_value
   } dfc_rtl011_control_t;
-  // total width: 121 bits
+  // total width: 122 bits
 
-  localparam int unsigned DFC_RTL011_CONTROL_WIDTH = 121;
+  localparam int unsigned DFC_RTL011_CONTROL_WIDTH = 122;
   localparam int unsigned DFC_RTL011_CONTROL__HEALTH_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL011_CONTROL__HEALTH_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL011_CONTROL__HEALTH_STICKY__ASSERTED_HI = 8;
@@ -1189,6 +1190,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL011_CONTROL__HEALTH_QUAL_4_7__CH7_MS_LO = 105;
   localparam int unsigned DFC_RTL011_CONTROL__HEALTH_STICKY__QUALIFICATION_FAILURE_HI = 120;
   localparam int unsigned DFC_RTL011_CONTROL__HEALTH_STICKY__QUALIFICATION_FAILURE_LO = 113;
+  localparam int unsigned DFC_RTL011_CONTROL__RTL011_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 121;
+  localparam int unsigned DFC_RTL011_CONTROL__RTL011_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 121;
 
   // ARCH-002 Appendix B dfc_rtl011_status_t (84 bits, rich format)
   typedef struct packed {

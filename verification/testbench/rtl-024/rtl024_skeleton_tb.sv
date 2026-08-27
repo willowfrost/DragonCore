@@ -684,6 +684,69 @@ module rtl024_skeleton_tb;
           dut.rtl009_status[dfc_types_pkg::DFC_RTL009_STATUS__PULSE0_FREQ_Q17_15__FREQUENCY_Q17_15_HI:dfc_types_pkg::DFC_RTL009_STATUS__PULSE0_FREQ_Q17_15__FREQUENCY_Q17_15_LO] == 32'd819_200_000,
           1'b1);
 
+    // ------------------------------------------------------------------
+    // RTL-011 integration checks -- real, added this session, over the
+    // real physical health_i[7:0] pads AND the real physical SPI pins.
+    // rtl011_integration_tb.sv already covers the RTL-001<->RTL-011
+    // register bus, the qualification stability timer, the sticky
+    // asserted/recovered contract, polarity, aggregate fault, and event/
+    // irq generation directly; this proves RTL-011's real readiness holds
+    // inside the actual RTL-024 top-level integration, plus a real,
+    // external health_i[0] pin transition genuinely reaching a real host
+    // SPI read of HEALTH_SYNC_IN/HEALTH_ACTIVE -- the concrete,
+    // physical-pad-level proof (gp14/J2-14, ULX3S_CONNECTION_MAP.md's own
+    // new Section 9), not merely a port-boundary-level one.
+    // ------------------------------------------------------------------
+    check("rtl011 status_o.ready is real (legal configuration, reset-default thresholds)",
+          dut.rtl011_status[dfc_types_pkg::DFC_RTL011_STATUS__READY_HI], 1'b1);
+    check("rtl011 status_o.fault is real (clear, no illegal configuration forced)",
+          dut.rtl011_status[dfc_types_pkg::DFC_RTL011_STATUS__FAULT_HI], 1'b0);
+
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check("host-readable SUBSYS_READY bit 10 (RTL-011) reflects RTL-011's real readiness",
+          rd_data[10], 1'b1);
+
+    // Real, protected SUBSYS_ENABLE write -- genuinely enables the
+    // optional RTL-011 module bit (10) on top of the mandatory mask plus
+    // the already-enabled RTL-007/RTL-008/RTL-009/RTL-010 bits
+    // (6/7/8/9), over a real re-armed PROTECT_KEY sequence.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SUBSYS_ENABLE) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SUBSYS_ENABLE) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SUBSYS_ENABLE, 32'h0080_FFDF, wr_status);  // mandatory mask | bit 6 | bit 7 | bit 8 | bit 9 | bit 10
+    check("SUBSYS_ENABLE SPI write (RTL-011 bit 10 enabled) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_HEALTH_CONTROL, 32'h0000_0001, wr_status);  // ENABLE=1
+    check("HEALTH_CONTROL SPI write (ENABLE=1) accepted", |wr_status, 1'b0);
+
+    // A real, external transition on this file's own health_i[0] top-level
+    // pin (reset-default ACTIVE_HIGH=0/qualification=0ms, so a HIGH input
+    // genuinely reads INACTIVE and a LOW input genuinely reads ACTIVE --
+    // driven LOW here, matching the reset-default polarity, to keep this
+    // check independent of any per-channel polarity/qualification
+    // configuration).
+    health_i[0] = 1'b0;
+    repeat (5) @(posedge core_clk_i); #1;
+
+    spi_read32(DFC_ADDR_HEALTH_SYNC_IN, rd_data, rd_status);
+    check("HEALTH_SYNC_IN SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable HEALTH_SYNC_IN genuinely reflects the real transition on this ",
+           "file's own external health_i[0] pin"},
+          rd_data[0], 1'b0);
+    spi_read32(DFC_ADDR_HEALTH_ACTIVE, rd_data, rd_status);
+    check("HEALTH_ACTIVE SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable HEALTH_ACTIVE genuinely reads channel 0 active (reset-default ",
+           "ACTIVE_HIGH=0, real LOW input on the real external pin)"},
+          rd_data[0], 1'b1);
+
+    check({"RTL-010's own SENSOR0_VALUE state is unaffected by RTL-011's real health_i[0] ",
+           "pin transition just driven -- confirms independent state even inside the ",
+           "actual RTL-024 top-level integration"},
+          dut.rtl010_status[dfc_types_pkg::DFC_RTL010_STATUS__SENSOR0_VALUE__VALUE_HI:dfc_types_pkg::DFC_RTL010_STATUS__SENSOR0_VALUE__VALUE_LO] == 32'd500,
+          1'b1);
+
     // The stub topology's remaining mandatory-mask modules (RTL-012
     // through RTL-016, etc.) never report ready, so RTL-002 is expected to
     // run out its full 499,000-cycle mandatory-init timeout and land in

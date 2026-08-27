@@ -1,0 +1,123 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x2400-0x2438), cited by contract ID below -- same disclosed scope/rationale as every prior field-map file's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). RTL011_EVT_OVERFLOW_STATUS's status_registers entry below (EVENT_OVERFLOW/DROP_COUNT mapped to the generic status_o.event_overflow/event_drop_count fields dfc_rtl011_status_t carries) closes the readback gap from the start, same discipline rtl006/007/008/009/010_field_map.json established (OPEN_ISSUES.md item 21). HEALTH_STICKY's three W1C fields (ASSERTED/RECOVERED/QUALIFICATION_FAILURE) each appear in BOTH control_registers (their real clear-request fields) AND status_registers (their real sticky-readback fields), same dual-appearance pattern already used for every prior module's own multi-field W1C status registers (e.g. RTL-006's GPIO_EVENT_STATUS). dfc_rtl011_control_t grew 121->122 bits this session (approved before implementation) to add rtl011_evt_overflow_status__event_overflow at the new highest bit (121), closing the tenth real instance of the EVENT_OVERFLOW-clear-field gap class (items 2/7/8/12/20/24/28/32/36). Confirmed directly against dfc_registers_pkg.json: HEALTH_RAW_IN/HEALTH_SYNC_IN/HEALTH_QUAL_IN/HEALTH_ACTIVE/HEALTH_STICKY/RTL011_EVT_OVERFLOW_STATUS/HEALTH_QUALIFICATION/HEALTH_STATUS are all readback=external; HEALTH_CONTROL/HEALTH_POLARITY/HEALTH_FAULT_ENABLE/HEALTH_EVENT_ENABLE/HEALTH_IRQ_ENABLE/HEALTH_QUAL_0_3/HEALTH_QUAL_4_7 are all readback=internal_reg (plain RW, host read returns RTL-001's own stored value, not an RTL-011 echo -- no status_registers entry needed for these, same pattern as every other module's plain configuration RW registers).",
+  "consumer_module": "RTL-011",
+  "control_struct": "dfc_rtl011_control_t",
+  "status_struct": "dfc_rtl011_status_t",
+  "control_registers": [
+    {
+      "register": "HEALTH_CONTROL", "contract_id": "REG-2400",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "health_control__enable"}
+      ]
+    },
+    {
+      "register": "HEALTH_STICKY", "contract_id": "REG-2414",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "W1C", "struct_field": "health_sticky__asserted"},
+        {"reg_hi": 15, "reg_lo": 8, "class": "W1C", "struct_field": "health_sticky__recovered"},
+        {"reg_hi": 23, "reg_lo": 16, "class": "W1C", "struct_field": "health_sticky__qualification_failure"}
+      ]
+    },
+    {
+      "register": "HEALTH_POLARITY", "contract_id": "REG-2418",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "health_polarity__active_high"}
+      ]
+    },
+    {
+      "register": "HEALTH_FAULT_ENABLE", "contract_id": "REG-241C",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "health_fault_enable__fault_enable"}
+      ]
+    },
+    {
+      "register": "HEALTH_EVENT_ENABLE", "contract_id": "REG-2420",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "health_event_enable__event_enable"}
+      ]
+    },
+    {
+      "register": "HEALTH_IRQ_ENABLE", "contract_id": "REG-2424",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "health_irq_enable__irq_enable"}
+      ]
+    },
+    {
+      "register": "HEALTH_QUAL_0_3", "contract_id": "REG-2428",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "health_qual_0_3__ch0_ms"},
+        {"reg_hi": 15, "reg_lo": 8, "class": "RW", "struct_field": "health_qual_0_3__ch1_ms"},
+        {"reg_hi": 23, "reg_lo": 16, "class": "RW", "struct_field": "health_qual_0_3__ch2_ms"},
+        {"reg_hi": 31, "reg_lo": 24, "class": "RW", "struct_field": "health_qual_0_3__ch3_ms"}
+      ]
+    },
+    {
+      "register": "HEALTH_QUAL_4_7", "contract_id": "REG-242C",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "health_qual_4_7__ch4_ms"},
+        {"reg_hi": 15, "reg_lo": 8, "class": "RW", "struct_field": "health_qual_4_7__ch5_ms"},
+        {"reg_hi": 23, "reg_lo": 16, "class": "RW", "struct_field": "health_qual_4_7__ch6_ms"},
+        {"reg_hi": 31, "reg_lo": 24, "class": "RW", "struct_field": "health_qual_4_7__ch7_ms"}
+      ]
+    },
+    {
+      "register": "RTL011_EVT_OVERFLOW_STATUS", "contract_id": "REG-2430",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl011_evt_overflow_status__event_overflow"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "HEALTH_RAW_IN", "contract_id": "REG-2404",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "health_raw_in__raw"}
+      ]
+    },
+    {
+      "register": "HEALTH_SYNC_IN", "contract_id": "REG-2408",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "health_sync_in__sync"}
+      ]
+    },
+    {
+      "register": "HEALTH_QUAL_IN", "contract_id": "REG-240C",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "health_qual_in__qualified"}
+      ]
+    },
+    {
+      "register": "HEALTH_ACTIVE", "contract_id": "REG-2410",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "health_active__active"}
+      ]
+    },
+    {
+      "register": "HEALTH_STICKY", "contract_id": "REG-2414",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "health_sticky__asserted"},
+        {"reg_hi": 15, "reg_lo": 8, "struct_field": "health_sticky__recovered"},
+        {"reg_hi": 23, "reg_lo": 16, "struct_field": "health_sticky__qualification_failure"}
+      ]
+    },
+    {
+      "register": "RTL011_EVT_OVERFLOW_STATUS", "contract_id": "REG-2430",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    },
+    {
+      "register": "HEALTH_QUALIFICATION", "contract_id": "REG-2434",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "health_qualification__in_progress"}
+      ]
+    },
+    {
+      "register": "HEALTH_STATUS", "contract_id": "REG-2438",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "health_status__aggregate_fault"}
+      ]
+    }
+  ]
+}

@@ -1730,7 +1730,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 208:185 | sensor1_meta__sequence | 24 | unsigned | 0 | readback_value |
 | 224:209 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### dfc_rtl011_control_t — 121 bits
+### dfc_rtl011_control_t — 122 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1750,6 +1750,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 104:97 | health_qual_4_7__ch6_ms | 8 | unsigned | 0 | control_value |
 | 112:105 | health_qual_4_7__ch7_ms | 8 | unsigned | 0 | control_value |
 | 120:113 | health_sticky__qualification_failure | 8 | unsigned | 0 | W1C mask for sticky per-channel qualification failure |
+| 121 | rtl011_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask for RTL011_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-2430 bit 0) |
 
 ### dfc_rtl011_status_t — 84 bits
 
