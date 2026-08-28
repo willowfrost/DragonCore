@@ -384,12 +384,28 @@ module dfc_rtl010 (
                              ch0_invalid_enter_test || ch0_invalid_exit_test;
 
   // ---- illegal configuration (ARCH-VAL-010), live, not sticky ----
-  wire signed [63:0] ch0_range_ext = {{32{ctl0_thresh_high[31]}}, ctl0_thresh_high} -
-                                      {{32{ctl0_thresh_low[31]}},  ctl0_thresh_low};
-  wire signed [63:0] ch0_hyst_ext  = {{32{ctl0_hysteresis[31]}}, ctl0_hysteresis};
+  //
+  // TIMING FIX (found via a real build_ecp5.ps1 failure during RTL-013's
+  // own session, approved before touching this already-shipped file):
+  // ch0_range_ext/ch0_hyst_ext were originally 64 bits wide, sign-extended
+  // from two 32-bit signed operands -- a genuinely expensive full 64-bit
+  // subtractor for a result that can never need more than 33 bits (the
+  // difference of two 32-bit signed values is bounded within a 33-bit
+  // signed range; the extra 31 bits of width were never load-bearing, just
+  // an unexamined "safe, don't think about it" choice). A real
+  // `build_ecp5.ps1` run named this exact subtraction (line numbers below)
+  // as the worst path once RTL-013's own added die area finally tipped an
+  // already-marginal margin over: 40.36 MHz, FAIL at 50 MHz required.
+  // Narrowed to the minimum non-overflowing width -- a pure width
+  // reduction, functionally identical, not a behavioral change (both
+  // sides of every comparison below are still evaluated at full signed
+  // precision for this range).
+  wire signed [32:0] ch0_range_ext = {ctl0_thresh_high[31], ctl0_thresh_high} -
+                                      {ctl0_thresh_low[31],  ctl0_thresh_low};
+  wire signed [32:0] ch0_hyst_ext  = {ctl0_hysteresis[31], ctl0_hysteresis};
   wire ch0_illegal_config = active && (
     ($signed(ctl0_thresh_low) > $signed(ctl0_thresh_high)) ||
-    (ch0_hyst_ext < 64'sd0) ||
+    (ch0_hyst_ext < 33'sd0) ||
     (ch0_hyst_ext > ch0_range_ext)
   );
 
@@ -474,12 +490,14 @@ module dfc_rtl010 (
                              ch1_stale_enter_test || ch1_stale_exit_test ||
                              ch1_invalid_enter_test || ch1_invalid_exit_test;
 
-  wire signed [63:0] ch1_range_ext = {{32{ctl1_thresh_high[31]}}, ctl1_thresh_high} -
-                                      {{32{ctl1_thresh_low[31]}},  ctl1_thresh_low};
-  wire signed [63:0] ch1_hyst_ext  = {{32{ctl1_hysteresis[31]}}, ctl1_hysteresis};
+  // TIMING FIX -- same real narrowing as ch0_range_ext/ch0_hyst_ext above
+  // (see that block's own comment for the full derivation).
+  wire signed [32:0] ch1_range_ext = {ctl1_thresh_high[31], ctl1_thresh_high} -
+                                      {ctl1_thresh_low[31],  ctl1_thresh_low};
+  wire signed [32:0] ch1_hyst_ext  = {ctl1_hysteresis[31], ctl1_hysteresis};
   wire ch1_illegal_config = active && (
     ($signed(ctl1_thresh_low) > $signed(ctl1_thresh_high)) ||
-    (ch1_hyst_ext < 64'sd0) ||
+    (ch1_hyst_ext < 33'sd0) ||
     (ch1_hyst_ext > ch1_range_ext)
   );
 

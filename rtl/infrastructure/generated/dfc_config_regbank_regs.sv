@@ -11,6 +11,7 @@
 // Cross-module forwarding: RTL-010 (see tools/reggen/rtl010_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-011 (see tools/reggen/rtl011_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-012 (see tools/reggen/rtl012_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-013 (see tools/reggen/rtl013_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -35,6 +36,8 @@
   // Aggregated real RTL-011 control, replacing the prior disconnected placeholder for: HEALTH_CONTROL, HEALTH_EVENT_ENABLE, HEALTH_FAULT_ENABLE, HEALTH_IRQ_ENABLE, HEALTH_POLARITY, HEALTH_QUAL_0_3, HEALTH_QUAL_4_7, HEALTH_STICKY, RTL011_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-012 status, replacing individual ports for: RTL012_EVT_OVERFLOW_STATUS, WDOG_ELAPSED_US, WDOG_STATUS
   // Aggregated real RTL-012 control, replacing the prior disconnected placeholder for: RTL012_EVT_OVERFLOW_STATUS, WDOG_CONTROL, WDOG_RECOVERY, WDOG_SERVICE, WDOG_STATUS, WDOG_TIMEOUT_US, WDOG_WINDOW_OPEN_US
+  // Aggregated real RTL-013 status, replacing individual ports for: DEGRADED_STATUS, FAULT_ACTIVE_SOURCE, FAULT_CLASS, FAULT_LATCHED_SOURCE, FAULT_STATUS, RTL013_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-013 control, replacing the prior disconnected placeholder for: DEGRADED_STATUS, FAULT_CONTROL, FAULT_LATCHED_SOURCE, FAULT_RECOVERABLE_MASK, FAULT_RESPONSE, FAULT_STATUS, RTL013_EVT_OVERFLOW_STATUS, TEST_FAULT_INJECT
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -120,12 +123,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  route_destination_drop_count_2_3_status_i,
   input  logic [31:0]  route_destination_drop_count_4_status_i,
   input  logic [31:0]  route_active_control_status_i,
-  input  logic [31:0]  fault_status_status_i,
-  input  logic [31:0]  fault_class_status_i,
-  input  logic [31:0]  degraded_status_status_i,
-  input  logic [31:0]  fault_active_source_status_i,
-  input  logic [31:0]  fault_latched_source_status_i,
-  input  logic [31:0]  rtl013_evt_overflow_status_status_i,
   input  logic [31:0]  ilock_status_status_i,
   input  logic [31:0]  ilock_active_result_status_i,
   input  logic [31:0]  rtl014_evt_overflow_status_status_i,
@@ -176,7 +173,9 @@ module dfc_config_regbank_regs (
   input  logic [83:0]  rtl011_status_i,
   output logic [121:0] rtl011_control_o,
   input  logic [57:0]  rtl012_status_i,
-  output logic [110:0] rtl012_control_o
+  output logic [110:0] rtl012_control_o,
+  input  logic [105:0]  rtl013_status_i,
+  output logic [112:0] rtl013_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -733,7 +732,15 @@ module dfc_config_regbank_regs (
   // TEST_IRQ_INJECT (0x0610) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-003 via test_irq_inject_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] test_irq_inject_q = 32'h00000000;
 
-  // TEST_FAULT_INJECT (0x0614) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TEST_FAULT_INJECT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // TEST_FAULT_INJECT (0x0614) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-013, real
+  //   generation per contract REG-0614, not a permanent tie.
+  logic [31:0] test_fault_inject_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) test_fault_inject_pulse_q <= 32'h0;
+    else test_fault_inject_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_TEST_FAULT_INJECT)) ? wdata_i : 32'h0;
+
+  // TEST_FAULT_INJECT (0x0614) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-013 via test_fault_inject_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] test_fault_inject_q = 32'h00000000;
 
   // TEST_REJECTION_ABORT_COUNT (0x0618) -- external passthrough, owner RTL-024
@@ -1624,17 +1631,33 @@ module dfc_config_regbank_regs (
   // RTL012_EVT_OVERFLOW_STATUS (0x301C) -- external passthrough, owner RTL-012. Reconstructed from the aggregated rtl012_status_i input (contract REG-301C), not an individual per-register port.
   wire [31:0] rtl012_evt_overflow_status_q = {8'h0, rtl012_status_i[57:42], 7'h0, rtl012_status_i[2:2]};
 
+  // FAULT_CONTROL (0x3100) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-013, real
+  //   generation per contract REG-3100, not a permanent tie.
+  logic [31:0] fault_control_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) fault_control_pulse_q <= 32'h0;
+    else fault_control_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_FAULT_CONTROL)) ? wdata_i : 32'h0;
+
   // FAULT_CONTROL (0x3100) -- Mixed: RW, WO-CMD, RSV0, owner RTL-013
   logic [31:0] fault_control_q;
   always_ff @(posedge clk_i or negedge rst_ni)
     if (!rst_ni) fault_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_FAULT_CONTROL)) fault_control_q <= wdata_i;
 
-  // FAULT_STATUS (0x3104) -- external passthrough, owner RTL-013
-  wire [31:0] fault_status_q = fault_status_status_i;
+  // FAULT_STATUS (0x3104) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-013, real
+  //   generation per contract REG-3104, not a permanent tie.
+  logic [31:0] fault_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) fault_status_pulse_q <= 32'h0;
+    else fault_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_FAULT_STATUS)) ? wdata_i : 32'h0;
 
-  // FAULT_CLASS (0x3108) -- external passthrough, owner RTL-013
-  wire [31:0] fault_class_q = fault_class_status_i;
+  // FAULT_STATUS (0x3104) -- external passthrough, owner RTL-013. Reconstructed from the aggregated rtl013_status_i input (contract REG-3104), not an individual per-register port.
+  wire [31:0] fault_status_q = {27'h0, rtl013_status_i[7:7], rtl013_status_i[6:6], rtl013_status_i[5:5], rtl013_status_i[4:4], rtl013_status_i[3:3]};
+
+  // FAULT_CLASS (0x3108) -- external passthrough, owner RTL-013. Reconstructed from the aggregated rtl013_status_i input (contract REG-3108), not an individual per-register port.
+  wire [31:0] fault_class_q = {18'h0, rtl013_status_i[21:21], rtl013_status_i[20:16], rtl013_status_i[15:8]};
 
   // FAULT_RESPONSE (0x310C) -- Mixed: RW, RSV0, owner RTL-013
   logic [31:0] fault_response_q;
@@ -1642,20 +1665,44 @@ module dfc_config_regbank_regs (
     if (!rst_ni) fault_response_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_FAULT_RESPONSE)) fault_response_q <= wdata_i;
 
-  // DEGRADED_STATUS (0x3110) -- external passthrough, owner RTL-013
-  wire [31:0] degraded_status_q = degraded_status_status_i;
+  // DEGRADED_STATUS (0x3110) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-013, real
+  //   generation per contract REG-3110, not a permanent tie.
+  logic [31:0] degraded_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) degraded_status_pulse_q <= 32'h0;
+    else degraded_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_DEGRADED_STATUS)) ? wdata_i : 32'h0;
 
-  // FAULT_ACTIVE_SOURCE (0x3114) -- external passthrough, owner RTL-013
-  wire [31:0] fault_active_source_q = fault_active_source_status_i;
+  // DEGRADED_STATUS (0x3110) -- external passthrough, owner RTL-013. Reconstructed from the aggregated rtl013_status_i input (contract REG-3110), not an individual per-register port.
+  wire [31:0] degraded_status_q = {28'h0, rtl013_status_i[25:25], rtl013_status_i[24:24], rtl013_status_i[23:23], rtl013_status_i[22:22]};
 
-  // FAULT_LATCHED_SOURCE (0x3118) -- external passthrough, owner RTL-013
-  wire [31:0] fault_latched_source_q = fault_latched_source_status_i;
+  // FAULT_ACTIVE_SOURCE (0x3114) -- external passthrough, owner RTL-013. Reconstructed from the aggregated rtl013_status_i input (contract REG-3114), not an individual per-register port.
+  wire [31:0] fault_active_source_q = {rtl013_status_i[57:26]};
+
+  // FAULT_LATCHED_SOURCE (0x3118) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-013, real
+  //   generation per contract REG-3118, not a permanent tie.
+  logic [31:0] fault_latched_source_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) fault_latched_source_pulse_q <= 32'h0;
+    else fault_latched_source_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_FAULT_LATCHED_SOURCE)) ? wdata_i : 32'h0;
+
+  // FAULT_LATCHED_SOURCE (0x3118) -- external passthrough, owner RTL-013. Reconstructed from the aggregated rtl013_status_i input (contract REG-3118), not an individual per-register port.
+  wire [31:0] fault_latched_source_q = {rtl013_status_i[89:58]};
 
   // FAULT_RECOVERABLE_MASK (0x311C) -- CONST, fixed at reset value
   wire [31:0] fault_recoverable_mask_q = 32'h00017FEF;
 
-  // RTL013_EVT_OVERFLOW_STATUS (0x3120) -- external passthrough, owner RTL-013
-  wire [31:0] rtl013_evt_overflow_status_q = rtl013_evt_overflow_status_status_i;
+  // RTL013_EVT_OVERFLOW_STATUS (0x3120) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-013, real
+  //   generation per contract REG-3120, not a permanent tie.
+  logic [31:0] rtl013_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl013_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl013_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL013_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
+  // RTL013_EVT_OVERFLOW_STATUS (0x3120) -- external passthrough, owner RTL-013. Reconstructed from the aggregated rtl013_status_i input (contract REG-3120), not an individual per-register port.
+  wire [31:0] rtl013_evt_overflow_status_q = {8'h0, rtl013_status_i[105:90], 7'h0, rtl013_status_i[2:2]};
 
   // ILOCK_CONTROL (0x3200) -- Mixed: RW, RSV0, owner RTL-014
   logic [31:0] ilock_control_q;
@@ -2226,6 +2273,31 @@ module dfc_config_regbank_regs (
   assign rtl012_control_o[1] = wdog_control_q[1:1];  // WDOG_CONTROL.wdog_control__window_enable
   assign rtl012_control_o[0] = wdog_control_q[0:0];  // WDOG_CONTROL.wdog_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl013_control_o -- real forwarding to RTL-013, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl013_control_t defines --
+  // cross-checked at generation time (113/113 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl013_control_o[112] = rtl013_evt_overflow_status_pulse_q[0:0];  // RTL013_EVT_OVERFLOW_STATUS.rtl013_evt_overflow_status__event_overflow
+  assign rtl013_control_o[111:80] = fault_recoverable_mask_q[31:0];  // FAULT_RECOVERABLE_MASK.fault_recoverable_mask__recoverable
+  assign rtl013_control_o[79:48] = fault_latched_source_pulse_q[31:0];  // FAULT_LATCHED_SOURCE.fault_latched_source__latched_source
+  assign rtl013_control_o[47] = degraded_status_pulse_q[3:3];  // DEGRADED_STATUS.degraded_status__recovered
+  assign rtl013_control_o[46] = degraded_status_pulse_q[1:1];  // DEGRADED_STATUS.degraded_status__entry
+  assign rtl013_control_o[45:42] = fault_response_q[7:4];  // FAULT_RESPONSE.fault_response__safety_output_request_enable
+  assign rtl013_control_o[41] = fault_response_q[3:3];  // FAULT_RESPONSE.fault_response__latch_until_host_clear
+  assign rtl013_control_o[40] = fault_response_q[2:2];  // FAULT_RESPONSE.fault_response__event_on_clear
+  assign rtl013_control_o[39] = fault_response_q[1:1];  // FAULT_RESPONSE.fault_response__safety_response_enable
+  assign rtl013_control_o[38] = fault_response_q[0:0];  // FAULT_RESPONSE.fault_response__degraded_enable
+  assign rtl013_control_o[37] = fault_status_pulse_q[3:3];  // FAULT_STATUS.fault_status__response_pending
+  assign rtl013_control_o[36] = fault_status_pulse_q[2:2];  // FAULT_STATUS.fault_status__event_pending
+  assign rtl013_control_o[35] = fault_status_pulse_q[1:1];  // FAULT_STATUS.fault_status__multi_fault
+  assign rtl013_control_o[34] = fault_status_pulse_q[0:0];  // FAULT_STATUS.fault_status__fault_active
+  assign rtl013_control_o[33] = fault_control_pulse_q[1:1];  // FAULT_CONTROL.fault_control__clear_all_req
+  assign rtl013_control_o[32] = fault_control_q[0:0];  // FAULT_CONTROL.fault_control__enable
+  assign rtl013_control_o[31:0] = test_fault_inject_pulse_q[31:0];  // TEST_FAULT_INJECT.test_fault_inject__source_mask
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -2512,14 +2584,14 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_WDOG_RECOVERY: begin rdata_o = wdog_recovery_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_RTL012_EVT_OVERFLOW_STATUS: begin rdata_o = rtl012_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_FAULT_CONTROL: begin rdata_o = fault_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_FAULT_STATUS: begin rdata_o = fault_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_FAULT_STATUS: begin rdata_o = fault_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_FAULT_CLASS: begin rdata_o = fault_class_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_FAULT_RESPONSE: begin rdata_o = fault_response_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_DEGRADED_STATUS: begin rdata_o = degraded_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_DEGRADED_STATUS: begin rdata_o = degraded_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_FAULT_ACTIVE_SOURCE: begin rdata_o = fault_active_source_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_FAULT_LATCHED_SOURCE: begin rdata_o = fault_latched_source_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_FAULT_LATCHED_SOURCE: begin rdata_o = fault_latched_source_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_FAULT_RECOVERABLE_MASK: begin rdata_o = fault_recoverable_mask_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL013_EVT_OVERFLOW_STATUS: begin rdata_o = rtl013_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL013_EVT_OVERFLOW_STATUS: begin rdata_o = rtl013_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ILOCK_CONTROL: begin rdata_o = ilock_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_ILOCK_STATUS: begin rdata_o = ilock_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ILOCK_ENTRY_SELECT: begin rdata_o = ilock_entry_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

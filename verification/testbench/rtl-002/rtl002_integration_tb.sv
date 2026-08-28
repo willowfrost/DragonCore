@@ -84,6 +84,11 @@ module rtl002_integration_tb;
   logic [dfc_types_pkg::DFC_RTL011_STATUS_WIDTH-1:0]  rtl011_status_stub = '0;
   logic [dfc_types_pkg::DFC_RTL012_CONTROL_WIDTH-1:0] rtl012_control_unused;
   logic [dfc_types_pkg::DFC_RTL012_STATUS_WIDTH-1:0]  rtl012_status_stub = '0;
+  // RTL-013 likewise out of this test's scope -- same disclosed-stub
+  // pattern, added while checking every dfc_rtl001 instantiation site
+  // during RTL-013's own integration session.
+  logic [dfc_types_pkg::DFC_RTL013_CONTROL_WIDTH-1:0] rtl013_control_unused;
+  logic [dfc_types_pkg::DFC_RTL013_STATUS_WIDTH-1:0]  rtl013_status_stub = '0;
 
   // Real signal (not a bare literal tie) so Part 4 below can withhold the
   // event handshake on purpose to force a genuine, real overflow condition
@@ -127,6 +132,8 @@ module rtl002_integration_tb;
     .rtl011_status_i        (rtl011_status_stub),
     .rtl012_control_o       (rtl012_control_unused),
     .rtl012_status_i        (rtl012_status_stub),
+    .rtl013_control_o       (rtl013_control_unused),
+    .rtl013_status_i        (rtl013_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );
@@ -150,6 +157,12 @@ module rtl002_integration_tb;
                                           // covered by rtl024_skeleton_tb.sv
     .module_fault_i       (24'h0),
     .module_reset_o       (),
+    // Real ports, added during RTL-013's own integration session --
+    // tied inactive here since this test targets the RTL-001<->RTL-002
+    // register bus specifically, not RTL-013's own escalation path
+    // (rtl013_integration_tb.sv and rtl024_skeleton_tb.sv cover that).
+    .degraded_req_i       (1'b0),
+    .faulted_req_i        (1'b0),
     .operating_state_o    (),
     .observational_mode_o (),
     // Real port this session -- tied inactive here since this test

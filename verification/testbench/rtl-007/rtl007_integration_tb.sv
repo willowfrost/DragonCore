@@ -93,6 +93,11 @@ module rtl007_integration_tb;
   logic [dfc_types_pkg::DFC_RTL011_STATUS_WIDTH-1:0]  rtl011_status_stub = '0;
   logic [dfc_types_pkg::DFC_RTL012_CONTROL_WIDTH-1:0] rtl012_control_unused;
   logic [dfc_types_pkg::DFC_RTL012_STATUS_WIDTH-1:0]  rtl012_status_stub = '0;
+  // RTL-013 likewise out of this test's scope -- same disclosed-stub
+  // pattern, added while checking every dfc_rtl001 instantiation site
+  // during RTL-013's own integration session.
+  logic [dfc_types_pkg::DFC_RTL013_CONTROL_WIDTH-1:0] rtl013_control_unused;
+  logic [dfc_types_pkg::DFC_RTL013_STATUS_WIDTH-1:0]  rtl013_status_stub = '0;
 
   logic [63:0] tb_timestamp = 64'h0;
   always @(posedge core_clk_i) tb_timestamp <= tb_timestamp + 64'd1;
@@ -144,6 +149,8 @@ module rtl007_integration_tb;
     .rtl011_status_i        (rtl011_status_stub),
     .rtl012_control_o       (rtl012_control_unused),
     .rtl012_status_i        (rtl012_status_stub),
+    .rtl013_control_o       (rtl013_control_unused),
+    .rtl013_status_i        (rtl013_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

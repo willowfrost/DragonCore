@@ -359,8 +359,24 @@ def emit_regbank(module, regs, fieldmaps, types_path, out_module_name):
     lines.append("    unique case (addr_i)")
     for r in regs:
         nm = sv_ident(r["name"])
-        has_real_write_path = r["name"] in reg_owner_ctx
-        if has_real_write_path:
+        owner_ctx = reg_owner_ctx.get(r["name"])
+        # FIX (found while wiring RTL-013's FAULT_RECOVERABLE_MASK, a CONST
+        # register whose REG-002 text requires "Any register write is
+        # ACCESS_ERROR"): a field-map control_registers entry means a real
+        # forwarding path exists into the consumer's control_o, but that is
+        # NOT the same claim as "a real host WRITE path exists" -- every
+        # entry used before this one was RW/WO-CMD/W1C, where forwarding and
+        # writability are the same thing, so the two were never
+        # distinguished. A register whose ctrl_entry fields are ALL class
+        # "CONST" forwards a fixed value with no writable field at all (the
+        # fixed literal comes from the register's own const-readback wire,
+        # never from wdata_i) -- write_illegal_o for such a register must
+        # still follow the readback-based rule below, not be unconditionally
+        # cleared. Every pre-existing RW/WO-CMD/W1C field-map entry is
+        # unaffected (has_writable_path stays True for all of them).
+        has_writable_path = bool(owner_ctx) and any(
+            f["class"] != "CONST" for f in owner_ctx["ctrl_regs_by_name"][r["name"]]["fields"])
+        if has_writable_path:
             illegal = "1'b0"  # FIX: a real write path exists for this register's mapped
                                # fields (see file header) -- v2 incorrectly hardcoded 1'b1
                                # for every "external"-class register regardless of this.

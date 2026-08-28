@@ -46,6 +46,13 @@ module rtl002_state_tb;
 
   logic [23:0] module_ready_i = 24'h0;
   logic [23:0] module_fault_i = 24'h0;
+  // Real ports, added during RTL-013's own integration session (RTL-013's
+  // own degraded_req_o/faulted_req_o) -- tied inactive here since this
+  // testbench exercises the primary state machine via module_ready_i/
+  // module_fault_i directly, not RTL-013's own escalation path
+  // (rtl013_integration_tb.sv and rtl024_skeleton_tb.sv cover that).
+  logic        degraded_req_i = 1'b0;
+  logic        faulted_req_i  = 1'b0;
   logic [23:0] module_reset_o;
   logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_o;
   logic        observational_mode_o;

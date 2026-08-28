@@ -1807,7 +1807,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 41:10 | wdog_elapsed_us__elapsed_us | 32 | unsigned | 0x00000000 | readback_value |
 | 57:42 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### dfc_rtl013_control_t — 112 bits
+### dfc_rtl013_control_t — 113 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1827,6 +1827,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 47 | degraded_status__recovered | 1 | unsigned | 0 | clear_mask |
 | 79:48 | fault_latched_source__latched_source | 32 | unsigned | 0 | clear_mask |
 | 111:80 | fault_recoverable_mask__recoverable | 32 | unsigned | 0x00017FEF | fixed Architecture constant; writes of any other value rejected |
+| 112 | rtl013_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
 
 ### dfc_rtl013_status_t — 106 bits
 

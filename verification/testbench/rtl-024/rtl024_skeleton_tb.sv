@@ -815,18 +815,30 @@ module rtl024_skeleton_tb;
           dut.rtl011_status[dfc_types_pkg::DFC_RTL011_STATUS__HEALTH_ACTIVE__ACTIVE_LO],
           1'b1);
 
-    // The stub topology's remaining mandatory-mask modules (RTL-013
+    check("rtl013 status_o.ready is real from reset (mandatory, no illegal configuration forced)",
+          dut.rtl013_status[dfc_types_pkg::DFC_RTL013_STATUS__READY_HI], 1'b1);
+    check("rtl013 status_o.fault is real (clear, no illegal reserved-bit activity forced)",
+          dut.rtl013_status[dfc_types_pkg::DFC_RTL013_STATUS__FAULT_HI], 1'b0);
+
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable SUBSYS_READY bit 12 (RTL-013) already reflects RTL-013's real ",
+           "readiness with no SUBSYS_ENABLE write at all -- mandatory-class, same precedent ",
+           "as RTL-012"},
+          rd_data[12], 1'b1);
+
+    // The stub topology's remaining mandatory-mask modules (RTL-014
     // through RTL-016) never report ready, so RTL-002 is expected to run
     // out its full 499,000-cycle mandatory-init timeout and land in
     // FAULTED -- this is the disclosed, real consequence of the current
     // stub topology (see dfc_rtl024.sv's RTL-002 integration comment), not
-    // a defect in RTL-002 itself. RTL-003/RTL-004/RTL-005/RTL-012 are now
-    // real, but none is a mandatory-mask module dependency RTL-002 can
-    // still rely on being ready for this specific timeout path -- RTL-002
-    // already relies on other, still-unready mandatory members (RTL-013
-    // through RTL-016), so this test's long-standing "reaches FAULTED"
-    // outcome is unchanged in kind, only in which remaining stub modules
-    // are responsible for it.
+    // a defect in RTL-002 itself. RTL-003/RTL-004/RTL-005/RTL-012/RTL-013
+    // are now real, but none is a mandatory-mask module dependency RTL-002
+    // can still rely on being ready for this specific timeout path --
+    // RTL-002 already relies on other, still-unready mandatory members
+    // (RTL-014 through RTL-016), so this test's long-standing "reaches
+    // FAULTED" outcome is unchanged in kind, only in which remaining stub
+    // modules are responsible for it.
     begin
       // NOTE: Icarus rejects `break` inside a for-loop ("sorry: break
       // statements not supported") -- confirmed via a real compile run,
@@ -850,6 +862,128 @@ module rtl024_skeleton_tb;
       check("rtl002 status_o.fault asserted once FAULTED", dut.rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__FAULT_HI], 1'b1);
       check("rtl002 status_o.sys_status__init_failed set", dut.rtl002_status[dfc_types_pkg::DFC_RTL002_STATUS__SYS_STATUS__INIT_FAILED_HI], 1'b1);
     end
+
+    // ------------------------------------------------------------------
+    // RTL-013 fault-forcing checks -- real, added this session. Placed
+    // AFTER the mandatory-init-timeout wait above, deliberately: RTL-013's
+    // own real faulted_req_o now genuinely reaches RTL-002's real
+    // faulted_req_i (this session's own dfc_rtl002.sv port-catalog fix),
+    // an ADDITIONAL real cause for FAULTED entry alongside the pre-existing
+    // mandatory-init-timeout path -- forcing it any earlier would make
+    // RTL-002 latch into FAULTED immediately and defeat the wait loop
+    // above's own genuine proof of the ~499,000-cycle timeout path. Here,
+    // RTL-002 is already latched in FAULTED for its own, original reason,
+    // so this section's own real, additional purpose is: THE CONCRETE,
+    // WHOLE-SYSTEM PROOF that the real fault-source matrix aggregates
+    // MULTIPLE genuinely independent real producers at once, not a single
+    // one in isolation (rtl013_integration_tb.sv's own, narrower scope):
+    // RTL-011's real health_i[0] condition, already forced active earlier
+    // in this same file and never cleared, plus a freshly-forced real
+    // RTL-007 rotor timeout on this file's own external rotor_i pin
+    // (already exercised, now left idle since its own section above), both
+    // genuinely reach RTL-013's real fault_source_i[4]/[6] simultaneously
+    // through dfc_rtl024.sv's own real rtl013_fault_source wiring -- not a
+    // hierarchical force at either boundary -- and that RTL-013's own real
+    // faulted_req_o/degraded_req_o genuinely reach RTL-002's real ports.
+    // ------------------------------------------------------------------
+
+    // Real, protected WDOG_CONTROL disable first: RTL-012's own WDOG_TIMEOUT_US
+    // (1000us, configured in that module's own section far earlier) has
+    // genuinely elapsed for real by now (the ~499,000-cycle mandatory-init
+    // wait above is itself ~10ms of real simulated time), so RTL-012's own
+    // real fault_req_o would otherwise ALSO be active on fault_source_i[0]
+    // -- a real, disclosed side effect of this test's own long real elapsed
+    // time, not a defect. Disabling it here (ARCH-RTL012-001: reset/disable
+    // clears the live timeout condition) keeps this section's own real,
+    // deliberate two-source scenario (bits 4/6) clean and unambiguous;
+    // RTL-012's own real timeout-classification behavior is already
+    // covered in exhaustive depth by rtl012_integration_tb.sv, not this
+    // file's own job to re-prove.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for WDOG_CONTROL) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for WDOG_CONTROL) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_WDOG_CONTROL, 32'h0000_0000, wr_status);  // ENABLE=0
+    check("WDOG_CONTROL SPI write (ENABLE=0, disable) accepted", |wr_status, 1'b0);
+
+    // Real, protected FAULT_CONTROL write (Protection: Yes, REG-3100) --
+    // same PROTECT_KEY re-arm sequence every protected register in this
+    // project requires.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for FAULT_CONTROL) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for FAULT_CONTROL) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_FAULT_CONTROL, 32'h0000_0001, wr_status);  // ENABLE=1
+    check("FAULT_CONTROL SPI write (ENABLE=1) accepted", |wr_status, 1'b0);
+
+    // Real, protected FAULT_RESPONSE write (Protection: Yes, REG-310C) --
+    // DEGRADED_ENABLE=1 is required for degraded_req_o to genuinely assert
+    // below (reset default is 0, disabled).
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for FAULT_RESPONSE) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for FAULT_RESPONSE) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_FAULT_RESPONSE, 32'h0000_0001, wr_status);  // DEGRADED_ENABLE=1
+    check("FAULT_RESPONSE SPI write (DEGRADED_ENABLE=1) accepted", |wr_status, 1'b0);
+
+    // RTL-011's own real health_i[0] condition (forced LOW/active earlier
+    // in this same file's own RTL-011 section, and never cleared since) is
+    // already live -- HEALTH_FAULT_ENABLE itself was never written in that
+    // earlier section (that section only ever proved HEALTH_SYNC_IN/
+    // HEALTH_ACTIVE, not the aggregate-fault path), so a real, protected
+    // write here is what newly and genuinely arms channel 0's own
+    // contribution to aggregate_fault_q/fault_req_o -- confirm RTL-013
+    // genuinely observes the result as bit 4.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for HEALTH_FAULT_ENABLE) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for HEALTH_FAULT_ENABLE) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_HEALTH_FAULT_ENABLE, 32'h0000_0001, wr_status);  // channel 0
+    check("HEALTH_FAULT_ENABLE SPI write (channel 0) accepted", |wr_status, 1'b0);
+    repeat (5) @(posedge core_clk_i); #1;
+
+    spi_read32(DFC_ADDR_FAULT_ACTIVE_SOURCE, rd_data, rd_status);
+    check("FAULT_ACTIVE_SOURCE SPI read accepted", |rd_status, 1'b0);
+    check({"RTL-013 genuinely observes RTL-011's real, already-active health condition ",
+           "on fault_source_i[4] with no further stimulus needed"},
+          rd_data[4], 1'b1);
+
+    // Force a SECOND, genuinely independent real producer condition --
+    // RTL-007's own rotor timeout, over this file's own real, external
+    // rotor_i pin (left idle since its own section above) -- the concrete
+    // proof this is real multi-module aggregation, not a single real
+    // source dressed up as several.
+    spi_write32(DFC_ADDR_ROTOR_TIMEOUT_US, 32'd100, wr_status);  // real, short timeout
+    check("ROTOR_TIMEOUT_US SPI write accepted", |wr_status, 1'b0);
+    repeat (300) @(posedge core_clk_i); #1;  // real 100us + generous margin, no further edges sent
+
+    spi_read32(DFC_ADDR_FAULT_ACTIVE_SOURCE, rd_data, rd_status);
+    check("FAULT_ACTIVE_SOURCE SPI read accepted", |rd_status, 1'b0);
+    check({"RTL-013 genuinely observes TWO simultaneous, independently-real producers -- ",
+           "RTL-011 on bit 4 (still active) and RTL-007's own freshly-forced real timeout ",
+           "on bit 6 -- the concrete, whole-system proof of genuine multi-module fault ",
+           "aggregation"},
+          (rd_data[6:4] == 3'b101), 1'b1);
+
+    spi_read32(DFC_ADDR_FAULT_CLASS, rd_data, rd_status);
+    check("FAULT_CLASS SPI read accepted", |rd_status, 1'b0);
+    check({"FAULT_CLASS.MULTIPLE genuinely sets with two real, simultaneous active sources, ",
+           "and PRIMARY_SOURCE genuinely selects the lowest (4, RTL-011)"},
+          ({rd_data[13], rd_data[12:8]} == 6'b1_00100), 1'b1);
+
+    check({"faulted_req_o genuinely asserts (bit 4, RTL-011, is a real nonrecoverable ",
+           "source per Appendix C.6) and degraded_req_o genuinely asserts too (bit 6, ",
+           "RTL-007, is a real recoverable source) -- both classifications correct, ",
+           "live, inside the actual RTL-024 top-level integration, and both genuinely ",
+           "reach RTL-002's own real degraded_req_i/faulted_req_i ports (this session's ",
+           "own dfc_rtl002.sv port-catalog fix)"},
+          (dut.rtl013_faulted_req && dut.rtl013_degraded_req), 1'b1);
+
+    check({"RTL-012's own real WDOG_STATUS.SERVICE_ACCEPTED state is unaffected by RTL-013's ",
+           "real fault classification just proven -- confirms independent state even inside ",
+           "the actual RTL-024 top-level integration"},
+          dut.rtl012_status[dfc_types_pkg::DFC_RTL012_STATUS__WDOG_STATUS__SERVICE_ACCEPTED_HI],
+          1'b1);
 
     // RTL-004's real timestamp broadcast genuinely advances within the
     // actual RTL-024 top-level integration (not just in isolation --

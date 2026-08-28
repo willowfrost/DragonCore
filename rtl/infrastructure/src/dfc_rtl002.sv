@@ -61,6 +61,20 @@
 //     recovery_failure) is set and unacknowledged -- see NOT YET
 //     IMPLEMENTED note, RTL-002 spec does not enumerate this module's
 //     exact IRQ source condition set.
+//   - REAL, CONFIRMED PORT-CATALOG GAP CLOSED THIS SESSION (RTL-013's own
+//     integration): this module previously had no `degraded_req_i`/
+//     `faulted_req_i` ports at all, despite ARCH-002's own RTL-002 port
+//     catalog already specifying both (producer RTL-013.degraded_req_o/
+//     faulted_req_o) -- same class of gap as OPEN_ISSUES.md items 5/22/54
+//     (a sibling module's own port-catalog nonconformance surfacing during
+//     a later module's integration). Both are now real ports, folded into
+//     the primary-state FSM's FAULTED/DEGRADED entry conditions as
+//     ADDITIONAL causes alongside the pre-existing module_fault_i-based
+//     mandatory/optional aggregation (`faulted_request_now`/
+//     `degraded_request_now`, ARCH-STATE-004/005's own generic wording
+//     covers both sources uniformly) -- see those wires' own declaration
+//     comment for the full derivation. This does NOT change SUBSYS_FAULT/
+//     module_fault_i aggregation, which remains pure per-module status.
 //
 // NOT YET IMPLEMENTED -- real, disclosed gaps, not silent no-ops:
 //   - TEST_DEBUG is now genuinely reachable (see the real test_active_i
@@ -186,6 +200,25 @@ module dfc_rtl002 (
   input  logic [23:0] module_ready_i,
   input  logic [23:0] module_fault_i,
   output logic [23:0] module_reset_o,
+
+  // REAL ports, per the Architecture formal port catalog (RTL-002 -- rows
+  // `degraded_req_i`/`faulted_req_i`, producer RTL-013.degraded_req_o/
+  // faulted_req_o) -- closes a real, pre-existing gap in this already-
+  // shipped module (same class as OPEN_ISSUES.md items 5/22/54: a sibling
+  // module's own port-catalog nonconformance surfacing during a later
+  // module's integration; ARCH-002 already specified both ports correctly,
+  // this file simply never implemented them before RTL-013 existed to
+  // drive them). `degraded_req_i` is RTL-013's own qualified, classified
+  // "at least one recoverable source is currently active" request;
+  // `faulted_req_i` is its qualified "at least one nonrecoverable source is
+  // active or latched" request -- both are ADDITIONAL causes alongside this
+  // module's own pre-existing module_fault_i-based mandatory/optional
+  // aggregation, not a replacement for it (ARCH-STATE-004/005's own generic
+  // "at least one enabled optional-function fault"/"a mandatory or
+  // nonrecoverable fault" wording covers both sources uniformly). See
+  // faulted_request_now/degraded_request_now below.
+  input  logic         degraded_req_i,
+  input  logic         faulted_req_i,
   output logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_o,
   output logic         observational_mode_o,
 
@@ -365,6 +398,14 @@ module dfc_rtl002 (
   wire optional_enabled_fault_now =
     |(module_fault_i & effective_optional_enable);
 
+  // ---- RTL-013's own classified escalation requests, folded in as
+  // ADDITIONAL causes for the primary-state FSM's FAULTED/DEGRADED entry
+  // conditions (see the degraded_req_i/faulted_req_i port declarations
+  // above for the full derivation) -- these do NOT feed SUBSYS_FAULT/
+  // module_fault_i aggregation, which remains pure per-module status.
+  wire faulted_request_now  = mandatory_fault_now || faulted_req_i;
+  wire degraded_request_now = optional_enabled_fault_now || degraded_req_i;
+
   // ---- Mandatory-init timeout counter (DFC-PERF-0002) ----
   logic [31:0] init_timeout_q;
   wire         init_timeout_expired = (init_timeout_q >= INIT_TIMEOUT_CYCLES);
@@ -397,25 +438,25 @@ module dfc_rtl002 (
       end
 
       dfc_types_pkg::STARTUP: begin
-        if (mandatory_fault_now || init_timeout_expired) begin
+        if (faulted_request_now || init_timeout_expired) begin
           state_d = dfc_types_pkg::FAULTED;
         end else if (mandatory_ready_now) begin
-          if (optional_enabled_fault_now)  state_d = dfc_types_pkg::DEGRADED;
+          if (degraded_request_now)        state_d = dfc_types_pkg::DEGRADED;
           else if (test_active_i)          state_d = dfc_types_pkg::TEST_DEBUG;
           else                             state_d = dfc_types_pkg::NORMAL;
         end
       end
 
       dfc_types_pkg::NORMAL: begin
-        if (mandatory_fault_now) state_d = dfc_types_pkg::FAULTED;
-        else if (optional_enabled_fault_now) state_d = dfc_types_pkg::DEGRADED;
+        if (faulted_request_now) state_d = dfc_types_pkg::FAULTED;
+        else if (degraded_request_now) state_d = dfc_types_pkg::DEGRADED;
         else if (test_active_i) state_d = dfc_types_pkg::TEST_DEBUG;
       end
 
       dfc_types_pkg::DEGRADED: begin
-        if (mandatory_fault_now) begin
+        if (faulted_request_now) begin
           state_d = dfc_types_pkg::FAULTED;
-        end else if (!optional_enabled_fault_now && degraded_ack_effective) begin
+        end else if (!degraded_request_now && degraded_ack_effective) begin
           state_d = test_active_i ? dfc_types_pkg::TEST_DEBUG : dfc_types_pkg::NORMAL;
         end
         // test_active_i alone never overrides an active DEGRADED cause --
@@ -433,8 +474,8 @@ module dfc_rtl002 (
         // enabled optional fault exits to DEGRADED even while test-active
         // remains asserted; otherwise exits back to NORMAL once
         // test_active_i deasserts.
-        if (mandatory_fault_now) state_d = dfc_types_pkg::FAULTED;
-        else if (optional_enabled_fault_now) state_d = dfc_types_pkg::DEGRADED;
+        if (faulted_request_now) state_d = dfc_types_pkg::FAULTED;
+        else if (degraded_request_now) state_d = dfc_types_pkg::DEGRADED;
         else if (!test_active_i) state_d = dfc_types_pkg::NORMAL;
       end
 
@@ -916,7 +957,7 @@ module dfc_rtl002 (
 
     status_comb[dfc_types_pkg::DFC_RTL002_STATUS__READY_HI] = host_ready_q && init_complete_q;
     status_comb[dfc_types_pkg::DFC_RTL002_STATUS__FAULT_HI] =
-      illegal_state_q || mandatory_fault_now || init_failed_q || reset_status_timeout_q;
+      illegal_state_q || faulted_request_now || init_failed_q || reset_status_timeout_q;
     status_comb[dfc_types_pkg::DFC_RTL002_STATUS__EVENT_OVERFLOW_HI] = event_overflow_q;
 
     status_comb[dfc_types_pkg::DFC_RTL002_STATUS__SYS_STATUS__RESET_ACTIVE_HI]  = (state_q == dfc_types_pkg::RESET_ACTIVE);

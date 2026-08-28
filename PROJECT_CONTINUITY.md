@@ -2458,12 +2458,176 @@ written in this project going forward, not just a historical note.
     established (item 31). The build genuinely passed with no workaround,
     so per this project's own standing rule (only investigate/fix when a
     build actually fails), no further timing work was done this session.
-- **RTL-013 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001 through RTL-012/024, exist and are citation-verified
+- **RTL-013 (Fault Manager): real, implemented and integrated into
+  `dfc_rtl024.sv`.** The second Safety-domain module, and the sole
+  consumer of the fixed 32-bit fault-source matrix (ARCH-002 Appendix
+  C.6). Implements the full SS10.1 classification contract: per-bit
+  ACTIVE/STICKY tracking with "new detection dominates clear" and "clear
+  effective only when ACTIVE is zero," lowest-numbered-active-else-sticky
+  primary-source selection, the fixed 0x00017FEF recoverability mask
+  (decoded from the real forwarded control field, not a local literal —
+  cross-checked bit-for-bit against Appendix C.6's own per-source class
+  column), the level-vs-latched distinction between `degraded_req_o`
+  (recoverable-active only) and `faulted_req_o` (nonrecoverable
+  active-or-sticky), `safety_inhibit_o` (active-only nonrecoverable), a
+  lane-1 `response_req_o` with a real LATCH_UNTIL_HOST_CLEAR level/latch
+  policy (SS10.4's own analogous `LATCHED_REQUEST[c]` equation, the
+  closest real cited precedent), TEST_FAULT_INJECT gated on qualified
+  TEST_DEBUG, and real, counted own-diagnostic event generation (event ID
+  0x0041, source index 12). Real cross-module register forwarding for all
+  9 REG-002 0x3100-0x3120 registers via `reggen.py` v4 and
+  `tools/reggen/rtl013_field_map.json`.
+  - **THE REAL, CONFIRMED FAULT-SOURCE MATRIX GAP IS CLOSED for every bit
+    whose real producer already exists in this build:** RTL-005's,
+    RTL-007's, RTL-008's, RTL-009's, RTL-010's, RTL-011's, and RTL-012's
+    own real `fault_req_o` outputs (previously each genuinely unconsumed)
+    now genuinely reach RTL-013's real `fault_source_i[5]`/`[6]`/`[7]`/
+    `[8]`/`[9]`/`[4]`/`[0]` respectively — the concrete, non-stub proof
+    that the Monitoring-before-Safety build-order decision paid off.
+    Bits whose producer doesn't exist yet (RTL-014/015/016, RTL-017
+    through RTL-023) stay disclosed stub-zero.
+  - **A real, pre-existing gap in already-shipped RTL-002 was found and
+    closed**: ARCH-002's own RTL-002 port catalog already specified
+    `degraded_req_i`/`faulted_req_i` (producer RTL-013), but `dfc_rtl002.sv`
+    implemented neither until now — same class of gap as items 5/22/54
+    (a sibling module's own port-catalog nonconformance surfacing during a
+    later module's integration). Both are now real inputs, folded into the
+    primary-state FSM as ADDITIONAL causes alongside the pre-existing
+    `module_fault_i`-based mandatory/optional aggregation. Confirmed live
+    end-to-end: forcing RTL-013's real `faulted_req_o` in
+    `rtl024_skeleton_tb.sv` genuinely drives RTL-002 into FAULTED through
+    this newly-wired path (that test's own RTL-013 section is deliberately
+    sequenced AFTER the pre-existing 499,000-cycle mandatory-init-timeout
+    wait, so both real paths get proven without one defeating the other).
+  - **One real ARCH-002 struct-growth fix**, approved before implementation
+    (the twelfth real instance of the EVENT_OVERFLOW-clear-field gap
+    class): `dfc_rtl013_control_t` grew 112→113 bits.
+  - **One real, newly-found `reggen.py` generator gap was found and fixed
+    in the generator itself** (not worked around): `FAULT_RECOVERABLE_MASK`
+    is a CONST register REG-311C requires to reject every write
+    (ACCESS_ERROR), but still needs to forward its fixed value into
+    RTL-013's own control struct — reggen.py's pre-existing "any
+    control_registers entry clears write_illegal_o" rule was wrong for
+    this first-ever CONST-only entry; fixed to fall back to the ordinary
+    readback-based rule when every field in an entry is class CONST.
+    Confirmed via a real regeneration diff that this is the ONLY register
+    whose `write_illegal_o` changed, and every pre-existing RW/WO-CMD/W1C
+    entry across all 12 consumer modules is unaffected.
+  - **Disclosed designs for behaviors with no owning-document equation to
+    cite** (CHTR-DOC-006): FAULT_RESPONSE.LATCH_UNTIL_HOST_CLEAR's own
+    level/latch policy (a real, live bug was found and fixed here during
+    testbench bring-up — `response_trigger` must gate on ACTIVE-only
+    nonrecoverable evidence, not active-or-sticky, or the level policy
+    could never auto-clear); the DEGRADED_STATUS ACTIVE/ENTRY/
+    RECOVERY_AVAILABLE/RECOVERED lifecycle; event 0x0041's own four
+    subtype definitions and their simultaneous-condition priority;
+    ARCH-VAL-013's "test-active" qualifier (RTL-013 has no dedicated
+    `test_active_i` port, so `operating_state_i == TEST_DEBUG` is used).
+  - No physical pin, no `module_enable_i` (mandatory-class, matching
+    RTL-012's own precedent, confirmed against RTL-013's real 19-port
+    catalog before any code was written).
+  - **Proven via a new, real integration testbench**,
+    `rtl013_integration_tb.sv` (71/71 checks): real host writes via
+    RTL-001's real DRI path genuinely change RTL-013's real behavior, and
+    real fault conditions genuinely forced on already-real producer
+    modules (RTL-007's rotor timeout, RTL-011's health fault — both
+    instantiated for real in this testbench, not synthesized at RTL-013's
+    own boundary) are genuinely observed and correctly classified,
+    including the SS10.1 "clear ineffective while active" rule, the
+    level-vs-latched distinction, and the real EVENT_OVERFLOW clear path
+    (the twelfth real instance of that gap class). **Additionally proven
+    inside the actual RTL-024 top-level integration**: `rtl024_skeleton_tb.sv`
+    was extended with real SPI reads confirming SUBSYS_READY bit 12
+    reflects RTL-013's real mandatory-class readiness with no
+    SUBSYS_ENABLE write, plus a real, whole-system proof that TWO
+    genuinely independent, simultaneously-forced real producers (RTL-011
+    and RTL-007) both reach RTL-013's real fault-source matrix and that
+    RTL-013's own real `faulted_req_o`/`degraded_req_o` reach RTL-002's
+    real ports.
+  - Every other existing testbench was checked for breakage from RTL-013's
+    two new `dfc_rtl001.sv` ports (`rtl013_control_o`/`rtl013_status_i`,
+    replacing 6 individual stub-tied status ports) and RTL-002's two new
+    `degraded_req_i`/`faulted_req_i` ports: `regbank_smoke_tb.sv` needed
+    its Check 3 redirected a twelfth time (`... → FAULT_STATUS → now
+    ILOCK_STATUS`, since FAULT_STATUS is aggregated too as of this
+    session) and its own individual RTL-013 `status_i` declarations
+    removed entirely; `dri_transaction_tb.sv` (`.*` wildcard) needed the
+    new port pair declared/tied off; `rtl002_integration_tb.sv`/
+    `rtl004_integration_tb.sv` (explicit named ports) and
+    `rtl002_state_tb.sv` (`.*` wildcard) needed the two new RTL-002 ports
+    tied inactive; `rtl002` through `rtl012_integration_tb.sv` (10 files)
+    plus `rtl012_integration_tb.sv` itself needed the RTL-013 stub pair
+    added, confirmed via a real, direct check of every existing
+    `dfc_rtl001` instantiation site rather than trusting scope alone.
+  - **A real, hard-won testbench-authoring lesson**: a brand-new
+    testbench with a completely missing clock generator produces total
+    silence (zero output, clean exit) rather than an obvious error — see
+    `OPEN_ISSUES.md` item 63. **A real, disclosed side effect of this
+    project's own whole-system testbench growing long in simulated time**:
+    RTL-012's own configured `WDOG_TIMEOUT_US` genuinely elapses for real
+    by the time later sections run — see `OPEN_ISSUES.md` item 64.
+  - **CONFIRMED, end-to-end, on the person's real machine — a real
+    `gate.ps1` run passed completely clean**: `lint.ps1` PASSED (22 files),
+    `sim.ps1` 17/17 testbenches (**756/756 checks** — verified by adding up
+    each testbench's own individually-reported count from the real output:
+    12+12+16+28+30+24+43+35+44+47+60+50+60+59+71+152+13=756, not restated
+    from memory — the delta over RTL-012's own 660 baseline is
+    `rtl013_integration_tb.sv`'s new 71 plus `rtl024_skeleton_tb.sv`'s
+    growth from 113→152, both genuinely new coverage, not a discrepancy),
+    `formal.ps1` both `bmc` and `prove` tasks genuinely PASS (real
+    k-induction against real RTL-001, unaffected by the RTL-013 changes),
+    coverage check ran clean (152/353 registers textually referenced, up
+    from 142/353).
+  - **A real, three-attempt timing-closure investigation was needed to get
+    a clean `build_ecp5.ps1` run** — the fourth confirmation of
+    PROJECT_CONTINUITY.md's own item-48 "wide fan-in hub" warning finally
+    tipping over into a genuine failure, same discipline as items 17/31/
+    40/41/57. First real attempt: **40.14 MHz, FAIL at 50 MHz** (12%
+    utilization, ruling out resource exhaustion). Fix 1 (real,
+    contributory): `dfc_rtl013.sv`'s own primary-source priority search
+    had threaded a "found" flag through two 17-iteration `for` loops — the
+    identical 17-deep serial-chain shape as RTL-005's own round-robin
+    arbiter bug (item 17) — replaced with a genuine `casez` priority
+    encoder (40.14→40.36 MHz, real but insufficient alone). Fix 2
+    (investigated, confirmed NOT the actual cause, kept as a real, honest
+    lesson): the critical path was named as running through already-
+    shipped `dfc_rtl010.sv`'s own 64-bit signed subtraction
+    (`ch0_range_ext`/`ch1_range_ext`, 31 bits wider than the 32-bit signed
+    operands could ever need) — narrowed to 33 bits with explicit approval
+    (a prior-shipped file), but a real, direct build-to-build comparison
+    showed a BYTE-IDENTICAL post-route result, proving Yosys's own
+    optimizer had already trimmed the unused width regardless of the
+    declared RTL width. The narrowing was kept anyway (genuinely correct,
+    harmless) but logged honestly as not the fix that worked. Fix 3 (the
+    real fix): `rtl013_fault_source` in `dfc_rtl024.sv` — a brand-new,
+    wide (7-source) combinational fan-in from physically-scattered real
+    modules' own `fault_req_o` outputs feeding straight into RTL-013's own
+    further logic — was itself a new instance of the exact "wide fan-in
+    hub" pattern item 48 already flagged. Fixed with the same "capture
+    this cycle, commit the next" technique already proven for the SPI
+    bridge (item 41) and RTL-005's event store (item 57): registered the
+    aggregation one CORE_CLK cycle before RTL-013 ever sees it. Full
+    account in `OPEN_ISSUES.md` item 65. **CONFIRMED, end-to-end, on the
+    person's real machine, after all three fixes**: a full Icarus
+    regression (17/17 testbenches, 756/756 checks, unchanged throughout —
+    confirming this was purely a timing-closure investigation, not a
+    functional one), a real `gate.ps1` run (lint/sim/formal/coverage all
+    clean), and a real `build_ecp5.ps1` run (Build ID `20260828_134327`,
+    **50.19 MHz PASS at 50 MHz required**, TRELLIS_COMB 26057/83640
+    (31%), TRELLIS_FF 16926/83640 (20%), MULT18X18D 12/156 (7%), no
+    `--timing-allow-fail` needed). **Lesson for RTL-014 onward,
+    reinforcing item 48's own warning with a real, now-proven fix
+    pattern:** any new module creating its own wide aggregation across
+    several already-scattered real producers (not merely "one more input
+    to an existing hub") should have that aggregation's own output
+    registered from the start, before it reaches further combinational
+    logic.
+- **RTL-014 through RTL-023:** spec-complete (all 24 module specs,
+  including RTL-001 through RTL-013/024, exist and are citation-verified
   against the `-002` baseline) but **not yet implemented as real RTL.**
-  This is the actual next phase of work — see Section 5. RTL-012 begins
-  the Safety domain (RTL-012 through RTL-016); RTL-013 (Fault Manager) is
-  next.
+  This is the actual next phase of work — see Section 5. RTL-013 (Fault
+  Manager) completed the first two Safety-domain modules alongside
+  RTL-012; RTL-014 (Interlock Engine) is next.
 - **Build script structural fix (2026-08-26): `build_ecp5.ps1`'s
   `$SourceFiles` list is no longer hardcoded.** This exact gap had been
   hit and reactively fixed 4 separate times (RTL-002, RTL-004, RTL-009,
@@ -2769,14 +2933,28 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-012 are now all real and implemented — RTL-012
-  begins the Safety domain (Watchdog Manager, the first of RTL-012 through
-  RTL-016); the next real step is RTL-013 (Fault Manager)**, one module at
-  a time, using the exact same real-verification discipline as RTL-001
-  through RTL-012 (compile, simulate, and only then trust — never claim
-  something works without actually running it). Then the rest of Safety,
-  then Databus, in that order (Programmable is now out of scope entirely —
-  see the scope-change entry directly above).
+- **RTL-002 through RTL-013 are now all real and implemented — RTL-012
+  (Watchdog Manager) and RTL-013 (Fault Manager) are the first two of the
+  Safety domain's five modules (RTL-012 through RTL-016); the next real
+  step is RTL-014 (Interlock Engine)**, one module at a time, using the
+  exact same real-verification discipline as RTL-001 through RTL-013
+  (compile, simulate, and only then trust — never claim something works
+  without actually running it). Then the rest of Safety, then Databus, in
+  that order (Programmable is now out of scope entirely — see the
+  scope-change entry directly above).
+  **RTL-013's own session reconfirmed a pattern this document has now
+  flagged three separate times (RTL-002/003's own port-catalog gaps in
+  RTL-002, then RTL-006's own module_enable_o/effective_operational_
+  enable_o gap in RTL-002 again, now degraded_req_i/faulted_req_i in
+  RTL-002 a third time): whenever a LATER module's own real port catalog
+  names an EARLIER, already-shipped module as its producer/consumer,
+  check that earlier module's own real port list directly before assuming
+  it's already conformant — ARCH-002 had already specified the fact
+  correctly every single time; the gap was always in the earlier module's
+  own implementation, not the specification. RTL-014 onward should expect
+  this same class of check against RTL-002 (the single most
+  frequently-referenced producer/consumer in the whole port catalog) and
+  every other already-shipped module it names.**
   **The margin-risk warning this document carried into RTL-012's own
   session ("RTL-012 onward should treat this as a live, standing risk")
   was correct a fourth time**: RTL-012's own `build_ecp5.ps1` run genuinely
@@ -2791,9 +2969,22 @@ written in this project going forward, not just a historical note.
   event-record mux, the fault/ready OR-trees — each gaining one more input
   per new module) is architectural, not a one-time fix, and the new worst
   path (the SPI bridge's own `dri_req_addr_o`/`dri_req_write_o` fan-out)
-  confirms the pattern continues to shift rather than disappear. **RTL-013
-  onward should keep checking this at the start of its own session**, the
-  same standing discipline items 17/31/40/41/57 all reinforce.
+  confirms the pattern continues to shift rather than disappear.
+  **RTL-013's own session confirmed the warning a fifth time, and this one
+  hit harder than any prior instance**: a real `build_ecp5.ps1` run failed
+  outright at 40.14 MHz (not a narrow miss like RTL-010/011/012's own
+  builds), because RTL-013's own real fault-source matrix is itself a
+  brand-new wide aggregation hub, not merely one more input to an existing
+  one. Fixed for real (after two other real investigations, one genuinely
+  contributory and one confirmed NOT the actual cause — see this
+  document's own RTL-013 entry in Section 4 and `OPEN_ISSUES.md` item 65
+  for the full three-attempt account) by registering the new aggregation
+  one cycle before it reaches further logic, closing at **50.19 MHz**.
+  **RTL-014 onward should apply this lesson proactively, not reactively**:
+  any new module that aggregates several already-scattered real
+  producers into one signal should register that aggregation's own output
+  from the start, before a real build failure forces the discovery a
+  second time.
   **RTL-011's own session reconfirmed the SPI bridge's own real timing
   margin is a live, recurring risk, not settled once and for all: a real
   `build_ecp5.ps1` run closed at only 50.12 MHz, 0.12 MHz (0.24%) above

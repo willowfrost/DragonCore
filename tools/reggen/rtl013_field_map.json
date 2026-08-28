@@ -1,0 +1,113 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x3100-0x3120, plus 0x0614 TEST_FAULT_INJECT), cited by contract ID below -- same disclosed scope/rationale as every prior field-map file's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). TEST_FAULT_INJECT (REG-0614, owner 'RTL-024 / RTL-013') is included here the same way rtl003_field_map.json already includes TEST_IRQ_INJECT (REG-0610) -- a shared-block production-test register forwarded through this consumer's own control struct, not a Fault-Manager-block register. FAULT_RECOVERABLE_MASK (REG-311C) is readback=const (fixed 0x00017FEF, not host-writable) -- its control_registers entry below still forwards the fixed value into dfc_rtl013_control_t's fault_recoverable_mask__recoverable field (RTL-013_RevA.md SS3: 'decode this mask directly' from the real forwarded field, not a locally hand-duplicated literal), using the same 'any non-WO-CMD/W1C class selects the plain stored/fixed _q wire' driver-selection rule reggen.py already applies to every RW field -- no reggen.py change was needed. dfc_rtl013_control_t grew 112->113 bits this session (approved before implementation) to add rtl013_evt_overflow_status__event_overflow at the new highest bit (112), closing the twelfth real instance of the EVENT_OVERFLOW-clear-field gap class (items 2/7/8/12/20/24/28/32/36/43/49). RTL013_EVT_OVERFLOW_STATUS's status_registers entry below (EVENT_OVERFLOW/DROP_COUNT mapped to the generic status_o.event_overflow/event_drop_count fields dfc_rtl013_status_t carries) closes the readback gap from the start, same discipline rtl006 through rtl012_field_map.json established (OPEN_ISSUES.md item 21). FAULT_STATUS's four W1C fields (FAULT_ACTIVE/MULTI_FAULT/EVENT_PENDING/RESPONSE_PENDING) each appear in BOTH control_registers (their real clear-request fields) AND status_registers (their real sticky-readback fields), same dual-appearance pattern already used for every prior module's own multi-field W1C status registers -- same for DEGRADED_STATUS's ENTRY/RECOVERED W1C pair. Confirmed directly against dfc_registers_pkg.json: FAULT_STATUS/FAULT_CLASS/DEGRADED_STATUS/FAULT_ACTIVE_SOURCE/FAULT_LATCHED_SOURCE/RTL013_EVT_OVERFLOW_STATUS are all readback=external; FAULT_CONTROL/FAULT_RESPONSE are readback=internal_reg (mixed RW/WO-CMD or plain RW, host read returns RTL-001's own stored value, not an RTL-013 echo -- no status_registers entry needed, same pattern as RTL-002's SYS_CONTROL/RTL-012's WDOG_CONTROL); FAULT_RECOVERABLE_MASK is readback=const (fixed value served directly by RTL-001's own const wire, no status_registers entry needed either); TEST_FAULT_INJECT is readback=zero (WO-CMD, reads zero per REG-0614's own 'Reads zero' text -- forwarded via control_registers' command_pulse capture only, no status_registers entry, same pattern as RTL-003's TEST_IRQ_INJECT).",
+  "consumer_module": "RTL-013",
+  "control_struct": "dfc_rtl013_control_t",
+  "status_struct": "dfc_rtl013_status_t",
+  "control_registers": [
+    {
+      "register": "FAULT_CONTROL", "contract_id": "REG-3100",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "fault_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "WO-CMD", "struct_field": "fault_control__clear_all_req"}
+      ]
+    },
+    {
+      "register": "FAULT_STATUS", "contract_id": "REG-3104",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "fault_status__fault_active"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "W1C", "struct_field": "fault_status__multi_fault"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "fault_status__event_pending"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "fault_status__response_pending"}
+      ]
+    },
+    {
+      "register": "FAULT_RESPONSE", "contract_id": "REG-310C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "fault_response__degraded_enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "fault_response__safety_response_enable"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "fault_response__event_on_clear"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "fault_response__latch_until_host_clear"},
+        {"reg_hi": 7, "reg_lo": 4, "class": "RW", "struct_field": "fault_response__safety_output_request_enable"}
+      ]
+    },
+    {
+      "register": "DEGRADED_STATUS", "contract_id": "REG-3110",
+      "fields": [
+        {"reg_hi": 1, "reg_lo": 1, "class": "W1C", "struct_field": "degraded_status__entry"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "degraded_status__recovered"}
+      ]
+    },
+    {
+      "register": "FAULT_LATCHED_SOURCE", "contract_id": "REG-3118",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "W1C", "struct_field": "fault_latched_source__latched_source"}
+      ]
+    },
+    {
+      "register": "FAULT_RECOVERABLE_MASK", "contract_id": "REG-311C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "CONST", "struct_field": "fault_recoverable_mask__recoverable"}
+      ]
+    },
+    {
+      "register": "RTL013_EVT_OVERFLOW_STATUS", "contract_id": "REG-3120",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl013_evt_overflow_status__event_overflow"}
+      ]
+    },
+    {
+      "register": "TEST_FAULT_INJECT", "contract_id": "REG-0614",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "WO-CMD", "struct_field": "test_fault_inject__source_mask"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "FAULT_STATUS", "contract_id": "REG-3104",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "fault_status__fault_active"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "fault_status__multi_fault"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "fault_status__event_pending"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "fault_status__response_pending"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "fault_status__class_valid"}
+      ]
+    },
+    {
+      "register": "FAULT_CLASS", "contract_id": "REG-3108",
+      "fields": [
+        {"reg_hi": 7, "reg_lo": 0, "struct_field": "fault_class__class"},
+        {"reg_hi": 12, "reg_lo": 8, "struct_field": "fault_class__primary_source"},
+        {"reg_hi": 13, "reg_lo": 13, "struct_field": "fault_class__multiple"}
+      ]
+    },
+    {
+      "register": "DEGRADED_STATUS", "contract_id": "REG-3110",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "degraded_status__active"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "degraded_status__entry"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "degraded_status__recovery_available"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "degraded_status__recovered"}
+      ]
+    },
+    {
+      "register": "FAULT_ACTIVE_SOURCE", "contract_id": "REG-3114",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "fault_active_source__active_source"}
+      ]
+    },
+    {
+      "register": "FAULT_LATCHED_SOURCE", "contract_id": "REG-3118",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "fault_latched_source__latched_source"}
+      ]
+    },
+    {
+      "register": "RTL013_EVT_OVERFLOW_STATUS", "contract_id": "REG-3120",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    }
+  ]
+}

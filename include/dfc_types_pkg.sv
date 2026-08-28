@@ -1334,8 +1334,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL012_STATUS__EVENT_DROP_COUNT_HI = 57;
   localparam int unsigned DFC_RTL012_STATUS__EVENT_DROP_COUNT_LO = 42;
 
-  // ARCH-002 Appendix B dfc_rtl013_control_t (112 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl013_control_t (113 bits, rich format)
   typedef struct packed {
+    logic rtl013_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic [31:0] fault_recoverable_mask__recoverable;  //  reset=0x00017FEF :: fixed Architecture constant; writes of any other value rejected
     logic [31:0] fault_latched_source__latched_source;  //  reset=0 :: clear_mask
     logic degraded_status__recovered;  //  reset=0 :: clear_mask
@@ -1353,9 +1354,9 @@ package dfc_types_pkg;
     logic fault_control__enable;  //  reset=0 :: control_value
     logic [31:0] test_fault_inject__source_mask;  //  reset=0 :: command_pulse
   } dfc_rtl013_control_t;
-  // total width: 112 bits
+  // total width: 113 bits
 
-  localparam int unsigned DFC_RTL013_CONTROL_WIDTH = 112;
+  localparam int unsigned DFC_RTL013_CONTROL_WIDTH = 113;
   localparam int unsigned DFC_RTL013_CONTROL__TEST_FAULT_INJECT__SOURCE_MASK_HI = 31;
   localparam int unsigned DFC_RTL013_CONTROL__TEST_FAULT_INJECT__SOURCE_MASK_LO = 0;
   localparam int unsigned DFC_RTL013_CONTROL__FAULT_CONTROL__ENABLE_HI = 32;
@@ -1388,6 +1389,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL013_CONTROL__FAULT_LATCHED_SOURCE__LATCHED_SOURCE_LO = 48;
   localparam int unsigned DFC_RTL013_CONTROL__FAULT_RECOVERABLE_MASK__RECOVERABLE_HI = 111;
   localparam int unsigned DFC_RTL013_CONTROL__FAULT_RECOVERABLE_MASK__RECOVERABLE_LO = 80;
+  localparam int unsigned DFC_RTL013_CONTROL__RTL013_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 112;
+  localparam int unsigned DFC_RTL013_CONTROL__RTL013_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 112;
 
   // ARCH-002 Appendix B dfc_rtl013_status_t (106 bits, rich format)
   typedef struct packed {

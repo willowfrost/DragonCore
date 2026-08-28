@@ -3531,8 +3531,8 @@
     },
     {
       "name": "dfc_rtl013_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl013_control_t (112 bits, rich format)",
-      "width": 112,
+      "trace": "ARCH-002 Appendix B dfc_rtl013_control_t (113 bits, rich format)",
+      "width": 113,
       "fields": [
         {
           "name": "test_fault_inject__source_mask",
@@ -3677,6 +3677,15 @@
           "signed": false,
           "reset": "0x00017FEF",
           "semantic": "fixed Architecture constant; writes of any other value rejected"
+        },
+        {
+          "name": "rtl013_evt_overflow_status__event_overflow",
+          "hi": 112,
+          "lo": 112,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },

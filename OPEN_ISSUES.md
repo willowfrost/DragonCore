@@ -1488,3 +1488,235 @@ incomplete, logged here rather than silently resolved or guessed.
     by this existing mechanism -- no manual edit to `build_ecp5.ps1` was
     needed or made for this module. This class of gap is now closed
     generically, not just for this one module.
+
+## RTL-013 (Fault Manager) integration
+
+59. **RESOLVED (2026-08-28), approved before implementation, same pattern
+    as items 2/7/8/12/20/24/28/32/36/43/49 (the twelfth real instance of
+    this exact gap class -- the second in the Safety domain).**
+    `dfc_rtl013_control_t` (112 bits) had no clear-request field for
+    `RTL013_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-3120 bit 0, a real W1C
+    field). Fixed: ARCH-002 grew the struct 112->113 bits, adding
+    `rtl013_evt_overflow_status__event_overflow` at the new highest bit
+    (112) -- every pre-existing field's bit position confirmed unchanged via
+    a real `regenerate.ps1` run (`git diff` of `include/dfc_types_pkg.sv`
+    shows only the new field/width/localparam lines changed).
+    `tools/reggen/rtl013_field_map.json` carries the corresponding
+    `control_registers` entry, and its `status_registers` section closes the
+    RTL-002/003/004-style readback gap (item 21) for every external RTL-013
+    register from the start, same discipline already established for
+    RTL-006 through RTL-012.
+
+60. **RESOLVED (2026-08-28), a real, newly-found `reggen.py` generator gap
+    -- fixed in the generator itself, not worked around in the field-map or
+    hand-patched in generated output (RTLSTD-ORG-003).** `FAULT_RECOVERABLE_
+    MASK` (REG-311C) is a CONST register whose own real write-validation
+    text is "Any register write is ACCESS_ERROR" -- but RTL-013_RevA.md
+    SS3's own instruction ("decode this mask directly" from the real
+    forwarded field) plus reggen.py's own generator invariant (every field-
+    map control struct bit must be covered by exactly one field-map entry,
+    no partial-coverage escape valve) both require this fixed value to
+    still forward into `dfc_rtl013_control_t`'s own
+    `fault_recoverable_mask__recoverable` field through the ordinary
+    control_registers mechanism. reggen.py's PRE-EXISTING rule ("any
+    register appearing in a field-map's control_registers reports
+    write_illegal_o = 1'b0") was correct for every RW/WO-CMD/W1C entry used
+    by every module through RTL-012 (a real write path genuinely exists for
+    those), but wrong here -- it would have silently ACCEPTED a host write
+    to this ACCESS_ERROR-only register (REG-311C's own explicit text),
+    reporting the wrong DRI response code even though the write has zero
+    real effect on the always-0x00017FEF constant wire. Fixed in reggen.py:
+    a register whose ctrl_entry fields are ALL class "CONST" now falls back
+    to the ordinary readback-based `write_illegal_o` rule instead of being
+    unconditionally cleared. Confirmed via a real `regenerate.ps1` diff that
+    `FAULT_RECOVERABLE_MASK` is the ONLY register whose `write_illegal_o`
+    value changed relative to the pre-fix generator output, and that every
+    pre-existing RW/WO-CMD/W1C field-map entry across all 12 consumer
+    modules is completely unaffected (confirmed by the identical diff
+    showing exactly 4 changed `write_illegal_o` lines, all RTL-013's own new
+    external-class registers, none of them `FAULT_RECOVERABLE_MASK`).
+
+61. **RESOLVED (2026-08-28), a real, pre-existing gap in already-shipped
+    RTL-002 -- same class as items 5/22/54 (a sibling module's own port-
+    catalog nonconformance surfacing during a later module's integration).**
+    ARCH-002's own RTL-002 port catalog already specified `degraded_req_i`/
+    `faulted_req_i` (producer `RTL-013.degraded_req_o`/`faulted_req_o`), but
+    `dfc_rtl002.sv`, as it existed before this session, implemented neither
+    -- unsurprising, since RTL-013 (the only real producer for either port)
+    did not exist until this session. Fixed by adding both as real inputs on
+    `dfc_rtl002.sv`, folded into the primary-state FSM's FAULTED/DEGRADED
+    entry conditions as ADDITIONAL causes alongside the pre-existing
+    `module_fault_i`-based mandatory/optional aggregation
+    (`faulted_request_now = mandatory_fault_now || faulted_req_i`;
+    `degraded_request_now = optional_enabled_fault_now || degraded_req_i`) --
+    ARCH-STATE-004/005's own generic wording ("at least one enabled
+    optional-function fault"/"a mandatory or nonrecoverable fault") covers
+    both sources uniformly, and this does NOT change SUBSYS_FAULT/
+    `module_fault_i` aggregation, which remains pure per-module status. A
+    real, concrete consequence confirmed live in `rtl024_skeleton_tb.sv`:
+    forcing RTL-013's real `faulted_req_o` (via a real RTL-011 health fault)
+    now genuinely drives RTL-002 into FAULTED through this newly-wired path,
+    proven by intentionally sequencing that test's own RTL-013 section AFTER
+    the pre-existing 499,000-cycle mandatory-init-timeout wait (forcing it
+    any earlier would make RTL-002 latch into FAULTED immediately and defeat
+    that wait's own, separate proof of the timeout path).
+
+62. **Real, disclosed design, not a bit-exact citation -- forced by a
+    genuine absence of further specification in the owning documents, same
+    class as items 25/29/34/52/53 (CHTR-DOC-006).** Several bit-exact
+    behaviors in `dfc_rtl013.sv` have no owning-document equation to cite
+    directly:
+    - **FAULT_RESPONSE.LATCH_UNTIL_HOST_CLEAR's own level-vs-latch policy**
+      for `response_pending_q`/`response_req_o.valid` mirrors ARCH-002
+      SS10.4's own analogous `LATCHED_REQUEST[c]` equation for RTL-016's
+      channels ("zero when latch policy is disabled... an active request
+      sets the retained latch" when enabled) -- the closest real, cited
+      precedent, since no equation names this field directly. This
+      required a real, live design fix found only by direct simulation, not
+      inspection: `response_trigger` must gate on ACTIVE-only nonrecoverable
+      evidence (`nonrecoverable_active17`, the same scope already used for
+      `safety_inhibit_o`), not active-OR-sticky (`nonrecoverable_evidence17`,
+      the scope `faulted_req_o` uses) -- using the broader, sticky-inclusive
+      set would make `response_pending_q` track sticky evidence
+      unconditionally, defeating the "level policy" case entirely (it could
+      never auto-clear once any nonrecoverable source had ever latched).
+    - **DEGRADED_STATUS lifecycle** (ACTIVE/ENTRY/RECOVERY_AVAILABLE/
+      RECOVERED): REG-3110 gives only generic W1C boilerplate text per bit,
+      no algorithm. Implemented as: ACTIVE = `degraded_req_o` itself (live);
+      ENTRY = sticky, set-dominates while `degraded_req_o` is high, cleared
+      only by host clear while low; RECOVERED = a one-shot pulse-latch on
+      the registered falling edge of `degraded_req_o` (an explicit
+      "previous cycle" comparison register, not a same-`always_ff`
+      same-cycle stale read -- PROJECT_CONTINUITY.md Section 2's own
+      confirmed lag finding); RECOVERY_AVAILABLE = `ENTRY && !ACTIVE` (a
+      live, derived signal, not its own register).
+    - **Event 0x0041 ("Fault manager") subtype definitions** (0 asserted, 1
+      recovered, 2 cleared, 3 response requested) track the module's OWN
+      overall evidence lifecycle (any of the 17 sources' `any_active` rising/
+      falling edge, an accepted clear command, or `response_pending_q`
+      newly setting) -- not the DEGRADED-specific sub-case above. Priority
+      when multiple subtypes qualify the same cycle: response requested >
+      asserted > cleared > recovered (most safety-relevant first, same
+      class of disclosed local priority as RTL-012's own).
+    - **ARCH-VAL-013's "injection requires test-active"**: RTL-013 has NO
+      dedicated `test_active_i` port on its own real 19-port catalog (unlike
+      RTL-002) -- `operating_state_i == dfc_types_pkg::TEST_DEBUG` is the
+      only test-related signal this module receives, used as the
+      "test-active" qualifier.
+    All four are proven via real, dedicated checks in
+    `rtl013_integration_tb.sv` (the level-vs-latch distinction specifically
+    in Parts 4/6, including the real bug found and fixed above).
+
+63. **Real, hard-won testbench-authoring lesson, kept here for RTL-014
+    onward.** A brand-new testbench (`rtl013_integration_tb.sv`) with a
+    completely missing clock generator (`always #10 core_clk_i = ~core_clk_i;`)
+    produces a real, genuine SILENT FAILURE mode distinct from every other
+    class of testbench bug already documented in this project: the
+    simulation elaborates cleanly, `vvp` runs and exits with code 0, and
+    produces ZERO output of any kind -- not a single `$display`, not an
+    error, nothing -- because the very first `initial`-block statement
+    (`repeat (4) @(posedge core_clk_i);`) blocks forever waiting for an edge
+    that will never come, the simulator detects no further events are
+    possible, and ends cleanly. This is easy to misdiagnose as a tool/
+    redirection problem (confirmed directly: re-ran the identical vvp
+    invocation against an already-working testbench to rule that out first)
+    rather than what it actually is -- a missing clock driver. **Any future
+    module's own new, from-scratch integration testbench should have its
+    clock-generator `always` block checked FIRST if it produces zero output
+    at all**, before investigating anything else.
+
+64. **Real, disclosed side effect of this project's own whole-system
+    testbench (`rtl024_skeleton_tb.sv`) growing long enough in real
+    simulated time -- found while adding RTL-013's own section, logged for
+    RTL-014 onward, not a defect.** RTL-012's own `WDOG_TIMEOUT_US` (1000us,
+    configured once early in that module's own section) genuinely elapses
+    for real by the time later sections run, since the ~499,000-cycle
+    mandatory-init-timeout wait alone is ~10ms of real simulated time and
+    WDOG_CONTROL is never re-serviced afterward -- RTL-012's own real
+    `fault_req_o` was found genuinely (not spuriously) active on
+    `fault_source_i[0]` by the time RTL-013's own section ran, confirmed via
+    direct signal inspection before concluding it was a real side effect
+    and not an RTL-013 bug. Any future module's own whole-system-testbench
+    section relying on an EARLIER module's timer/timeout-based module
+    remaining in a specific state should check whether enough real
+    simulated time has elapsed since that state was last set, not assume it
+    still holds -- RTL-013's own section now explicitly disables
+    `WDOG_CONTROL` first to keep its own scenario clean, with this
+    reasoning documented in the test itself.
+
+65. **RESOLVED (2026-08-28), a real, multi-attempt timing-closure
+    investigation confirming PROJECT_CONTINUITY.md's own item-48
+    "wide fan-in hub" prediction finally tipped over into a genuine build
+    failure -- same discipline as items 17/31/40/41/57, three sequential
+    real fixes needed, not all found or fixed in one pass.** A real
+    `build_ecp5.ps1` run after RTL-013 was added failed timing:
+    **40.14 MHz, FAIL at 50 MHz required** (device utilization only
+    7-9%, ruling out resource exhaustion). Three real critical-path
+    investigations were needed:
+    1. **`dfc_rtl013.sv`'s own primary-source priority search.** The
+       original implementation threaded a "found" flag through two
+       17-iteration `for` loops (one over active sources, one over sticky
+       sources), each iteration's own condition reading the PREVIOUS
+       iteration's own flag update -- structurally the identical genuine
+       17-deep SERIAL dependency chain already found and fixed once for
+       RTL-005's own round-robin arbiter (item 17). Fixed the same way:
+       replaced with a genuine `casez`-based priority encoder (one pattern
+       per bit position, each an independent parallel comparison), and
+       reduced two unconditional 17-way encodes down to one (select which
+       17-bit vector to encode first, via a plain mux, rather than
+       encoding both every cycle). This measurably helped (40.14 -> 40.36
+       MHz) but was not, by itself, sufficient -- the dominant bottleneck
+       was elsewhere.
+    2. **Investigated and found NOT the real cause, kept here as a real
+       lesson, not smoothed over:** the real critical path (24.78 ns:
+       6.16 ns logic, 18.62 ns routing) was named as running through
+       already-shipped `dfc_rtl010.sv`'s own `ch0_range_ext`/
+       `ch1_range_ext` (a 64-bit signed subtraction of two 32-bit signed
+       operands, sign-extended to a width 31 bits wider than the subtrahend
+       could ever need). Approved and narrowed to the minimum
+       non-overflowing 33-bit width, a pure width reduction with zero
+       functional change -- confirmed via a real, direct build-to-build
+       comparison that this produced a BYTE-IDENTICAL post-route result
+       (same 40.36 MHz, same exact ns figures to two decimal places),
+       proving Yosys's own `opt`/width-reduction passes had already
+       trimmed the unused high bits regardless of the declared RTL width.
+       **Lesson: a source-line attribution in a critical-path report is not
+       proof that widening/narrowing that exact RTL construct will move
+       the number** -- confirm via a real before/after build comparison,
+       not just a plausible-sounding hypothesis, before concluding a fix
+       worked. The width reduction was kept anyway (genuinely correct,
+       harmless, and clearer about the field's real range) but logged
+       honestly as NOT the fix that closed timing.
+    3. **The real fix: pipelined `rtl013_fault_source` in `dfc_rtl024.sv`.**
+       This new, wide (7-source) combinational fan-in from physically-
+       scattered real modules' own registered `fault_req_o` outputs,
+       feeding directly into RTL-013's own further combinational
+       classification logic, was itself a brand-new instance of exactly
+       the "wide fan-in hub" pattern item 48 already identified as this
+       design's own standing architectural risk. Fixed via the same
+       "capture this cycle, commit the next" technique already proven for
+       the SPI bridge (item 41) and RTL-005's own event store (item 57):
+       registered the aggregation one CORE_CLK cycle before RTL-013 ever
+       sees it (`rtl013_fault_source_q`), breaking the combinational path
+       from seven distant modules' registers through RTL-013's own
+       downstream logic in one cut. Adds exactly one CORE_CLK cycle of
+       latency to fault-source detection -- negligible for a safety-
+       monitoring signal, and confirmed via a real, full regression
+       (17/17 testbenches, 756/756 checks, unchanged) that this is a pure
+       timing/latency change with no functional regression (every test's
+       own wait margins were already generous enough to absorb it).
+    Verified end-to-end: a full Icarus regression after each of the three
+    fix attempts (17/17 testbenches, 756/756 checks, unchanged throughout
+    -- confirming this was purely a timing-closure investigation, never a
+    functional one), a real `gate.ps1` run (lint/sim/formal/coverage all
+    clean) after the final fix, and a real `build_ecp5.ps1` run (Build ID
+    `20260828_134327`, **50.19 MHz PASS at 50 MHz required**,
+    TRELLIS_COMB 26057/83640 (31%), TRELLIS_FF 16926/83640 (20%),
+    MULT18X18D 12/156 (7%), no `--timing-allow-fail` needed). **Lesson for
+    RTL-014 onward, reinforcing item 48's own standing warning with a real,
+    now-proven fix pattern**: any NEW module that creates its own wide
+    aggregation across several already-scattered real producers (not just
+    "one more input to an existing hub") should have that aggregation's
+    own output registered from the start, before it ever reaches further
+    combinational logic -- don't wait for a real build failure to
+    discover this a second time.

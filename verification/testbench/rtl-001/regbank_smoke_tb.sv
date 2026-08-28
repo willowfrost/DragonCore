@@ -135,6 +135,14 @@ module regbank_smoke_tb;
   // ports.
   logic [dfc_types_pkg::DFC_RTL012_STATUS_WIDTH-1:0]  rtl012_status_i;
   logic [dfc_types_pkg::DFC_RTL012_CONTROL_WIDTH-1:0] rtl012_control_o;
+  // RTL-013's real cross-module register bus, aggregated this session
+  // (reggen.py v4 from tools/reggen/rtl013_field_map.json) --
+  // fault_status_status_i, fault_class_status_i, degraded_status_status_i,
+  // fault_active_source_status_i, fault_latched_source_status_i, and
+  // rtl013_evt_overflow_status_status_i no longer exist as individual
+  // ports.
+  logic [dfc_types_pkg::DFC_RTL013_STATUS_WIDTH-1:0]  rtl013_status_i;
+  logic [dfc_types_pkg::DFC_RTL013_CONTROL_WIDTH-1:0] rtl013_control_o;
   logic [31:0] host_status_status_i;
   logic [31:0] host_last_result_status_i;
   logic [31:0] host_last_address_status_i;
@@ -186,12 +194,6 @@ module regbank_smoke_tb;
   logic [31:0] route_active_filter_mask_status_i;
   logic [31:0] route_entry_status_status_i;
   logic [31:0] rtl021_evt_overflow_status_status_i;
-  logic [31:0] fault_status_status_i;
-  logic [31:0] fault_class_status_i;
-  logic [31:0] degraded_status_status_i;
-  logic [31:0] fault_active_source_status_i;
-  logic [31:0] fault_latched_source_status_i;
-  logic [31:0] rtl013_evt_overflow_status_status_i;
   logic [31:0] ilock_status_status_i;
   logic [31:0] ilock_active_result_status_i;
   logic [31:0] rtl014_evt_overflow_status_status_i;
@@ -322,12 +324,8 @@ module regbank_smoke_tb;
     .rtl011_control_o(rtl011_control_o),
     .rtl012_status_i(rtl012_status_i),
     .rtl012_control_o(rtl012_control_o),
-    .fault_status_status_i(fault_status_status_i),
-    .fault_class_status_i(fault_class_status_i),
-    .degraded_status_status_i(degraded_status_status_i),
-    .fault_active_source_status_i(fault_active_source_status_i),
-    .fault_latched_source_status_i(fault_latched_source_status_i),
-    .rtl013_evt_overflow_status_status_i(rtl013_evt_overflow_status_status_i),
+    .rtl013_status_i(rtl013_status_i),
+    .rtl013_control_o(rtl013_control_o),
     .ilock_status_status_i(ilock_status_status_i),
     .ilock_active_result_status_i(ilock_active_result_status_i),
     .rtl014_evt_overflow_status_status_i(rtl014_evt_overflow_status_status_i),
@@ -418,12 +416,7 @@ module regbank_smoke_tb;
     rtl010_status_i = '0;
     rtl011_status_i = '0;
     rtl012_status_i = '0;
-    fault_status_status_i = 32'h0;
-    fault_class_status_i = 32'h0;
-    degraded_status_status_i = 32'h0;
-    fault_active_source_status_i = 32'h0;
-    fault_latched_source_status_i = 32'h0;
-    rtl013_evt_overflow_status_status_i = 32'h0;
+    rtl013_status_i = '0;
     ilock_status_status_i = 32'h0;
     ilock_active_result_status_i = 32'h0;
     rtl014_evt_overflow_status_status_i = 32'h0;
@@ -474,22 +467,23 @@ module regbank_smoke_tb;
     // to ROTOR_STATUS (RTL-006 integration), then to ENGINE_STATUS (RTL-007
     // integration), then to PULSE0_STATUS (RTL-008 integration), then to
     // SENSOR_STATUS (RTL-009 integration), then to HEALTH_RAW_IN (RTL-010
-    // integration), then to WDOG_STATUS (RTL-011 integration), and now
-    // redirected an eleventh time this session to FAULT_STATUS: WDOG_STATUS's
-    // own status_i is no longer an individual port either (it's now
-    // aggregated into rtl012_status_i, real cross-module wiring covered by
-    // rtl012_integration_tb.sv instead). FAULT_STATUS (RTL-013, not yet
+    // integration), then to WDOG_STATUS (RTL-011 integration), then to
+    // FAULT_STATUS (RTL-012 integration), and now redirected a twelfth time
+    // this session to ILOCK_STATUS: FAULT_STATUS's own status_i is no
+    // longer an individual port either (it's now aggregated into
+    // rtl013_status_i, real cross-module wiring covered by
+    // rtl013_integration_tb.sv instead). ILOCK_STATUS (RTL-014, not yet
     // real) is untouched by that change and still uses the original generic
     // per-register status_i mechanism this check is actually meant to
     // exercise.
-    fault_status_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_FAULT_STATUS;
+    ilock_status_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_ILOCK_STATUS;
     #1;
-    check("FAULT_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("FAULT_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    fault_status_status_i = 32'h0000_0041;
+    check("ILOCK_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("ILOCK_STATUS write_illegal (external)", write_illegal_o, 1'b1);
+    ilock_status_status_i = 32'h0000_0041;
     #1;
-    check("FAULT_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("ILOCK_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;
