@@ -10,6 +10,7 @@
 // Cross-module forwarding: RTL-009 (see tools/reggen/rtl009_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-010 (see tools/reggen/rtl010_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-011 (see tools/reggen/rtl011_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-012 (see tools/reggen/rtl012_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -32,6 +33,8 @@
   // Aggregated real RTL-010 control, replacing the prior disconnected placeholder for: RTL010_EVT_OVERFLOW_STATUS, SENSOR0_EVENT_IRQ_CFG, SENSOR0_HYSTERESIS, SENSOR0_MAX_AGE_MS, SENSOR0_STATUS, SENSOR0_THRESH_HIGH, SENSOR0_THRESH_LOW, SENSOR1_EVENT_IRQ_CFG, SENSOR1_HYSTERESIS, SENSOR1_MAX_AGE_MS, SENSOR1_STATUS, SENSOR1_THRESH_HIGH, SENSOR1_THRESH_LOW, SENSOR_CONTROL, SENSOR_STATUS, SENSOR_UPDATE_COMMIT, SENSOR_UPDATE_META, SENSOR_UPDATE_SELECT, SENSOR_UPDATE_VALUE
   // Aggregated real RTL-011 status, replacing individual ports for: HEALTH_ACTIVE, HEALTH_QUALIFICATION, HEALTH_QUAL_IN, HEALTH_RAW_IN, HEALTH_STATUS, HEALTH_STICKY, HEALTH_SYNC_IN, RTL011_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-011 control, replacing the prior disconnected placeholder for: HEALTH_CONTROL, HEALTH_EVENT_ENABLE, HEALTH_FAULT_ENABLE, HEALTH_IRQ_ENABLE, HEALTH_POLARITY, HEALTH_QUAL_0_3, HEALTH_QUAL_4_7, HEALTH_STICKY, RTL011_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-012 status, replacing individual ports for: RTL012_EVT_OVERFLOW_STATUS, WDOG_ELAPSED_US, WDOG_STATUS
+  // Aggregated real RTL-012 control, replacing the prior disconnected placeholder for: RTL012_EVT_OVERFLOW_STATUS, WDOG_CONTROL, WDOG_RECOVERY, WDOG_SERVICE, WDOG_STATUS, WDOG_TIMEOUT_US, WDOG_WINDOW_OPEN_US
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -117,9 +120,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  route_destination_drop_count_2_3_status_i,
   input  logic [31:0]  route_destination_drop_count_4_status_i,
   input  logic [31:0]  route_active_control_status_i,
-  input  logic [31:0]  wdog_status_status_i,
-  input  logic [31:0]  wdog_elapsed_us_status_i,
-  input  logic [31:0]  rtl012_evt_overflow_status_status_i,
   input  logic [31:0]  fault_status_status_i,
   input  logic [31:0]  fault_class_status_i,
   input  logic [31:0]  degraded_status_status_i,
@@ -174,7 +174,9 @@ module dfc_config_regbank_regs (
   input  logic [224:0]  rtl010_status_i,
   output logic [345:0] rtl010_control_o,
   input  logic [83:0]  rtl011_status_i,
-  output logic [121:0] rtl011_control_o
+  output logic [121:0] rtl011_control_o,
+  input  logic [57:0]  rtl012_status_i,
+  output logic [110:0] rtl012_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -1575,20 +1577,52 @@ module dfc_config_regbank_regs (
     if (!rst_ni) wdog_timeout_us_q <= 32'h000F4240;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_WDOG_TIMEOUT_US)) wdog_timeout_us_q <= wdata_i;
 
-  // WDOG_SERVICE (0x300C) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_WDOG_SERVICE)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // WDOG_SERVICE (0x300C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-012, real
+  //   generation per contract REG-300C, not a permanent tie.
+  logic [31:0] wdog_service_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) wdog_service_pulse_q <= 32'h0;
+    else wdog_service_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_WDOG_SERVICE)) ? wdata_i : 32'h0;
+
+  // WDOG_SERVICE (0x300C) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-012 via wdog_service_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] wdog_service_q = 32'h00000000;
 
-  // WDOG_STATUS (0x3010) -- external passthrough, owner RTL-012
-  wire [31:0] wdog_status_q = wdog_status_status_i;
+  // WDOG_STATUS (0x3010) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-012, real
+  //   generation per contract REG-3010, not a permanent tie.
+  logic [31:0] wdog_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) wdog_status_pulse_q <= 32'h0;
+    else wdog_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_WDOG_STATUS)) ? wdata_i : 32'h0;
 
-  // WDOG_ELAPSED_US (0x3014) -- external passthrough, owner RTL-012
-  wire [31:0] wdog_elapsed_us_q = wdog_elapsed_us_status_i;
+  // WDOG_STATUS (0x3010) -- external passthrough, owner RTL-012. Reconstructed from the aggregated rtl012_status_i input (contract REG-3010), not an individual per-register port.
+  wire [31:0] wdog_status_q = {25'h0, rtl012_status_i[9:9], rtl012_status_i[8:8], rtl012_status_i[7:7], rtl012_status_i[6:6], rtl012_status_i[5:5], rtl012_status_i[4:4], rtl012_status_i[3:3]};
 
-  // WDOG_RECOVERY (0x3018) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_WDOG_RECOVERY)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // WDOG_ELAPSED_US (0x3014) -- external passthrough, owner RTL-012. Reconstructed from the aggregated rtl012_status_i input (contract REG-3014), not an individual per-register port.
+  wire [31:0] wdog_elapsed_us_q = {rtl012_status_i[41:10]};
+
+  // WDOG_RECOVERY (0x3018) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-012, real
+  //   generation per contract REG-3018, not a permanent tie.
+  logic [31:0] wdog_recovery_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) wdog_recovery_pulse_q <= 32'h0;
+    else wdog_recovery_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_WDOG_RECOVERY)) ? wdata_i : 32'h0;
+
+  // WDOG_RECOVERY (0x3018) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-012 via wdog_recovery_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] wdog_recovery_q = 32'h00000000;
 
-  // RTL012_EVT_OVERFLOW_STATUS (0x301C) -- external passthrough, owner RTL-012
-  wire [31:0] rtl012_evt_overflow_status_q = rtl012_evt_overflow_status_status_i;
+  // RTL012_EVT_OVERFLOW_STATUS (0x301C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-012, real
+  //   generation per contract REG-301C, not a permanent tie.
+  logic [31:0] rtl012_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl012_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl012_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL012_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
+  // RTL012_EVT_OVERFLOW_STATUS (0x301C) -- external passthrough, owner RTL-012. Reconstructed from the aggregated rtl012_status_i input (contract REG-301C), not an individual per-register port.
+  wire [31:0] rtl012_evt_overflow_status_q = {8'h0, rtl012_status_i[57:42], 7'h0, rtl012_status_i[2:2]};
 
   // FAULT_CONTROL (0x3100) -- Mixed: RW, WO-CMD, RSV0, owner RTL-013
   logic [31:0] fault_control_q;
@@ -2169,6 +2203,29 @@ module dfc_config_regbank_regs (
   assign rtl011_control_o[8:1] = health_sticky_pulse_q[7:0];  // HEALTH_STICKY.health_sticky__asserted
   assign rtl011_control_o[0] = health_control_q[0:0];  // HEALTH_CONTROL.health_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl012_control_o -- real forwarding to RTL-012, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl012_control_t defines --
+  // cross-checked at generation time (111/111 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl012_control_o[110] = rtl012_evt_overflow_status_pulse_q[0:0];  // RTL012_EVT_OVERFLOW_STATUS.rtl012_evt_overflow_status__event_overflow
+  assign rtl012_control_o[109] = wdog_recovery_pulse_q[0:0];  // WDOG_RECOVERY.wdog_recovery__recover
+  assign rtl012_control_o[108] = wdog_status_pulse_q[5:5];  // WDOG_STATUS.wdog_status__timeout
+  assign rtl012_control_o[107] = wdog_status_pulse_q[4:4];  // WDOG_STATUS.wdog_status__bad_service_key
+  assign rtl012_control_o[106] = wdog_status_pulse_q[3:3];  // WDOG_STATUS.wdog_status__early_service
+  assign rtl012_control_o[105] = wdog_status_pulse_q[2:2];  // WDOG_STATUS.wdog_status__service_accepted
+  assign rtl012_control_o[104:73] = wdog_service_pulse_q[31:0];  // WDOG_SERVICE.wdog_service__service_key
+  assign rtl012_control_o[72:41] = wdog_timeout_us_q[31:0];  // WDOG_TIMEOUT_US.wdog_timeout_us__timeout_us
+  assign rtl012_control_o[40:9] = wdog_window_open_us_q[31:0];  // WDOG_WINDOW_OPEN_US.wdog_window_open_us__window_open_us
+  assign rtl012_control_o[8:5] = wdog_control_q[8:5];  // WDOG_CONTROL.wdog_control__safety_response_mask
+  assign rtl012_control_o[4] = wdog_control_q[4:4];  // WDOG_CONTROL.wdog_control__fault_enable
+  assign rtl012_control_o[3] = wdog_control_q[3:3];  // WDOG_CONTROL.wdog_control__irq_enable
+  assign rtl012_control_o[2] = wdog_control_q[2:2];  // WDOG_CONTROL.wdog_control__event_enable
+  assign rtl012_control_o[1] = wdog_control_q[1:1];  // WDOG_CONTROL.wdog_control__window_enable
+  assign rtl012_control_o[0] = wdog_control_q[0:0];  // WDOG_CONTROL.wdog_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -2450,10 +2507,10 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_WDOG_WINDOW_OPEN_US: begin rdata_o = wdog_window_open_us_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_WDOG_TIMEOUT_US: begin rdata_o = wdog_timeout_us_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_WDOG_SERVICE: begin rdata_o = wdog_service_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_WDOG_STATUS: begin rdata_o = wdog_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_WDOG_STATUS: begin rdata_o = wdog_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_WDOG_ELAPSED_US: begin rdata_o = wdog_elapsed_us_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_WDOG_RECOVERY: begin rdata_o = wdog_recovery_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_RTL012_EVT_OVERFLOW_STATUS: begin rdata_o = rtl012_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL012_EVT_OVERFLOW_STATUS: begin rdata_o = rtl012_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_FAULT_CONTROL: begin rdata_o = fault_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_FAULT_STATUS: begin rdata_o = fault_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_FAULT_CLASS: begin rdata_o = fault_class_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end

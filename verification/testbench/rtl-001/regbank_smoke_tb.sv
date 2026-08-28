@@ -128,6 +128,13 @@ module regbank_smoke_tb;
   // session's change created or needs to fix).
   logic [dfc_types_pkg::DFC_RTL011_STATUS_WIDTH-1:0]  rtl011_status_i;
   logic [dfc_types_pkg::DFC_RTL011_CONTROL_WIDTH-1:0] rtl011_control_o;
+  // RTL-012's real cross-module register bus, aggregated this session
+  // (reggen.py v4 from tools/reggen/rtl012_field_map.json) --
+  // wdog_status_status_i, wdog_elapsed_us_status_i, and
+  // rtl012_evt_overflow_status_status_i no longer exist as individual
+  // ports.
+  logic [dfc_types_pkg::DFC_RTL012_STATUS_WIDTH-1:0]  rtl012_status_i;
+  logic [dfc_types_pkg::DFC_RTL012_CONTROL_WIDTH-1:0] rtl012_control_o;
   logic [31:0] host_status_status_i;
   logic [31:0] host_last_result_status_i;
   logic [31:0] host_last_address_status_i;
@@ -179,9 +186,6 @@ module regbank_smoke_tb;
   logic [31:0] route_active_filter_mask_status_i;
   logic [31:0] route_entry_status_status_i;
   logic [31:0] rtl021_evt_overflow_status_status_i;
-  logic [31:0] wdog_status_status_i;
-  logic [31:0] wdog_elapsed_us_status_i;
-  logic [31:0] rtl012_evt_overflow_status_status_i;
   logic [31:0] fault_status_status_i;
   logic [31:0] fault_class_status_i;
   logic [31:0] degraded_status_status_i;
@@ -316,9 +320,8 @@ module regbank_smoke_tb;
     .rtl010_control_o(rtl010_control_o),
     .rtl011_status_i(rtl011_status_i),
     .rtl011_control_o(rtl011_control_o),
-    .wdog_status_status_i(wdog_status_status_i),
-    .wdog_elapsed_us_status_i(wdog_elapsed_us_status_i),
-    .rtl012_evt_overflow_status_status_i(rtl012_evt_overflow_status_status_i),
+    .rtl012_status_i(rtl012_status_i),
+    .rtl012_control_o(rtl012_control_o),
     .fault_status_status_i(fault_status_status_i),
     .fault_class_status_i(fault_class_status_i),
     .degraded_status_status_i(degraded_status_status_i),
@@ -414,9 +417,7 @@ module regbank_smoke_tb;
     rtl009_status_i = '0;
     rtl010_status_i = '0;
     rtl011_status_i = '0;
-    wdog_status_status_i = 32'h0;
-    wdog_elapsed_us_status_i = 32'h0;
-    rtl012_evt_overflow_status_status_i = 32'h0;
+    rtl012_status_i = '0;
     fault_status_status_i = 32'h0;
     fault_class_status_i = 32'h0;
     degraded_status_status_i = 32'h0;
@@ -473,21 +474,22 @@ module regbank_smoke_tb;
     // to ROTOR_STATUS (RTL-006 integration), then to ENGINE_STATUS (RTL-007
     // integration), then to PULSE0_STATUS (RTL-008 integration), then to
     // SENSOR_STATUS (RTL-009 integration), then to HEALTH_RAW_IN (RTL-010
-    // integration), and now redirected a tenth time this session to
-    // WDOG_STATUS: HEALTH_RAW_IN's own status_i is no longer an individual
-    // port either (it's now aggregated into rtl011_status_i, real
-    // cross-module wiring covered by rtl011_integration_tb.sv instead).
-    // WDOG_STATUS (RTL-012, not yet real) is untouched by that change and
-    // still uses the original generic per-register status_i mechanism this
-    // check is actually meant to exercise.
-    wdog_status_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_WDOG_STATUS;
+    // integration), then to WDOG_STATUS (RTL-011 integration), and now
+    // redirected an eleventh time this session to FAULT_STATUS: WDOG_STATUS's
+    // own status_i is no longer an individual port either (it's now
+    // aggregated into rtl012_status_i, real cross-module wiring covered by
+    // rtl012_integration_tb.sv instead). FAULT_STATUS (RTL-013, not yet
+    // real) is untouched by that change and still uses the original generic
+    // per-register status_i mechanism this check is actually meant to
+    // exercise.
+    fault_status_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_FAULT_STATUS;
     #1;
-    check("WDOG_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("WDOG_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    wdog_status_status_i = 32'h0000_0041;
+    check("FAULT_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("FAULT_STATUS write_illegal (external)", write_illegal_o, 1'b1);
+    fault_status_status_i = 32'h0000_0041;
     #1;
-    check("WDOG_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("FAULT_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

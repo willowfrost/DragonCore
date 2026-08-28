@@ -1239,8 +1239,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL011_STATUS__HEALTH_STATUS__AGGREGATE_FAULT_HI = 83;
   localparam int unsigned DFC_RTL011_STATUS__HEALTH_STATUS__AGGREGATE_FAULT_LO = 83;
 
-  // ARCH-002 Appendix B dfc_rtl012_control_t (110 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl012_control_t (111 bits, rich format)
   typedef struct packed {
+    logic rtl012_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic wdog_recovery__recover;  //  reset=0 :: command_pulse
     logic wdog_status__timeout;  //  reset=0 :: clear_mask
     logic wdog_status__bad_service_key;  //  reset=0 :: clear_mask
@@ -1256,9 +1257,9 @@ package dfc_types_pkg;
     logic wdog_control__window_enable;  //  reset=0 :: control_value
     logic wdog_control__enable;  //  reset=0 :: control_value
   } dfc_rtl012_control_t;
-  // total width: 110 bits
+  // total width: 111 bits
 
-  localparam int unsigned DFC_RTL012_CONTROL_WIDTH = 110;
+  localparam int unsigned DFC_RTL012_CONTROL_WIDTH = 111;
   localparam int unsigned DFC_RTL012_CONTROL__WDOG_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL012_CONTROL__WDOG_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL012_CONTROL__WDOG_CONTROL__WINDOW_ENABLE_HI = 1;
@@ -1287,6 +1288,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL012_CONTROL__WDOG_STATUS__TIMEOUT_LO = 108;
   localparam int unsigned DFC_RTL012_CONTROL__WDOG_RECOVERY__RECOVER_HI = 109;
   localparam int unsigned DFC_RTL012_CONTROL__WDOG_RECOVERY__RECOVER_LO = 109;
+  localparam int unsigned DFC_RTL012_CONTROL__RTL012_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 110;
+  localparam int unsigned DFC_RTL012_CONTROL__RTL012_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 110;
 
   // ARCH-002 Appendix B dfc_rtl012_status_t (58 bits, rich format)
   typedef struct packed {

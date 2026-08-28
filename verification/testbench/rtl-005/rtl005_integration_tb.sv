@@ -84,6 +84,19 @@ module rtl005_integration_tb;
   // pattern, added during RTL-009's own integration session.
   logic [dfc_types_pkg::DFC_RTL009_CONTROL_WIDTH-1:0] rtl009_control_unused;
   logic [dfc_types_pkg::DFC_RTL009_STATUS_WIDTH-1:0]  rtl009_status_stub = '0;
+  // RTL-010/RTL-011/RTL-012 likewise out of this test's scope -- same
+  // disclosed-stub pattern, added while checking every dfc_rtl001
+  // instantiation site during RTL-012's own integration session (a real,
+  // pre-existing gap found here: this file had never been updated for
+  // RTL-010/RTL-011 either, since neither of those modules' own sessions
+  // swept every existing testbench -- same class of gap as
+  // OPEN_ISSUES.md item 15).
+  logic [dfc_types_pkg::DFC_RTL010_CONTROL_WIDTH-1:0] rtl010_control_unused;
+  logic [dfc_types_pkg::DFC_RTL010_STATUS_WIDTH-1:0]  rtl010_status_stub = '0;
+  logic [dfc_types_pkg::DFC_RTL011_CONTROL_WIDTH-1:0] rtl011_control_unused;
+  logic [dfc_types_pkg::DFC_RTL011_STATUS_WIDTH-1:0]  rtl011_status_stub = '0;
+  logic [dfc_types_pkg::DFC_RTL012_CONTROL_WIDTH-1:0] rtl012_control_unused;
+  logic [dfc_types_pkg::DFC_RTL012_STATUS_WIDTH-1:0]  rtl012_status_stub = '0;
 
   logic [63:0] rtl004_timestamp;
 
@@ -94,11 +107,17 @@ module rtl005_integration_tb;
   logic [23:0]  rtl005_evt_ready_o;
   logic [24*dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl005_evt_record_i;
 
-  // Real producer index 3 (RTL-004); every other index disclosed stub-zero
-  // (same as the real dfc_rtl024.sv integration for not-yet-real modules).
-  assign rtl005_evt_valid_i  = {20'h0, rtl004_evt_valid, 3'h0};
+  // Real producer index 3 (RTL-004); index 0 is a directly testbench-
+  // controlled producer, used by Part 7's own read-after-write hazard test
+  // below (a real push through the real evt_valid_i/accept_i handshake,
+  // precisely timed -- not a hierarchical force); every other index
+  // disclosed stub-zero (same as the real dfc_rtl024.sv integration for
+  // not-yet-real modules).
+  logic         tb_producer0_valid = 1'b0;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] tb_producer0_record = '0;
+  assign rtl005_evt_valid_i  = {20'h0, rtl004_evt_valid, 2'h0, tb_producer0_valid};
   assign rtl004_evt_ready    = rtl005_evt_ready_o[3];
-  assign rtl005_evt_record_i = {2560'h0, rtl004_evt_record, 384'h0};
+  assign rtl005_evt_record_i = {2560'h0, rtl004_evt_record, 256'h0, tb_producer0_record};
 
   // See file header -- own self-loop simplification, not the real
   // evt_valid_i[4] arbitration path.
@@ -137,6 +156,12 @@ module rtl005_integration_tb;
     .rtl008_status_i        (rtl008_status_stub),
     .rtl009_control_o       (rtl009_control_unused),
     .rtl009_status_i        (rtl009_status_stub),
+    .rtl010_control_o       (rtl010_control_unused),
+    .rtl010_status_i        (rtl010_status_stub),
+    .rtl011_control_o       (rtl011_control_unused),
+    .rtl011_status_i        (rtl011_status_stub),
+    .rtl012_control_o       (rtl012_control_unused),
+    .rtl012_status_i        (rtl012_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );
@@ -455,6 +480,69 @@ module rtl005_integration_tb;
           32'h0000_0001);
 
     rtl005_self_evt_ready = 1'b1;
+
+    // ------------------------------------------------------------------
+    // Part 7 (OPEN_ISSUES.md item 57): the real read-after-write hazard
+    // this session's own store-write pipelining fix introduced and closed.
+    // `store_q[tail_q] <= slot_record_q[push_idx]` is now pipelined one
+    // cycle behind the tail_q/head_q/level_q pointer update -- a
+    // CAPTURE_OLDEST landing in the exact one-cycle window between "the
+    // push is accepted" and "the data actually lands in store_q" would,
+    // without the forwarding mux on the EVT_SNAPSHOT read, capture stale/
+    // default data instead of the real just-pushed record. This part
+    // engineers that EXACT race deterministically, not by chance: a real
+    // dri_write() for CAPTURE_OLDEST takes exactly 2 CORE_CLK edges from
+    // call to its own write_en (S_RESPOND) cycle, and this module's own
+    // arbiter puts a freshly-asserted producer's evt_valid_i one edge away
+    // from do_push (accept_i/slot_valid_q set combinationally the same
+    // cycle evt_valid_i asserts; do_push reads the now-valid slot the very
+    // next cycle) -- starting BOTH the CAPTURE_OLDEST write and a one-cycle
+    // producer-0 push pulse at the exact same simulation instant lands
+    // do_push's own pipeline capture and the CAPTURE_OLDEST pulse's
+    // control_i visibility on the identical cycle, by construction, not by
+    // retrying until it happens to line up.
+    // ------------------------------------------------------------------
+    dri_read(DFC_ADDR_EVT_COUNT, rdata, code);
+    check("Part 7 setup: store is genuinely empty before this race (Part 6's own CLEAR_ALL calls already reset it)",
+          rdata, 32'h0000_0000);
+
+    tb_producer0_record = {32'hCAFE_BABE, 8'h00, 8'h05, 16'h1234, 64'hDEAD_BEEF_0000_1234};
+
+    fork
+      begin
+        dri_write(DFC_ADDR_EVT_SNAPSHOT, 32'h0000_0001, code);  // CAPTURE_OLDEST
+      end
+      begin
+        tb_producer0_valid = 1'b1;
+        @(posedge core_clk_i);
+        #1;
+        tb_producer0_valid = 1'b0;
+      end
+    join
+
+    // Immediately after `join` returns, we are on the exact cycle both the
+    // push's pipelined write and the CAPTURE_OLDEST pulse's own effects
+    // are simultaneously visible -- the real hazard window. No settle
+    // delay here is deliberate: adding one would let the pipelined write
+    // land first and silently defeat the very race this part exists to
+    // exercise.
+    check("Part 7 CAPTURE_OLDEST write accepted (RSP_OK)", {29'h0, code}, 32'h0);
+    dri_read(DFC_ADDR_EVT_STATUS, rdata, code);
+    check_bit("Part 7: EVT_STATUS.SNAPSHOT_VALID genuinely set by the real capture",
+              rdata[2], 1'b1);
+
+    dri_read(DFC_ADDR_EVT_DATA2, rdata, code);
+    check({"Part 7: EVT_DATA2 genuinely reflects the real just-pushed record's own ",
+           "EVENT_ID/SOURCE_ID (0x1234/0x05) via the forwarding mux -- NOT stale/",
+           "default data from store_q, which had not actually been written yet at ",
+           "the moment this capture's own pulse landed"},
+          rdata, 32'h0005_1234);
+    dri_read(DFC_ADDR_EVT_DATA3, rdata, code);
+    check("Part 7: EVT_DATA3 genuinely reflects the real just-pushed record's own EVENT_DATA (0xCAFEBABE)",
+          rdata, 32'hCAFE_BABE);
+
+    dri_write(DFC_ADDR_EVT_POP, 32'h0000_0001, code);  // drain, tidy
+    check("Part 7 EVT_POP write accepted (RSP_OK)", {29'h0, code}, 32'h0);
 
     $display("");
     $display("rtl005_integration_tb: %0d checks, %0d failures", checks, errors);

@@ -99,6 +99,19 @@ module rtl006_integration_tb;
   // pattern, added during RTL-009's own integration session.
   logic [dfc_types_pkg::DFC_RTL009_CONTROL_WIDTH-1:0] rtl009_control_unused;
   logic [dfc_types_pkg::DFC_RTL009_STATUS_WIDTH-1:0]  rtl009_status_stub = '0;
+  // RTL-010/RTL-011/RTL-012 likewise out of this test's scope -- same
+  // disclosed-stub pattern, added while checking every dfc_rtl001
+  // instantiation site during RTL-012's own integration session (a real,
+  // pre-existing gap found here: this file had never been updated for
+  // RTL-010/RTL-011 either, since neither of those modules' own sessions
+  // swept every existing testbench -- same class of gap as
+  // OPEN_ISSUES.md item 15).
+  logic [dfc_types_pkg::DFC_RTL010_CONTROL_WIDTH-1:0] rtl010_control_unused;
+  logic [dfc_types_pkg::DFC_RTL010_STATUS_WIDTH-1:0]  rtl010_status_stub = '0;
+  logic [dfc_types_pkg::DFC_RTL011_CONTROL_WIDTH-1:0] rtl011_control_unused;
+  logic [dfc_types_pkg::DFC_RTL011_STATUS_WIDTH-1:0]  rtl011_status_stub = '0;
+  logic [dfc_types_pkg::DFC_RTL012_CONTROL_WIDTH-1:0] rtl012_control_unused;
+  logic [dfc_types_pkg::DFC_RTL012_STATUS_WIDTH-1:0]  rtl012_status_stub = '0;
 
   always #10 core_clk_i = ~core_clk_i;
 
@@ -131,6 +144,12 @@ module rtl006_integration_tb;
     .rtl008_status_i        (rtl008_status_stub),
     .rtl009_control_o       (rtl009_control_unused),
     .rtl009_status_i        (rtl009_status_stub),
+    .rtl010_control_o       (rtl010_control_unused),
+    .rtl010_status_i        (rtl010_status_stub),
+    .rtl011_control_o       (rtl011_control_unused),
+    .rtl011_status_i        (rtl011_status_stub),
+    .rtl012_control_o       (rtl012_control_unused),
+    .rtl012_status_i        (rtl012_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

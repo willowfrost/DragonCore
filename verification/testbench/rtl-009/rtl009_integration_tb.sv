@@ -96,6 +96,17 @@ module rtl009_integration_tb;
   logic [dfc_types_pkg::DFC_RTL007_STATUS_WIDTH-1:0]  rtl007_status_stub = '0;
   logic [dfc_types_pkg::DFC_RTL008_CONTROL_WIDTH-1:0] rtl008_control_unused;
   logic [dfc_types_pkg::DFC_RTL008_STATUS_WIDTH-1:0]  rtl008_status_stub = '0;
+  // RTL-010/RTL-011/RTL-012 likewise out of this test's scope -- same
+  // disclosed-stub pattern, added while checking every dfc_rtl001
+  // instantiation site during RTL-012's own integration session (a real,
+  // pre-existing gap found here: this file had never been updated for
+  // RTL-010/RTL-011 either).
+  logic [dfc_types_pkg::DFC_RTL010_CONTROL_WIDTH-1:0] rtl010_control_unused;
+  logic [dfc_types_pkg::DFC_RTL010_STATUS_WIDTH-1:0]  rtl010_status_stub = '0;
+  logic [dfc_types_pkg::DFC_RTL011_CONTROL_WIDTH-1:0] rtl011_control_unused;
+  logic [dfc_types_pkg::DFC_RTL011_STATUS_WIDTH-1:0]  rtl011_status_stub = '0;
+  logic [dfc_types_pkg::DFC_RTL012_CONTROL_WIDTH-1:0] rtl012_control_unused;
+  logic [dfc_types_pkg::DFC_RTL012_STATUS_WIDTH-1:0]  rtl012_status_stub = '0;
 
   logic [63:0] tb_timestamp = 64'h0;
   always @(posedge core_clk_i) tb_timestamp <= tb_timestamp + 64'd1;
@@ -153,6 +164,12 @@ module rtl009_integration_tb;
     .rtl008_status_i        (rtl008_status_stub),
     .rtl009_control_o       (rtl009_control),
     .rtl009_status_i        (rtl009_status),
+    .rtl010_control_o       (rtl010_control_unused),
+    .rtl010_status_i        (rtl010_status_stub),
+    .rtl011_control_o       (rtl011_control_unused),
+    .rtl011_status_i        (rtl011_status_stub),
+    .rtl012_control_o       (rtl012_control_unused),
+    .rtl012_status_i        (rtl012_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

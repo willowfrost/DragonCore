@@ -747,17 +747,86 @@ module rtl024_skeleton_tb;
           dut.rtl010_status[dfc_types_pkg::DFC_RTL010_STATUS__SENSOR0_VALUE__VALUE_HI:dfc_types_pkg::DFC_RTL010_STATUS__SENSOR0_VALUE__VALUE_LO] == 32'd500,
           1'b1);
 
-    // The stub topology's remaining mandatory-mask modules (RTL-012
-    // through RTL-016, etc.) never report ready, so RTL-002 is expected to
-    // run out its full 499,000-cycle mandatory-init timeout and land in
+    // ------------------------------------------------------------------
+    // RTL-012 integration checks -- real, added this session, over the
+    // real physical SPI pins. RTL-012 has NO physical pin at all and NO
+    // module_enable_i port (confirmed against its own real 17-port catalog
+    // before dfc_rtl012.sv was written -- see that file's own header): it
+    // is a MANDATORY-class module (Appendix D.1 bit 11, part of the
+    // 0x80F81F mandatory mask), unlike every Monitoring-domain module
+    // tested above, so unlike those, its SUBSYS_READY bit is already real
+    // and asserted BEFORE any SUBSYS_ENABLE write at all -- there is no
+    // optional-mask bit to enable. rtl012_integration_tb.sv already covers
+    // the RTL-001<->RTL-012 register bus, the exact window-boundary
+    // classification, timeout, recovery, and event/irq generation directly;
+    // this proves RTL-012's real readiness holds inside the actual RTL-024
+    // top-level integration, plus a real, external SPI-driven service
+    // sequence genuinely reaching WDOG_STATUS.SERVICE_ACCEPTED.
+    // ------------------------------------------------------------------
+    check("rtl012 status_o.ready is real from reset (mandatory, no illegal configuration forced)",
+          dut.rtl012_status[dfc_types_pkg::DFC_RTL012_STATUS__READY_HI], 1'b1);
+    check("rtl012 status_o.fault is real (clear, no illegal configuration forced)",
+          dut.rtl012_status[dfc_types_pkg::DFC_RTL012_STATUS__FAULT_HI], 1'b0);
+
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable SUBSYS_READY bit 11 (RTL-012) already reflects RTL-012's real ",
+           "readiness with no SUBSYS_ENABLE write at all -- mandatory-class, unlike every ",
+           "Monitoring-domain module tested above"},
+          rd_data[11], 1'b1);
+
+    // Real, protected WDOG_CONTROL write (Protection: Yes, REG-3000) --
+    // same PROTECT_KEY re-arm sequence every protected register in this
+    // project requires.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for WDOG_CONTROL) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for WDOG_CONTROL) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_WDOG_CONTROL, 32'h0000_001D, wr_status);  // ENABLE|EVENT_ENABLE|IRQ_ENABLE|FAULT_ENABLE
+    check("WDOG_CONTROL SPI write (ENABLE=1) accepted", |wr_status, 1'b0);
+
+    // Generous, non-adjacent window boundaries (not this file's job to
+    // exercise the exact EARLY/LATE boundary -- rtl012_integration_tb.sv
+    // already does that in depth): window opens immediately, times out far
+    // in the future.
+    spi_write32(DFC_ADDR_WDOG_WINDOW_OPEN_US, 32'd0, wr_status);
+    check("WDOG_WINDOW_OPEN_US SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_WDOG_TIMEOUT_US, 32'd1000, wr_status);
+    check("WDOG_TIMEOUT_US SPI write accepted", |wr_status, 1'b0);
+
+    repeat (10) @(posedge core_clk_i); #1;  // comfortably inside [0, 1000us)
+
+    // A real service key write over this file's own real, external SPI
+    // pins -- the correct 0xA5C35A3C key, landing inside the live window.
+    spi_write32(DFC_ADDR_WDOG_SERVICE, 32'hA5C3_5A3C, wr_status);
+    check("WDOG_SERVICE SPI write accepted", |wr_status, 1'b0);
+    #1;
+
+    spi_read32(DFC_ADDR_WDOG_STATUS, rd_data, rd_status);
+    check("WDOG_STATUS SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable WDOG_STATUS.SERVICE_ACCEPTED genuinely reflects the real, valid ",
+           "in-window service key driven over this file's own real, external SPI pins"},
+          rd_data[2], 1'b1);
+    check("host-readable WDOG_STATUS.ENABLED reflects the real host-enabled state", rd_data[0], 1'b1);
+
+    check({"RTL-011's own HEALTH_ACTIVE state is unaffected by RTL-012's real WDOG_SERVICE ",
+           "write just driven -- confirms independent state even inside the actual ",
+           "RTL-024 top-level integration"},
+          dut.rtl011_status[dfc_types_pkg::DFC_RTL011_STATUS__HEALTH_ACTIVE__ACTIVE_LO],
+          1'b1);
+
+    // The stub topology's remaining mandatory-mask modules (RTL-013
+    // through RTL-016) never report ready, so RTL-002 is expected to run
+    // out its full 499,000-cycle mandatory-init timeout and land in
     // FAULTED -- this is the disclosed, real consequence of the current
     // stub topology (see dfc_rtl024.sv's RTL-002 integration comment), not
-    // a defect in RTL-002 itself. RTL-003/RTL-004/RTL-005 are now real,
-    // but none is a mandatory-mask module dependency RTL-002 can still rely
-    // on being ready for this specific timeout path -- RTL-002 already
-    // relies on other, still-unready mandatory members, so this test's
-    // long-standing "reaches FAULTED" outcome is unchanged in kind, only in
-    // which remaining stub modules are responsible for it.
+    // a defect in RTL-002 itself. RTL-003/RTL-004/RTL-005/RTL-012 are now
+    // real, but none is a mandatory-mask module dependency RTL-002 can
+    // still rely on being ready for this specific timeout path -- RTL-002
+    // already relies on other, still-unready mandatory members (RTL-013
+    // through RTL-016), so this test's long-standing "reaches FAULTED"
+    // outcome is unchanged in kind, only in which remaining stub modules
+    // are responsible for it.
     begin
       // NOTE: Icarus rejects `break` inside a for-loop ("sorry: break
       // statements not supported") -- confirmed via a real compile run,

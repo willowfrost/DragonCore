@@ -428,6 +428,29 @@ module dfc_rtl005 (
   logic [5:0] head_q, tail_q;
   logic [6:0] level_q;
 
+  // TIMING FIX (OPEN_ISSUES.md item 57): `store_q[tail_q] <= slot_record_q
+  // [push_idx]` -- a runtime-indexed 24:1 128-bit read-mux feeding a
+  // runtime-indexed 64-way write, both in one cycle -- was confirmed via a
+  // real nextpnr-ecp5 critical-path report to be this design's own worst
+  // path once RTL-012's added die area pushed the whole build's already-
+  // razor-thin margin (item 48) into a real, reproducible timing failure
+  // (47.73 MHz, FAIL at 50 MHz). Pipelined the same proven way as item 41's
+  // SPI-bridge fix: capture the push's selected record/target address into
+  // their own registers the cycle the push is accepted, and commit the
+  // actual store_q write from those registers the FOLLOWING cycle -- see
+  // the always_ff block below. The pointer/level bookkeeping (tail_q/
+  // head_q/level_q) is UNCHANGED and still commits the same cycle a push
+  // is accepted (ARCH-EVT-004's "one accept per CORE_CLK" contract is
+  // unaffected); only the 128-bit DATA payload's actual landing in
+  // store_q is delayed by one cycle. This creates a genuine one-cycle
+  // read-after-write window (a capture/pop of the just-pushed slot before
+  // its data has actually landed would otherwise read stale/default
+  // data) -- closed by the explicit forwarding mux on the EVT_SNAPSHOT
+  // read below, not left as a silent hazard.
+  logic        pending_write_q;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] pending_write_data_q;
+  logic [5:0]  pending_write_addr_q;
+
   wire not_empty = (level_q != 7'd0);
   wire full      = (level_q == 7'd64);
 
@@ -459,6 +482,9 @@ module dfc_rtl005 (
       last_ordinary_source_q <= 5'd0;
       last_source_reported_q <= 5'd0;
       rr_mask_q <= 24'hFFFFFF;
+      pending_write_q      <= 1'b0;
+      pending_write_data_q <= '0;
+      pending_write_addr_q <= 6'd0;
     end else if (module_reset_i) begin
       head_q <= 6'd0; tail_q <= 6'd0; level_q <= 7'd0;
       evt_status_overflow_q      <= 1'b0;
@@ -471,22 +497,41 @@ module dfc_rtl005 (
       last_ordinary_source_q <= 5'd0;
       last_source_reported_q <= 5'd0;
       rr_mask_q <= 24'hFFFFFF;
+      pending_write_q      <= 1'b0;
+      pending_write_data_q <= '0;
+      pending_write_addr_q <= 6'd0;
     end else begin
       if (accepted_clear_all) begin
         head_q <= 6'd0; tail_q <= 6'd0; level_q <= 7'd0;
       end else begin
         if (do_push && accepted_pop) begin
-          store_q[tail_q] <= slot_record_q[push_idx];
           tail_q <= tail_q + 6'd1;
           head_q <= head_q + 6'd1;
         end else if (do_push) begin
-          store_q[tail_q] <= slot_record_q[push_idx];
           tail_q <= tail_q + 6'd1;
           if (full) head_q <= head_q + 6'd1;
           else      level_q <= level_q + 7'd1;
         end else if (accepted_pop) begin
           head_q  <= head_q + 6'd1;
           level_q <= level_q - 7'd1;
+        end
+
+        // TIMING FIX (item 57, see store_q's own declaration comment
+        // above): the actual 128-bit data write is pipelined one cycle
+        // behind the pointer/level bookkeeping above -- capture this
+        // cycle's push (if any), commit the PRIOR cycle's captured push
+        // (if any) into store_q. Order matters for correctness: this
+        // commit uses pending_write_q/_data_q/_addr_q's PRE-this-edge
+        // (nonblocking) values, i.e. exactly what was captured on the
+        // previous edge, before they're overwritten below with this
+        // cycle's own capture.
+        if (pending_write_q) begin
+          store_q[pending_write_addr_q] <= pending_write_data_q;
+        end
+        pending_write_q <= do_push;
+        if (do_push) begin
+          pending_write_data_q <= slot_record_q[push_idx];
+          pending_write_addr_q <= tail_q;
         end
 
         if (do_push && push_ordinary) begin
@@ -518,7 +563,15 @@ module dfc_rtl005 (
       end
 
       if (accepted_capture) begin
-        snapshot_record_q <= store_q[head_q];
+        // Read-after-write forwarding (item 57): if the slot at head_q is
+        // still in flight in the one-cycle write pipeline above (a push
+        // was accepted last cycle and hasn't landed in store_q yet), use
+        // the staged data directly instead of the stale/default value
+        // still sitting in store_q -- preserves ARCH-EVT-008's "snapshot
+        // old head" semantics bit-for-bit against the pre-pipelined
+        // design.
+        snapshot_record_q <= (pending_write_q && (pending_write_addr_q == head_q))
+                              ? pending_write_data_q : store_q[head_q];
         evt_status_snapshot_valid_q <= 1'b1;
       end else if (accepted_pop) begin
         evt_status_snapshot_valid_q <= 1'b0;

@@ -3274,8 +3274,8 @@
     },
     {
       "name": "dfc_rtl012_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl012_control_t (110 bits, rich format)",
-      "width": 110,
+      "trace": "ARCH-002 Appendix B dfc_rtl012_control_t (111 bits, rich format)",
+      "width": 111,
       "fields": [
         {
           "name": "wdog_control__enable",
@@ -3402,6 +3402,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "command_pulse"
+        },
+        {
+          "name": "rtl012_evt_overflow_status__event_overflow",
+          "hi": 110,
+          "lo": 110,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },

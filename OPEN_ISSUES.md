@@ -1254,3 +1254,237 @@ incomplete, logged here rather than silently resolved or guessed.
       restructure any of the four wide-fanin hubs above, or leave this as a
       standing, monitored margin risk is a decision for a future session,
       not resolved by this investigation.
+
+## RTL-012 (Watchdog Manager) integration
+
+49. **RESOLVED (2026-08-27), approved before implementation, same pattern
+    as items 2/7/8/12/20/24/28/32/36/43 (the eleventh real instance of this
+    exact gap class -- the first in the Safety domain).**
+    `dfc_rtl012_control_t` (110 bits) had no clear-request field for
+    `RTL012_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-301C bit 0, a real W1C
+    field). Fixed: ARCH-002 grew the struct 110->111 bits, adding
+    `rtl012_evt_overflow_status__event_overflow` at the new highest bit
+    (110) -- every pre-existing field's bit position confirmed unchanged
+    via a real `regenerate.ps1` run (`git diff` of the regenerated
+    `include/dfc_types_pkg.sv` shows only the new field/width/localparam
+    lines changed). `tools/reggen/rtl012_field_map.json` carries the
+    corresponding `control_registers` entry, and its `status_registers`
+    section closes the RTL-002/003/004-style readback gap (item 21) for
+    every external RTL-012 register from the start, same discipline
+    already established for RTL-006 through RTL-011.
+
+50. **Real, disclosed ARCH-002 internal inconsistency -- a new class of
+    finding, distinct from every prior module-spec-vs-ARCH-002 conflict
+    already resolved in this document (items 1/10/11/13/19/22/37/44), since
+    both conflicting tables here belong to ARCH-002 itself, the owning
+    document, not to a restating module spec.** ARCH-002's own Appendix F.3
+    (RTL-012 condition-mask bit allocation: "0 early; 1 late/missing; 2
+    invalid key; 3 timeout; 4 recovery; 5 service accepted; 6 event-slot
+    overflow") and its own Appendix C.7 (event ID 0x0040 subtype values: "0
+    early, 1 late, 2 missing/timeout, 3 invalid key, 4 recovered, 5 service
+    accepted") do not align positionally -- F.3 folds "late" and "missing"
+    onto one shared condition-mask bit, while C.7 keeps them as two
+    distinct subtype values, and REG-002's real `WDOG_STATUS` register has
+    exactly 4 sticky W1C bits (SERVICE_ACCEPTED/EARLY_SERVICE/
+    BAD_SERVICE_KEY/TIMEOUT -- no dedicated LATE bit at all), consistent
+    with neither table read literally. **Resolved with explicit approval,
+    not silently:** `dfc_rtl012.sv` keeps LATE and TIMEOUT/MISSING as two
+    independently real, distinct conditions -- F.3 bit 1 gates a "late
+    service attempt" condition (C.7 subtype 1) and F.3 bit 3 gates the
+    actual "counter reached MAX_WINDOW" timeout-declared condition (C.7
+    subtype 2) -- both can genuinely coincide on the identical cycle
+    (ARCH-RTL012-001's own named "timeout detection precedes same-cycle
+    late service" race), proven as two independently-observed real event
+    subtypes in `rtl012_integration_tb.sv` Parts 5 and 7. If ARCH-002 is
+    ever revised to reconcile these two tables, only this module's
+    condition-mask-bit-to-subtype mapping needs to change.
+
+51. **Real, disclosed, narrow architectural limitation -- logged, not
+    silently worked around.** `WDOG_SERVICE.SERVICE_KEY` (REG-300C) is a
+    32-bit WO-CMD field whose entire legal range (0-0xFFFFFFFF) is
+    meaningful -- every value, including a legitimately-written
+    `0x00000000`, is a real service attempt subject to the exact-key check
+    (REG-300C's own text: "Correct value services; any other value sets
+    service error"). This project's existing WO-CMD pulse-capture
+    mechanism (`reggen.py`'s generated `{name}_pulse_q`, confirmed by
+    direct reading of `reggen.py`'s own generation code before writing
+    `dfc_rtl012.sv`) holds the raw written value for exactly one cycle,
+    defaulting to `32'h0` every other cycle -- meaning a host write of
+    EXACTLY `0x00000000` is indistinguishable from "no write this cycle."
+    `dfc_rtl012.sv` detects a service attempt as `ctl_service_key != 32'h0`,
+    correctly classifying every other legal write (the valid key and every
+    other wrong key) but silently missing the single specific case of a
+    host writing the all-zero key -- that one case is treated as no
+    service attempt rather than `BAD_SERVICE_KEY`. A bit-exact fix would
+    require a dedicated write-strobe signal alongside the pulse value,
+    which no cross-module register-bus mechanism in this project currently
+    provides -- real, disclosed future work, not something this module's
+    own field-map or RTL can invent around.
+
+52. **Real, disclosed interpretation -- no functional consequence, not
+    fixed (nothing to fix: no equation exists anywhere in the owning
+    documents to attach a meaning to). Same class as items 25/29/34.**
+    `WDOG_CONTROL.WINDOW_ENABLE` has NO wired functional effect anywhere in
+    `dfc_rtl012.sv`. `ARCH-SAFE-005` (the sole owning contract for
+    EARLY/LATE/window behavior, quoted in full in `RTL-012_RevA.md` SS3)
+    describes the window/key algorithm completely and unconditionally
+    whenever "an enabled counter" (`WDOG_CONTROL.ENABLE`) is running -- it
+    never references WINDOW_ENABLE at all, and neither does
+    `ARCH-RTL012-001` or `ARCH-VAL-012`. REG-3000 lists WINDOW_ENABLE only
+    as one of the protected control bits with no further behavioral text of
+    its own. The field is still real: stored, forwarded, and host-readable
+    via `WDOG_CONTROL` itself, exactly per REG-3000's own RW access class --
+    just genuinely inert.
+
+53. **Real, disclosed design, not a bit-exact citation -- forced by a
+    genuine absence of further specification, not guessed.**
+    ARCH-RTL012-001's own text ("Recovery requires exactly one valid
+    in-window service after the source condition clears") plus
+    ARCH-VAL-012's "recovery command with invalid timing is rejected" and
+    REG-3018's own "recovery/clear command after source condition is
+    inactive" description leave the exact RECOVER/recovery-completion
+    sequencing underspecified at the bit level. `dfc_rtl012.sv` implements:
+    (1) RECOVER is accepted only while the live timeout condition is
+    currently active (issuing it while not timed out is rejected, no
+    effect -- ARCH-VAL-012's "invalid timing"); (2) an accepted RECOVER
+    resets the elapsed counter to zero and clears the live timeout
+    condition ("the source condition clears") but does NOT by itself clear
+    `RESPONSE_PENDING`/deassert `response_req_o` -- the safety-response
+    request stays pending, the conservative reading of "recovery
+    REQUIRES..."; (3) exactly one subsequent valid in-window service (an
+    ordinary service, checked against the freshly-reset counter under
+    unchanged window rules) completes recovery, clearing `RESPONSE_PENDING`
+    the same cycle it also sets `SERVICE_ACCEPTED`; (4) if the counter
+    instead reaches `MAX_WINDOW` again before that confirming service
+    arrives, the single-shot recovery opportunity is spent and a fresh
+    RECOVER is required. Proven end-to-end in `rtl012_integration_tb.sv`
+    Part 6, including the "RECOVER rejected while not timed out" case.
+
+54. **Real, pre-existing testbench gap found while checking every existing
+    `dfc_rtl001` instantiation site during this session, same discipline as
+    items 15/22 -- and materially larger in scope than either of those.**
+    8 of the 10 pre-existing per-module `dfc_rtl001`-instantiating
+    integration testbenches (`rtl002_integration_tb.sv` through
+    `rtl009_integration_tb.sv`) were missing `rtl010_control_o`/
+    `rtl010_status_i` AND `rtl011_control_o`/`rtl011_status_i` ENTIRELY
+    (not merely stub-tied -- the ports were never even declared or
+    connected), since neither RTL-010's nor RTL-011's own integration
+    session swept every existing testbench, only the ones each session's
+    own account happened to check. `rtl010_integration_tb.sv` was likewise
+    missing `rtl011_control_o`/`rtl011_status_i`. Confirmed via a real,
+    direct `grep` across all 10 files before assuming any single file's own
+    account was exhaustive (the same lesson item 15 already drew from a
+    smaller instance of this exact gap class). Fixed: all 10 files now
+    declare/connect the correct disclosed-stub pairs for every sibling
+    module not under that file's own test, through `rtl012` inclusive.
+    Verified via the real, full `sim.ps1` regression (see
+    PROJECT_CONTINUITY.md Section 4 for the exact pass/fail counts).
+
+55. **Confirmed, not assumed: RTL-012 needs no physical FPGA pin**, same
+    class of finding as RTL-010's own module. Checked directly against
+    ARCH-002's own 17-port catalog (RTL-012 - Watchdog Manager) before
+    writing `dfc_rtl012.sv`: every port is either the standard clock/reset/
+    control/status/event/irq/fault group, an internal same-domain signal to
+    a not-yet-existing sibling module (`response_req_o` -> RTL-016,
+    `service_activity_o` -> RTL-015), or a broadcast input from an
+    already-real module. No external pad, no CDC/RDC inventory entry names
+    this module. No `fpga/ecp5/ulx3s_dfc.lpf` or `ULX3S_CONNECTION_MAP.md`
+    change was needed or made for this module.
+
+56. **Real, transient toolchain-robustness finding -- confirmed
+    non-reproducible via an immediate retry, same class of finding as item
+    18 (a one-off `nextpnr-ecp5` router-internal assertion crash).** A real
+    `gate.ps1` run's `formal.ps1` step failed its `prove` task: the
+    `basecase` SMT engine crashed with "Unexpected EOF response from
+    solver" (`returncode=1`) while the `induction` engine, checked in the
+    same run, genuinely returned `pass` -- this is a solver-process crash,
+    not a genuine counterexample (no trace was produced, and the crash
+    message names an unexpected process-communication failure, not a
+    property violation). An immediate retry of `formal.ps1` alone, no
+    other change, passed both `bmc` and `prove` completely clean. Logged
+    here as a real, disclosed toolchain-robustness finding, not silently
+    retried-and-ignored -- if this recurs more persistently on a future
+    module's `gate.ps1` run (every retry crashes the same way), that would
+    be a much stronger signal worth investigating directly, the same
+    reasoning item 18 already applied to its own analogous finding.
+
+57. **RESOLVED (2026-08-27), a real timing-closure fix to already-shipped
+    RTL-005, approved before implementation per this session's own task
+    instructions (touching a prior module's shipped file requires explicit
+    approval).** A real `build_ecp5.ps1` run after RTL-012 was added failed
+    timing: **47.73 MHz, FAIL at 50 MHz required** (3.38 ns logic + 17.57 ns
+    routing = 20.95 ns). The real critical-path report named a chain
+    entirely inside already-shipped code -- RTL-010's status register ->
+    RTL-004's `error_q` -> the SPI bridge's `rdata_shift_q` -> RTL-005's
+    `store_q[56]` -- confirmed to NOT touch `dfc_rtl012.sv`'s own new logic
+    at all. This is the exact same worst-path sink item 48's own prior
+    investigation had already named (`store_q[54]` then, a different bit
+    of the same signal) -- RTL-012's added die area pushed an
+    already-razor-thin, already-identified margin problem (RTL-011's own
+    build closed at only 50.12 MHz) over the edge, not a defect in RTL-012
+    itself.
+    - **Root cause, confirmed by direct reading of `dfc_rtl005.sv`, not
+      guessed:** `store_q[tail_q] <= slot_record_q[push_idx]`
+      (ARCH-EVT-004/005) is a runtime-indexed 24:1 128-bit read-mux
+      (`slot_record_q[push_idx]`) feeding a runtime-indexed 64-way write
+      (`store_q[tail_q]`), both resolved in the same cycle a push is
+      accepted -- genuinely expensive combinational depth, unlike item 41's
+      own array (RTL-005's store is a true, randomly-addressed ring buffer,
+      not a sequential-only access pattern, so the shift-register
+      replacement technique does not apply here).
+    - **Real fix: pipelined the store write into two cycles**, same
+      "capture this cycle, commit the next" technique already proven by
+      item 41's own SPI-bridge fix. The push/pop pointer bookkeeping
+      (`tail_q`/`head_q`/`level_q`) is UNCHANGED and still commits the same
+      cycle a push is accepted (ARCH-EVT-004's "one accept per CORE_CLK" is
+      unaffected) -- only the 128-bit data payload's actual landing in
+      `store_q` is delayed by one cycle, via two new registers
+      (`pending_write_q`/`pending_write_data_q`/`pending_write_addr_q`).
+    - **A real, genuine read-after-write hazard was identified BEFORE
+      implementation, not discovered after a failing test:** the one-cycle
+      write pipeline creates exactly one cycle where a `CAPTURE_OLDEST`/POP
+      of the just-pushed slot (`head_q == the in-flight write's target
+      address`) would read stale/default data from `store_q`, since the
+      real data hasn't landed yet. Closed with an explicit forwarding mux
+      on the `EVT_SNAPSHOT` read (`store_q[head_q]` only when nothing is
+      in flight to that exact address; the staged register directly
+      otherwise) -- preserves ARCH-EVT-008's "snapshot old head" semantics
+      bit-for-bit against the pre-pipelined design.
+    - **Proven via a new, real, deterministically-engineered test**,
+      `rtl005_integration_tb.sv` Part 7 (43/43 checks total, up from 37):
+      a real dri_write() for `CAPTURE_OLDEST` and a real one-cycle producer
+      push (through the real `evt_valid_i`/`accept_i` handshake on
+      producer slot 0, not a hierarchical force) are started in a `fork`
+      at the exact same simulation instant -- since a real DRI write takes
+      exactly 2 CORE_CLK edges from call to its own write-commit cycle, and
+      this module's own arbiter puts a freshly-asserted producer's
+      `evt_valid_i` exactly one edge from `do_push`, this lands the
+      capture's own pulse and the push's pipelined-write visibility on the
+      IDENTICAL cycle by construction, not by chance retry. **The test was
+      verified to actually catch the regression it claims to catch**: a
+      real, temporary negative-control run (forwarding mux reverted to
+      plain `store_q[head_q]`, then restored) confirmed Part 7 genuinely
+      FAILS without the fix -- reading back stale data (0x00030009/
+      0x00000002, an earlier test part's own leftover record) instead of
+      the real just-pushed 0x00051234/0xCAFEBABE pattern -- not merely
+      passing by coincidence.
+    - Verified end-to-end: a full Icarus regression (16/16 testbenches,
+      **660/660 checks** -- 654 from the RTL-012 baseline plus 6 new
+      Part 7 checks), a real `gate.ps1` run (lint/sim/formal/coverage all
+      clean), and a real `build_ecp5.ps1` run -- see
+      PROJECT_CONTINUITY.md's own RTL-012 entry for the exact, real
+      post-fix Max frequency and utilization figures.
+
+58. **Confirmed, not assumed: `build_ecp5.ps1`'s `$SourceFiles` list is NO
+    LONGER a manually-maintained list** -- it was converted to real
+    per-domain auto-discovery (`Get-ChildItem` over every `rtl\<domain>\
+    src\*.sv`, sorted by name) at some point after RTL-011's own session
+    (whose own account, PROJECT_CONTINUITY.md Section 4, still described
+    this as a manually-maintained list needing a new line added "immediately
+    after `dfc_rtl010.sv`" -- the recurring gap this session's own task
+    instructions specifically named as having "recurred 4 times"). Checked
+    directly against the real, current `build_ecp5.ps1` before assuming
+    either way: `rtl\safety\src\dfc_rtl012.sv` is picked up automatically
+    by this existing mechanism -- no manual edit to `build_ecp5.ps1` was
+    needed or made for this module. This class of gap is now closed
+    generically, not just for this one module.

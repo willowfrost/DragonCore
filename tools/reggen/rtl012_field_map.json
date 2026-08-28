@@ -1,0 +1,85 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md's real per-field bit tables (0x3000-0x301C), cited by contract ID below -- same disclosed scope/rationale as every prior field-map file's own _source note (extract_registers.py does not currently preserve per-field bit ranges project-wide). RTL012_EVT_OVERFLOW_STATUS's status_registers entry below (EVENT_OVERFLOW/DROP_COUNT mapped to the generic status_o.event_overflow/event_drop_count fields dfc_rtl012_status_t carries) closes the readback gap from the start, same discipline rtl006/007/008/009/010/011_field_map.json established (OPEN_ISSUES.md item 21). WDOG_STATUS's four W1C fields (SERVICE_ACCEPTED/EARLY_SERVICE/BAD_SERVICE_KEY/TIMEOUT) each appear in BOTH control_registers (their real clear-request fields) AND status_registers (their real sticky-readback fields), same dual-appearance pattern already used for every prior module's own multi-field W1C status registers. dfc_rtl012_control_t grew 110->111 bits this session (approved before implementation) to add rtl012_evt_overflow_status__event_overflow at the new highest bit (110), closing the eleventh real instance of the EVENT_OVERFLOW-clear-field gap class (items 2/7/8/12/20/24/28/32/36/43). Confirmed directly against dfc_registers_pkg.json: WDOG_STATUS/WDOG_ELAPSED_US/RTL012_EVT_OVERFLOW_STATUS are all readback=external; WDOG_CONTROL/WDOG_WINDOW_OPEN_US/WDOG_TIMEOUT_US are readback=internal_reg (plain RW, host read returns RTL-001's own stored value, not an RTL-012 echo -- no status_registers entry needed, same pattern as every other module's plain configuration RW registers); WDOG_SERVICE/WDOG_RECOVERY are readback=zero (WO-CMD, reads zero per REG-300C/REG-3018's own 'Reads zero' text -- forwarded via control_registers' command_pulse capture only, no status_registers entry).",
+  "consumer_module": "RTL-012",
+  "control_struct": "dfc_rtl012_control_t",
+  "status_struct": "dfc_rtl012_status_t",
+  "control_registers": [
+    {
+      "register": "WDOG_CONTROL", "contract_id": "REG-3000",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "wdog_control__enable"},
+        {"reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "wdog_control__window_enable"},
+        {"reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "wdog_control__event_enable"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "wdog_control__irq_enable"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "RW", "struct_field": "wdog_control__fault_enable"},
+        {"reg_hi": 8, "reg_lo": 5, "class": "RW", "struct_field": "wdog_control__safety_response_mask"}
+      ]
+    },
+    {
+      "register": "WDOG_WINDOW_OPEN_US", "contract_id": "REG-3004",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "wdog_window_open_us__window_open_us"}
+      ]
+    },
+    {
+      "register": "WDOG_TIMEOUT_US", "contract_id": "REG-3008",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "wdog_timeout_us__timeout_us"}
+      ]
+    },
+    {
+      "register": "WDOG_SERVICE", "contract_id": "REG-300C",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "class": "WO-CMD", "struct_field": "wdog_service__service_key"}
+      ]
+    },
+    {
+      "register": "WDOG_STATUS", "contract_id": "REG-3010",
+      "fields": [
+        {"reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "wdog_status__service_accepted"},
+        {"reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "wdog_status__early_service"},
+        {"reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "wdog_status__bad_service_key"},
+        {"reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "wdog_status__timeout"}
+      ]
+    },
+    {
+      "register": "WDOG_RECOVERY", "contract_id": "REG-3018",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "wdog_recovery__recover"}
+      ]
+    },
+    {
+      "register": "RTL012_EVT_OVERFLOW_STATUS", "contract_id": "REG-301C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl012_evt_overflow_status__event_overflow"}
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "WDOG_STATUS", "contract_id": "REG-3010",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "wdog_status__enabled"},
+        {"reg_hi": 1, "reg_lo": 1, "struct_field": "wdog_status__window_open"},
+        {"reg_hi": 2, "reg_lo": 2, "struct_field": "wdog_status__service_accepted"},
+        {"reg_hi": 3, "reg_lo": 3, "struct_field": "wdog_status__early_service"},
+        {"reg_hi": 4, "reg_lo": 4, "struct_field": "wdog_status__bad_service_key"},
+        {"reg_hi": 5, "reg_lo": 5, "struct_field": "wdog_status__timeout"},
+        {"reg_hi": 6, "reg_lo": 6, "struct_field": "wdog_status__response_pending"}
+      ]
+    },
+    {
+      "register": "WDOG_ELAPSED_US", "contract_id": "REG-3014",
+      "fields": [
+        {"reg_hi": 31, "reg_lo": 0, "struct_field": "wdog_elapsed_us__elapsed_us"}
+      ]
+    },
+    {
+      "register": "RTL012_EVT_OVERFLOW_STATUS", "contract_id": "REG-301C",
+      "fields": [
+        {"reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow"},
+        {"reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count"}
+      ]
+    }
+  ]
+}

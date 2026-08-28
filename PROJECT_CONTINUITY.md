@@ -2257,12 +2257,213 @@ written in this project going forward, not just a historical note.
     narrow margin proved correct a second time (this module), **RTL-012
     onward should expect this margin to need real attention very soon,
     not treat 50.12 MHz as comfortable working room.**
-- **RTL-012 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001 through RTL-011/024, exist and are citation-verified
+- **RTL-012 (Watchdog Manager): real, implemented and integrated into
+  `dfc_rtl024.sv`.** The first Safety-domain module. A protected, windowed
+  service-timer with key checking, requesting lane 0 of the safety-response
+  authorization matrix on timeout, per ARCH-002 SS10.3 `ARCH-SAFE-005`/
+  Appendix F.1 `ARCH-RTL012-001`. Confirmed before any code was written
+  that its own real register set (a microsecond free-running counter
+  compared against two live boundaries) is closer in shape to RTL-004's
+  own microsecond correlation-timer divider than to any Monitoring-domain
+  module's divider/CDC architecture, and that RTL-002's own RESET_CONTROL/
+  RESET_STATUS multi-cycle busy/assert/wait-ready command sequencer does
+  NOT apply here — a watchdog service/recovery request resolves
+  combinationally against the live elapsed counter in the same cycle the
+  command pulse arrives, no multi-cycle busy state needed. Real
+  cross-module register forwarding for all 8 REG-002 0x3000-0x301C
+  registers (`WDOG_CONTROL`/`WDOG_WINDOW_OPEN_US`/`WDOG_TIMEOUT_US`/
+  `WDOG_SERVICE`/`WDOG_STATUS`/`WDOG_RECOVERY`/`RTL012_EVT_OVERFLOW_STATUS`
+  control forwarding; `WDOG_STATUS`/`WDOG_ELAPSED_US`/
+  `RTL012_EVT_OVERFLOW_STATUS` status forwarding) via `reggen.py` v4 and
+  `tools/reggen/rtl012_field_map.json`. Real, counted own-diagnostic event
+  generation (event ID 0x0040, source index 11, subtypes early/late/
+  missing-timeout/invalid-key/recovered/service-accepted per ARCH-002
+  Appendix C.7's own row for this ID).
+  - **NO PHYSICAL PIN, NO `module_enable_i`:** confirmed directly against
+    RTL-012's own real 17-port catalog before writing any RTL — every port
+    is the standard clock/reset/control/status/event/irq/fault group, an
+    internal same-domain signal to a not-yet-existing sibling module
+    (`response_req_o` → RTL-016, `service_activity_o` → RTL-015), or a
+    broadcast input from an already-real module. Mandatory-class (Appendix
+    D.1 bit 11, part of the `0x80F81F` mandatory mask), so unlike every
+    Monitoring-domain module tested before it, its `SUBSYS_READY` bit is
+    real and asserted from reset with no `SUBSYS_ENABLE` write needed at
+    all (`OPEN_ISSUES.md` item 55). RTL-012's own `irq_req_o` now genuinely
+    reaches RTL-003's real `irq_source_i[13]`, and its `evt_valid_o`/
+    `evt_record_o` now genuinely reach RTL-005's real `evt_valid_i[11]`/
+    `evt_record_i[11]`. `fault_req_o`/`response_req_o`/`service_activity_o`
+    are real outputs left genuinely unconsumed (their architected
+    destinations, RTL-013/RTL-016/RTL-015, do not exist yet).
+  - **One real ARCH-002 gap, found and fixed before this module was
+    implemented, approved before implementation (the eleventh real
+    instance of this exact gap class):** `dfc_rtl012_control_t` (110 bits)
+    had no clear-request field for
+    `RTL012_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` — grown 110→111 bits, same
+    growth-at-new-highest-bit pattern already established
+    (`OPEN_ISSUES.md` item 49).
+  - **A genuine, new class of ARCH-002 internal inconsistency was found and
+    resolved, with explicit approval, not silently:** Appendix F.3's own
+    RTL-012 condition-mask row and Appendix C.7's own event-subtype row for
+    ID 0x0040 — two tables inside the SAME owning document — don't align
+    positionally (F.3 folds "late" and "missing" onto one bit; C.7 keeps
+    them as two distinct subtypes; REG-002's real `WDOG_STATUS` has exactly
+    4 sticky bits, matching neither table read literally). Resolved by
+    keeping LATE and TIMEOUT/MISSING as two independently real, distinct
+    conditions — proven as two independently-observed real event subtypes
+    in `rtl012_integration_tb.sv` Parts 5 and 7. Full derivation in
+    `dfc_rtl012.sv`'s own header and `OPEN_ISSUES.md` item 50.
+  - **Two further real, disclosed, narrow gaps, neither requiring an
+    ARCH-002 edit:** (1) this project's existing WO-CMD pulse-capture
+    mechanism cannot distinguish a host writing exactly `0x00000000` to
+    `WDOG_SERVICE` from "no write this cycle," so that one specific value
+    is silently treated as no service attempt rather than
+    `BAD_SERVICE_KEY` (`OPEN_ISSUES.md` item 51); (2)
+    `WDOG_CONTROL.WINDOW_ENABLE` has no wired functional effect anywhere —
+    `ARCH-SAFE-005` (the sole owning contract) never conditions any real
+    equation on it (`OPEN_ISSUES.md` item 52).
+  - **RECOVER/recovery-completion sequencing is a real, disclosed design**
+    derived from `ARCH-RTL012-001`/`ARCH-VAL-012`/REG-3018's own text, not
+    a bit-exact citation (no field exists to make it one): RECOVER is
+    accepted only while genuinely timed out (clears the live condition but
+    NOT sticky `TIMEOUT` evidence nor `RESPONSE_PENDING`); exactly one
+    subsequent valid in-window service then completes recovery, clearing
+    `RESPONSE_PENDING`. Full derivation in `dfc_rtl012.sv`'s own header and
+    `OPEN_ISSUES.md` item 53.
+  - **Proven via a new, real integration testbench**,
+    `rtl012_integration_tb.sv` (59/59 checks): real host writes via
+    RTL-001's real DRI path genuinely change RTL-012's real behavior, and
+    every named `VP-SAFE-004` window boundary is its own real, exact test
+    vector — EARLY at MIN_WINDOW-1, legal exactly at MIN_WINDOW, legal at
+    MAX_WINDOW-1, and LATE exactly at MAX_WINDOW (the genuine simultaneous
+    timeout/late-service race `ARCH-RTL012-001` names explicitly, proven
+    with `TIMEOUT` genuinely setting while `SERVICE_ACCEPTED` genuinely
+    stays clear on the identical cycle) — plus missing/timeout with no
+    service at all, INVALID key independent of window position, full
+    RECOVERY sequencing (both the accepted-while-timed-out and
+    rejected-while-not-timed-out cases), the real
+    `RTL012_EVT_OVERFLOW_STATUS` host-read-and-clear round trip, and real
+    illegal-configuration detection (`MIN_WINDOW_US >= MAX_WINDOW_US`,
+    `MAX_WINDOW_US == 0`, and `SAFETY_RESPONSE_MASK` reserved bits). Timing
+    methodology disclosed in the file's own header: rather than blindly
+    counting CORE_CLK cycles against a free-running tick generator, the
+    file waits on the DUT's own live `elapsed_us_q` via a hierarchical
+    reference (`wait (u_rtl012.elapsed_us_q == target)`) — legal, standard
+    testbench practice, not synthesizable RTL — since one microsecond tick
+    (50 cycles) comfortably exceeds a full DRI round trip (~4 cycles), the
+    target is guaranteed stable for the whole write. **Two real testbench
+    bugs were found and fixed during this file's own bring-up, kept here
+    since they're a real, generalizable lesson:** (1) `WDOG_RECOVERY` is a
+    REG-002-protected register — the first draft wrote it without the
+    PROTECT_KEY sequence, so RTL-001 silently rejected it (protected
+    error), leaving RTL-012 permanently timed out and causing every
+    subsequent `wait_until_elapsed` call to block forever (elapsed_us_q
+    could never again equal a target below the still-climbing live value)
+    — a real, deterministic hang, not a flaky one, traced directly to the
+    missing PROTECT_KEY dance once `$fflush` was added to the check tasks
+    to unmask exactly where output stopped; (2) a boundary-proof check
+    written as `elapsed_us_q > (last_boundary)` immediately after only a
+    short, sub-one-tick wait can genuinely still read the OLD boundary
+    value even when the timer correctly did not reset — fixed by checking
+    `!= 0`/`>= known_nonzero` against a value the test itself first
+    established via `wait_until_elapsed`, not a value inferred from timing
+    assumptions alone.
+  - **A real, pre-existing testbench gap, materially larger than any prior
+    instance of this class, was found and fixed while checking every
+    existing `dfc_rtl001` instantiation site (`OPEN_ISSUES.md` item 54):**
+    8 of the 10 pre-existing per-module integration testbenches
+    (`rtl002_integration_tb.sv` through `rtl009_integration_tb.sv`) were
+    missing `rtl010_control_o`/`rtl010_status_i` AND `rtl011_control_o`/
+    `rtl011_status_i` ENTIRELY (not merely stub-tied), since neither
+    RTL-010's nor RTL-011's own session swept every existing testbench;
+    `rtl010_integration_tb.sv` was likewise missing RTL-011's own pair.
+    Fixed for all 10 files, confirmed via a real, direct `grep` across
+    every file rather than trusting any single prior session's own account.
+  - `regbank_smoke_tb.sv`'s Check 3 was redirected an eleventh time
+    (`... → HEALTH_RAW_IN → WDOG_STATUS → now FAULT_STATUS`, since
+    `WDOG_STATUS` is aggregated too as of this session) and its own
+    individual RTL-012 `status_i` declarations/connections removed
+    entirely; `dri_transaction_tb.sv` (`.*` wildcard instantiation) needed
+    the new ports declared/tied off.
+  - **`build_ecp5.ps1` needed NO edit for source discovery** — confirmed
+    directly, not assumed: the `$SourceFiles` auto-discovery mechanism
+    RTL-011's own session built (`OPEN_ISSUES.md` item 46's fix) already
+    covers `rtl\safety\src\dfc_rtl012.sv` automatically, closing what would
+    otherwise have been the fifth recurrence of the "forgot the new file"
+    class of gap (`OPEN_ISSUES.md` item 56).
+  - **A real timing-closure fix to already-shipped RTL-005 was needed and
+    made, approved before implementation (`OPEN_ISSUES.md` item 57):** the
+    first `build_ecp5.ps1` run after RTL-012 was added failed timing at
+    47.73 MHz (FAIL at 50 MHz) — the real critical-path report named a
+    chain entirely inside already-shipped code (RTL-010's status register
+    → RTL-004's `error_q` → the SPI bridge's `rdata_shift_q` → RTL-005's
+    `store_q[56]`), the exact same worst-path sink item 48's own prior
+    investigation had already flagged as this design's own standing margin
+    risk. Root cause: `dfc_rtl005.sv`'s `store_q[tail_q] <= slot_record_q
+    [push_idx]` (a runtime-indexed 24:1 read-mux feeding a runtime-indexed
+    64-way write, both in one cycle). Fixed by pipelining the store write
+    into two cycles (same technique as item 41's own SPI-bridge fix) —
+    the pointer/level bookkeeping is unchanged, only the 128-bit data
+    payload's landing is delayed one cycle — with an explicit
+    read-after-write forwarding mux on the `EVT_SNAPSHOT` read closing the
+    one-cycle hazard this creates (a `CAPTURE_OLDEST`/POP of the
+    just-pushed slot before its data lands). **The new test proving this
+    (`rtl005_integration_tb.sv` Part 7) was verified to actually catch the
+    regression it claims to catch**: a real, temporary negative-control run
+    (forwarding reverted, then restored) confirmed the test genuinely FAILS
+    without the fix, reading back stale data from an earlier test part
+    instead of the real just-pushed record — not merely passing by
+    coincidence. Full derivation in `dfc_rtl005.sv`'s own header and
+    `OPEN_ISSUES.md` item 57.
+  - **CONFIRMED, end-to-end, on the person's real machine — a real
+    `gate.ps1` run passed completely clean (after the RTL-005 fix above)**:
+    `lint.ps1` PASSED (21 files compile/elaborate OK, no wildcard imports,
+    no stub/TODO markers, `RTLSTD-ORG-001` filename check clean), `sim.ps1`
+    16/16 testbenches (**660/660 checks** — verified by adding up each
+    testbench's own individually-reported count from the real output:
+    12+12+16+28+30+24+43+35+44+47+60+50+60+59+127+13=660, not restated
+    from memory — the +6 over RTL-012's own original 654 is
+    `rtl005_integration_tb.sv`'s new Part 7, 37→43), `formal.ps1` both
+    `bmc` and `prove` tasks genuinely PASS (real k-induction against real
+    RTL-001, unaffected by either the RTL-012 or RTL-005 changes — one
+    real, transient `basecase` solver crash was hit on an earlier run and
+    confirmed non-reproducible via an immediate retry, `OPEN_ISSUES.md`
+    item 56), coverage check ran clean (142/353 registers textually
+    referenced, up from 134/353, exactly the expected +8 given RTL-012's
+    own 8 registers are now exercised).
+  - **A real `build_ecp5.ps1` run genuinely failed timing BEFORE the
+    RTL-005 fix above** (Build ID `20260827_094707`): **47.73 MHz, FAIL at
+    50 MHz required** — the real critical-path report named the RTL-005
+    `store_q` bottleneck described above, confirmed to not touch
+    `dfc_rtl012.sv`'s own logic at all. **After the RTL-005 fix, a real,
+    subsequent `build_ecp5.ps1` run (Build ID `20260827_133447`) passed
+    completely clean: `Program finished normally`, real critical path
+    2.18 ns logic + 10.50 ns routing = 12.68 ns, and — the number that
+    matters — the real, final, post-route Max frequency line reads
+    `50.28 MHz (PASS at 50.00 MHz)`** (an earlier, pessimistic pre-route
+    estimate in the same log read 39.73 MHz FAIL — the same "later lines
+    are the real result" caveat this project's own build manifests always
+    carry). Device utilisation: **TRELLIS_COMB 26144/83640 (31%),
+    TRELLIS_FF 16828/83640 (20%), MULT18X18D 12/156 (7%)**. No
+    `--timing-allow-fail` needed. **A real, notable margin improvement, not
+    just a narrow recovery:** 50.28 MHz is a WIDER margin than RTL-011's
+    own already-razor-thin 50.12 MHz, despite BOTH RTL-012's own new logic
+    AND the RTL-005 fix's own two new pipeline registers adding real area —
+    confirming the RTL-005 fix genuinely reduced the design's worst-path
+    depth rather than merely trading one bottleneck for an equally-bad one.
+    The new worst path (confirmed via the real, final critical-path report)
+    now runs through the SPI bridge's own `dri_req_addr_o`/`dri_req_write_o`
+    signal fan-out — a different bottleneck than RTL-005's former
+    `store_q` write, exactly the "closing one bottleneck reveals the next-
+    tightest one" pattern this project's own timing-closure history already
+    established (item 31). The build genuinely passed with no workaround,
+    so per this project's own standing rule (only investigate/fix when a
+    build actually fails), no further timing work was done this session.
+- **RTL-013 through RTL-023:** spec-complete (all 24 module specs,
+  including RTL-001 through RTL-012/024, exist and are citation-verified
   against the `-002` baseline) but **not yet implemented as real RTL.**
-  This is the actual next phase of work — see Section 5. RTL-011 completes
-  the Monitoring domain (RTL-007 through RTL-011); Safety (RTL-012,
-  Watchdog Manager) is next.
+  This is the actual next phase of work — see Section 5. RTL-012 begins
+  the Safety domain (RTL-012 through RTL-016); RTL-013 (Fault Manager) is
+  next.
 - **Build script structural fix (2026-08-26): `build_ecp5.ps1`'s
   `$SourceFiles` list is no longer hardcoded.** This exact gap had been
   hit and reactively fixed 4 separate times (RTL-002, RTL-004, RTL-009,
@@ -2568,15 +2769,31 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-011 are now all real and implemented — RTL-011
-  completes the Monitoring domain (System Health Monitor, the fifth and
-  last Monitoring module); the next real step is RTL-012 (Watchdog
-  Manager), the first Safety-domain module**, one module at a time, using
-  the exact same real-verification discipline as RTL-001 through RTL-011
-  (compile, simulate, and only then trust — never claim something works
-  without actually running it). Then the rest of Safety, then Databus, in
-  that order (Programmable is now out of scope entirely — see the
-  scope-change entry directly above).
+- **RTL-002 through RTL-012 are now all real and implemented — RTL-012
+  begins the Safety domain (Watchdog Manager, the first of RTL-012 through
+  RTL-016); the next real step is RTL-013 (Fault Manager)**, one module at
+  a time, using the exact same real-verification discipline as RTL-001
+  through RTL-012 (compile, simulate, and only then trust — never claim
+  something works without actually running it). Then the rest of Safety,
+  then Databus, in that order (Programmable is now out of scope entirely —
+  see the scope-change entry directly above).
+  **The margin-risk warning this document carried into RTL-012's own
+  session ("RTL-012 onward should treat this as a live, standing risk")
+  was correct a fourth time**: RTL-012's own `build_ecp5.ps1` run genuinely
+  failed timing (47.73 MHz), root-caused to the exact `store_q` bottleneck
+  item 48's own investigation had already flagged, and fixed for real (not
+  worked around) by pipelining RTL-005's event-store write — see this
+  document's own RTL-012 entry in Section 4 for the full account. The
+  fixed design now closes at **50.28 MHz, a WIDER margin than RTL-011's own
+  50.12 MHz** despite RTL-012's own added area, so this specific bottleneck
+  is genuinely closed, not merely deferred — but the underlying dynamic
+  item 48 identified (wide-fanin hubs — the register-readback mux, the
+  event-record mux, the fault/ready OR-trees — each gaining one more input
+  per new module) is architectural, not a one-time fix, and the new worst
+  path (the SPI bridge's own `dri_req_addr_o`/`dri_req_write_o` fan-out)
+  confirms the pattern continues to shift rather than disappear. **RTL-013
+  onward should keep checking this at the start of its own session**, the
+  same standing discipline items 17/31/40/41/57 all reinforce.
   **RTL-011's own session reconfirmed the SPI bridge's own real timing
   margin is a live, recurring risk, not settled once and for all: a real
   `build_ecp5.ps1` run closed at only 50.12 MHz, 0.12 MHz (0.24%) above
