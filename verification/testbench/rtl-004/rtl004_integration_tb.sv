@@ -90,6 +90,9 @@ module rtl004_integration_tb;
   // during RTL-013's own integration session.
   logic [dfc_types_pkg::DFC_RTL013_CONTROL_WIDTH-1:0] rtl013_control_unused;
   logic [dfc_types_pkg::DFC_RTL013_STATUS_WIDTH-1:0]  rtl013_status_stub = '0;
+  // RTL-014 register-bus pair -- disclosed stub (RTL-014 not under test here).
+  logic [dfc_types_pkg::DFC_RTL014_CONTROL_WIDTH-1:0] rtl014_control_unused;
+  logic [dfc_types_pkg::DFC_RTL014_STATUS_WIDTH-1:0]  rtl014_status_stub = '0;
 
   // Real RTL-004 timestamp broadcast -- the actual connection under test in
   // Part 5 below.
@@ -148,6 +151,8 @@ module rtl004_integration_tb;
     .rtl012_status_i        (rtl012_status_stub),
     .rtl013_control_o       (rtl013_control_unused),
     .rtl013_status_i        (rtl013_status_stub),
+    .rtl014_control_o       (rtl014_control_unused),
+    .rtl014_status_i        (rtl014_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

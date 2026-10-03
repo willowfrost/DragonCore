@@ -1720,3 +1720,317 @@ incomplete, logged here rather than silently resolved or guessed.
     own output registered from the start, before it ever reaches further
     combinational logic -- don't wait for a real build failure to
     discover this a second time.
+
+## RTL-014 (Interlock Engine) integration
+
+**Approval note, read first:** every ARCH-002/generator decision below was
+made in one session under the person's explicit instruction to run the
+RTL-014 task end to end without stopping for item-by-item approval. Each
+one is a real, disclosed decision, logged here so it can be reviewed and
+reversed through the normal process, not a silently settled fact.
+
+66. **Resolved without an ARCH-002 edit, same resolution style as items
+    1/10/11/13/19/37/44.** `RTL-014_RevA.md` SS2 lists only `response_req_o`
+    as RTL-014-specific, omitting five real ports in ARCH-002 Appendix A's
+    "RTL-014 - Interlock Engine (19 ports)" table: `interlock_terms_i[63:0]`,
+    `interlock_satisfied_o[7:0]`, `interlock_inhibit_o[7:0]`, `irq_req_o`
+    (to `RTL-003.irq_source_i[15]`), and `fault_req_o` (to
+    `RTL-013.fault_source_i[1]`). Its SS1/SS4 also say "10 registers", where
+    REG-002 SS26 says and lists 16. Both resolved in favor of the owning
+    documents. `dfc_rtl014.sv` implements all 19 ports and all 16
+    registers. **The module spec itself was then corrected:**
+    `docs/rtl_specs/RTL-014_RevB.md` supersedes Rev A (retired), with the
+    real 19-port list, 16 registers, the staged-bank/term-source/commit
+    design, and a VP evidence table citing items 66-79. **An earlier briefing for this task claimed RTL-014 does not
+    feed RTL-013's fault matrix. That claim was wrong:** Appendix A and C.6
+    bit 1 ("Interlock violation, class 0x04, recoverable") both assign it,
+    and it is now wired.
+
+67. **RESOLVED (2026-10-02), ARCH-002 struct growth, three gap classes in
+    one change.**
+    - `dfc_rtl014_control_t` grew from 68 to 513 bits:
+      - bits 71:68, `ilock_stage_response__safety_response_mask`. REG-002's
+        own generation-check paragraph (near line 7123) requires "a
+        four-bit control member in `dfc_rtl014_control_t`" for
+        `ILOCK_STAGE_RESPONSE.SAFETY_RESPONSE_MASK`, and the 68-bit struct
+        had none. This was a REG-002-vs-ARCH-002 conflict, not just a gap.
+      - bit 72, `rtl014_evt_overflow_status__event_overflow`. This is the
+        **13th instance** of the EVENT_OVERFLOW-clear gap class (items
+        2/7/8/12/20/24/28/32/36/43/49/59).
+      - bits 512:73, `ilock_stage_e<0..7>__*`: the complete 8 x 55-bit
+        staged bank (item 68).
+    - `dfc_rtl014_status_t` grew from 53 to 108 bits (bits 107:53): the
+      selected-entry readback for the five external `ILOCK_ACTIVE_*`
+      registers (REG-322C..323C). Before this, none of them had any status
+      field, so VP-MOD-014 "active readback", VP-SAFE-016 and VP-REG-022
+      could not be met.
+    - Appendix A's two width columns (the RTL-001 rows and the RTL-014 rows)
+      were updated to match.
+    - Every pre-existing field kept its bit position. A `git diff` of the
+      regenerated `include/dfc_types_pkg.sv` shows only RTL-014 lines
+      changed.
+
+68. **RESOLVED (2026-10-02): where the eight staged entries live.** This is
+    a new architectural question no prior module had.
+    - **The gap:** REG-002 defines each `ILOCK_STAGE_*` register as a single
+      `internal_reg` register in RTL-001. Yet REG-3228 says "reads selected
+      entry's staged response mask", REG-COH-001 says "selector writes do
+      not change staged or active object contents", and VP-SAFE-016 requires
+      each of the 8 entries to stage and read back independently. Taken
+      together, that means 8 independent staged objects. `reggen.py` v4 had
+      no way to represent them: one `_q` per address, RW fields forwarded as
+      levels with no write strobe, and status mapping only for
+      `external`-class registers.
+    - **Options considered:** (i) selector-indexed storage in RTL-001,
+      forwarding the whole bank; (ii) an RTL-014-side bank captured on new
+      RW write strobes, which would also require changing the five STAGE_*
+      registers' readback class through the extractor or REG-002.
+    - **Chosen: (i).** It keeps staged readback in RTL-001 exactly as REG-002
+      classifies it, satisfies ARCH-GEN-019 literally, and needs no
+      readback-class change.
+    - **Implementation:** `reggen.py` **v5** adds an `indexed_registers`
+      field-map declaration. Each named register becomes `depth` stores,
+      written and read only at the selector's current entry, plus a
+      selected-entry view `{name}_q`. Field-map fields with an explicit
+      `"entry": i` forward that entry's store.
+    - **Generator checks (fail loud):** non-`internal_reg` target, a
+      selector declared after its target (Icarus declaration-before-use), a
+      register claimed by two field-maps, and depth exceeding the selector
+      range.
+    - **Proof of no side effects:** the regeneration diff of
+      `dfc_config_regbank_regs.sv` outside RTL-014 is exactly two lines: the
+      version-header line, and a trailing comma on the previous last port.
+      Every other consumer's output is byte-identical.
+    - **Cost:** 5 x 8 x 32 = 1,280 stored bits (Yosys trims unused high
+      bits) and one 8:1 mux in front of five read-mux cases. Item 48's
+      readback hub gets 5 slightly deeper inputs. This is worth watching on
+      future builds.
+
+69. **Real, disclosed design: COMMIT_ALL validation details (CHTR-DOC-006,
+    no owning table exists).**
+    - **Field order within an entry:** TERM0, TERM1, TERM2, TERM3 (C.3 legal
+      0-31 or 37), then OPERATOR 0-3, then the cross-field "enabled entry
+      requires nonzero guard" check. This order follows REG-002 register
+      order and is consistent with F.4's "range, then cross-field
+      relation". Entries are checked in parallel; the first error in
+      **entry order** wins, selected by a documented `casez` encoder.
+    - **Error codes** (now owned by ARCH-VAL-014): 1-4 TERM0-3 illegal, 5
+      OPERATOR illegal, 6 enabled entry with zero guard.
+    - **Where the first error is reported:** ILOCK_STATUS has no first-error
+      field, so it is reported only in event 0x0042's detail (subtype 3,
+      `event_data[15:8]` = entry, `[31:16]` = code).
+    - **RESOLVED in the same session:** REG-COH-003's "records the first
+      error" had no host-readable home. REG-002 REG-3204 gained RO
+      `FIRST_ERROR_ENTRY` (20:18) and `FIRST_ERROR_CODE` (24:21) in
+      ILOCK_STATUS's former reserved bits. ARCH-VAL-014 now owns the field
+      order and the code table. `dfc_rtl014_status_t` grew 108→115 bits.
+      Retention: captured on the earliest rejection since COMMIT_REJECTED
+      was last clear, cleared with it, and a same-cycle new rejection wins
+      (F.4). These are proven by four host-read checks in
+      `rtl014_integration_tb.sv` Part 7.
+    - **Not checkable here:** ARCH-VAL-014's "zero reserved bits" cannot be
+      checked in RTL-014, because reserved register bits are never
+      forwarded and RTL-001 has no per-field reserved validation (item 4).
+    - **Response mask:** `SAFETY_RESPONSE_MASK` 0-15 is always legal.
+    - **Timing:** for timing, the staged bank and the COMMIT_ALL pulse are
+      registered together one cycle inside RTL-014, so validation reads
+      local registers (the items 41/57/65 technique). The commit result
+      therefore lands two edges after the RTL-001 pulse, not one. F.4 says
+      "a commit result is one cycle". The validated bank is still exactly
+      the bank present in the COMMIT_ALL cycle (RTLSTD-SEQ-010). Disclosed.
+
+70. **Real, disclosed design: LATCH_VIOLATION (precedent ARCH-002 SS10.4
+    `LATCHED_REQUEST`, and item 62's active-vs-sticky lesson).**
+    - **Equation:** effective violation = `ILOCK_CONTROL.ENABLE &
+      entry_enable & (live_violation | (LATCH_VIOLATION &
+      VIOLATION_STICKY))`.
+    - **Latch off:** guards, the lane-2 response, and the event/IRQ follow
+      the live condition.
+    - **Latch on:** they stay asserted until the host clears that entry's
+      sticky bit. A clear is ineffective while the violation is still live
+      (new evidence dominates, REG-3204/DFC-SAFE-0009).
+    - `VIOLATION_ACTIVE` always reports the live condition, and
+      `fault_req_o` uses live violations only (C.6 "active condition").
+    - `ILOCK_CONTROL.ENABLE=0` releases everything but does **not** clear
+      sticky evidence. REG-002's "Reset/disable, then new evidence" priority
+      could also be read as "disable clears"; the conservative,
+      evidence-preserving reading was chosen.
+
+71. **Real, disclosed interpretations: guard and satisfied outputs.**
+    - **Guard rule:** a guarded action g is inhibited when any
+      effective-violated entry has bit g in its guard mask (DFC-FUNC-0107).
+      `interlock_inhibit_o[g] = ~GUARD_ALLOWED[g]`, indexed **per guard**.
+    - **Satisfied output:** `interlock_satisfied_o[e] = ENTRY_TRUE[e] =
+      ENABLE & entry_enable[e] & expression[e]`, indexed **per entry**.
+      Nothing in the owning documents states this index. If both ports were
+      per guard, they would be redundant complements. RTL-016's 8-bit
+      `SAFETY_INTERLOCK_MASK.REQUIRED_INTERLOCKS` ("required
+      interlock-permission mask") is their consumer and must be read
+      against this choice when RTL-016 is built.
+    - **Reset values:** during reset or module reset, `interlock_inhibit_o =
+      0xFF` (Appendix A reset 1), and GUARD_ALLOWED/satisfied are 0
+      (REG-3220 reset 0x00).
+    - **Steady state:** with no enabled entry, or with `ENABLE=0`, every
+      guard is allowed. Nothing configured means nothing is inhibited.
+    - **Same-edge rule (VP-SAFE-007):** all guard, violation, response, and
+      fault outputs register from one combinational evaluation on one edge.
+      `rtl014_integration_tb.sv` checks this on every edge across a
+      12-transition sweep. A **negative control** (inhibit made one cycle
+      late) was confirmed to fail that check, with 12 bad cycles counted,
+      before the fix was restored.
+
+72. **Real, disclosed design: lane-2 `response_req_o` (one 8-bit
+    `dfc_safety_response_req_t`).** `valid` asserts when any
+    effective-violated entry has a nonzero response mask. `source_id` is the
+    **lowest** such entry, the same rule as RTL-013's primary-source
+    selection. `response_mask` is that entry's mask. A zero mask requests
+    nothing. Other simultaneously violated entries are not represented in
+    the single request: ARCH-CONN-008 forbids merging before authorization,
+    and no owning text defines a multi-source encoding. This can't be done
+    better until RTL-016's per-source authorization exists. `source_id` is 3
+    bits, so it can never name a reserved lane-2 ID (RTLSTD-SAFE-014).
+
+73. **Real, disclosed gaps, no functional consequence.**
+    - `status_o.fault` is held 0. No local fault source is detectable,
+      because the active bank can only ever hold validated values.
+    - `status_o.ready` is 1 from the cycle after reset release (mandatory,
+      D.1 bit 13).
+    - `operating_state_i`/`observational_mode_i` have no equation in
+      RTL-014's owning contracts (observational output gating belongs to
+      RTL-016, REG-GEN-012); they go to the unused sink.
+    - The selected-entry staged view members of `control_i` are forwarded
+      but unused (staged readback is RTL-001's own store).
+
+74. **Real, disclosed, PROJECT-WIDE finding, not fixed: event `source_id`
+    convention vs Appendix C.5.** C.5's "Source ID" column is index+1: index
+    0 is `0x01` (RTL-001), and index 13 is `0x0E` (RTL-014). All 12 shipped
+    producers (RTL-002 through RTL-013) set `evt_record.source_id` to the
+    bare **index** instead (e.g. `EVT_SOURCE_INDEX_RTL013 = 8'd12`,
+    `dfc_rtl013.sv:547`). RTL-014 follows the shipped convention (`8'd13`)
+    so the project stays internally consistent. Which value is correct, and
+    whether to fix all 13 modules together, needs a decision. Fixing only
+    RTL-014 would split the convention.
+
+75. **Real, disclosed design: events and IRQ.**
+    - **Subtypes (C.7 0x0042):** 0 violation (rising edge), 1
+      satisfied/recovered (falling edge), 2 commit accepted, 3 commit
+      rejected.
+    - **Enable gating (F.3 preamble, item 39 precedent):** each active
+      entry's own EVENT_ENABLE/IRQ_ENABLE replaces `ILOCK_CONTROL`'s
+      module-wide enables for F.3 bits 0-15. The module enables gate bits
+      16-18.
+    - **IRQ shape:** violation IRQs are level (C.4); recovery, commit, and
+      overflow IRQs are one-cycle pulses.
+    - **Slot priority:** one shared pending slot, ordered rejected >
+      accepted > lowest-entry violation > lowest-entry recovery.
+    - **Drop accounting:** every losing candidate, or every candidate when
+      the slot is blocked, is counted into the saturating
+      `event_drop_count` and sets `event_overflow` (RTL-009/010 precedent).
+      For example, three entries recovering in the same cycle record one
+      event and count two drops.
+    - **Integration stub:** `event_condition_enable_i`/
+      `irq_condition_enable_i` are tied to `64'h0` in `dfc_rtl024.sv` (item
+      6), so no RTL-014 event or IRQ fires in the integrated build yet.
+
+76. **RESOLVED (2026-10-02): `internal_source_vector` built for the first
+    time, and registered proactively.**
+    - **Why RTL-024 builds it:** ARCH-002 Appendix A names
+      `dragon_core_top.internal_source_vector[63:0]` as the producer of
+      `interlock_terms_i`. Nothing in `rtl/` built it before this session.
+      Its only other consumer, `RTL-023.route_source_i`, is permanently out
+      of scope.
+    - **Construction:** `dfc_rtl024.sv` assembles it per C.1 from
+      already-real modules' `status_o`, using generated `_HI`/`_LO`
+      constants.
+    - **Fixed and stubbed bits:**
+      - Bit 30 ("any lost link") is a disclosed stub 0, because RTL-015 is
+        not built.
+      - Bits 33-36 are permanently 0 (RTL-022 is out of scope).
+      - Bit 37 is 1; bits 0 and 38-63 are 0.
+      - Bit 32 (RTL-014's own "any violation") is included. It is never a
+        legal term (C.3), and because the vector is registered there is no
+        combinational loop.
+    - **Registered from the start:** applying items 48/57/65 before any
+      failure, the vector is registered (`internal_source_vector_q`) one
+      CORE_CLK before RTL-014 sees it. This adds one cycle between a source
+      change and its evaluation. It does not affect which active bank
+      evaluates it, or the same-edge guard rule, which is internal to
+      RTL-014.
+
+77. **Confirmed, not assumed: RTL-014 needs no physical FPGA pin.** None of
+    the 19 Appendix A ports is an external pad, and every C.1 term source is
+    an existing internal status signal. No `fpga/ecp5/ulx3s_dfc.lpf` or
+    `ULX3S_CONNECTION_MAP.md` change was made. Only the WiFi-shared
+    `gp11`-`gp13` remain open.
+
+78. **Real, disclosed verification gap: VP-SAFE-007 and VP-MOD-014 list
+    `F-PROP` (formal).** `formal.ps1` covers RTL-001 only, and no RTL-014
+    formal harness was added this session. The same-edge guard property is
+    proven by T-SIM only: an every-edge monitor plus the item 71 negative
+    control. A real immediate-assertion harness, using the
+    PROJECT_CONTINUITY Section 2 rules, remains future work.
+
+79. **Real, hard-won lessons from this session.**
+    - **(a) Git Bash has no `iverilog` on its PATH on this machine.** A
+      bash pipeline like `iverilog ... | head; echo rc=$?` reports `head`'s
+      exit code 0 even when `iverilog` was never found (rc 127), which
+      looks exactly like a clean compile. Every real compile, simulation,
+      and build in this project must go through the PowerShell scripts or
+      the PowerShell tool.
+    - **(b) Per-entry EVENT_ENABLE gating:** a first-draft testbench part
+      expected recovery events from entries staged with EVENT_ENABLE=0. The
+      DUT was correct; the stimulus was fixed.
+    - **(c) `regbank_smoke_tb.sv` floating inputs:** it declared only 3 of
+      RTL-014's 8 individual status ports. The five `ilock_active_*` inputs
+      were floating, a pre-existing gap of the items 15/54 class. This is
+      moot now: all 8 are aggregated into `rtl014_status_i`. Its Check 3 was
+      redirected a 13th time, to `LLINK_STATUS`.
+
+80. **RESOLVED (2026-10-02): a real timing failure on the final RTL-014
+    tree, fixed in already-shipped RTL-005.** The person's standing
+    approve-before-touching-shipped-files rule was applied under their
+    explicit instruction in this session to finish the pass without
+    stopping, so the change is disclosed here for review.
+    - **The failure.** A first RTL-014 build (Build ID `20261002_130553`,
+      before the item-69 first-error fields) passed at 52.18 MHz. The
+      final-tree build (`20261002_164121`, which added only 7 first-error
+      flip-flops plus a status mux) failed timing at **48.41 MHz (FAIL at
+      50 MHz)**, 3.61 ns logic + 17.04 ns routing.
+    - **The critical path** was entirely inside RTL-005's event-store push
+      cone: arbitration → `push_idx` → `slot_record_q[push_idx]` (24:1 ×
+      128-bit) → `pending_write_data_q`. Its hops crossed tiles x=25 → 87 →
+      47 → 58 → 111, and no RTL-014 net was on it.
+    - **Why RTL-014 matters to it:** RTL-014 turned slot 13 from a constant
+      zero, which synthesis had removed, into a live producer. That widened
+      this mux in practice.
+    - **Router time grew** 6412 s (RTL-013) → 8373 s → 11159 s. That's a
+      real congestion signal.
+    - **Root cause found by reading the code:** RTL-005's two lowest-set-bit
+      encoders were `for` loops where the last assignment wins. That
+      synthesizes as a 24-deep serial priority chain, the same shape
+      item 65 fix 1 removed from RTL-013. The chain's binary `push_idx`
+      then drove a binary-indexed 24:1 record read.
+    - **The fix (timing fix #3 in `dfc_rtl005.sv`), with identical
+      selection semantics:**
+      - each candidate's "no lower bit set" term is an independent parallel
+        reduction;
+      - the grant is one-hot;
+      - the record is read through a one-hot AND-OR mux;
+      - `push_idx` is OR-encoded from the one-hot grant.
+      Arbitration order, push timing, and every other `push_idx` consumer
+      are unchanged. `rtl005_integration_tb.sv` still passes 43/43,
+      including its arbitration tests.
+    - **Build result after the fix:** a real `build_ecp5.ps1` run (Build ID
+      `20261002_203309`, default invocation) reached **55.02 MHz PASS at 50
+      MHz**. That is the real, final post-route line; an earlier pre-route
+      estimate read 42.89 MHz FAIL.
+      - Critical path: 2.18 ns logic + 10.08 ns routing.
+      - Utilization: TRELLIS_COMB 30251/83640 (36%), TRELLIS_FF 19045/83640
+        (22%), MULT18X18D 12/156.
+      - **Router1 time fell from 11159 s to 1356 s.** Removing the serial
+        chain and the binary mux cut real routing congestion, not just one
+        path.
+      - The new worst path starts at RTL-001's `req_accept` and leaves
+        RTL-005 entirely.
+    - **Verified:** a full `gate.ps1` after the fix passed (lint; sim 18/18,
+      894/894; formal bmc+prove; coverage 168/353).

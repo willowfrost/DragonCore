@@ -827,8 +827,8 @@ module rtl024_skeleton_tb;
            "as RTL-012"},
           rd_data[12], 1'b1);
 
-    // The stub topology's remaining mandatory-mask modules (RTL-014
-    // through RTL-016) never report ready, so RTL-002 is expected to run
+    // The stub topology's remaining mandatory-mask modules (RTL-015
+    // and RTL-016, now that RTL-014 is real) never report ready, so RTL-002 is expected to run
     // out its full 499,000-cycle mandatory-init timeout and land in
     // FAULTED -- this is the disclosed, real consequence of the current
     // stub topology (see dfc_rtl024.sv's RTL-002 integration comment), not
@@ -836,7 +836,7 @@ module rtl024_skeleton_tb;
     // are now real, but none is a mandatory-mask module dependency RTL-002
     // can still rely on being ready for this specific timeout path --
     // RTL-002 already relies on other, still-unready mandatory members
-    // (RTL-014 through RTL-016), so this test's long-standing "reaches
+    // (RTL-015 and RTL-016), so this test's long-standing "reaches
     // FAULTED" outcome is unchanged in kind, only in which remaining stub
     // modules are responsible for it.
     begin
@@ -982,6 +982,103 @@ module rtl024_skeleton_tb;
     check({"RTL-012's own real WDOG_STATUS.SERVICE_ACCEPTED state is unaffected by RTL-013's ",
            "real fault classification just proven -- confirms independent state even inside ",
            "the actual RTL-024 top-level integration"},
+          dut.rtl012_status[dfc_types_pkg::DFC_RTL012_STATUS__WDOG_STATUS__SERVICE_ACCEPTED_HI],
+          1'b1);
+
+    // ------------------------------------------------------------------
+    // RTL-014 (Interlock Engine) whole-system checks -- real, added in
+    // RTL-014's own session. Sequenced AFTER the mandatory-init-timeout
+    // proof and the RTL-013 section above, so neither earlier proof is
+    // disturbed (OPEN_ISSUES.md items 61/64). Everything below is driven
+    // over this file's own real SPI pins and its own real external gpio_i
+    // pad: gpio_i[2] -> RTL-006 synchronizer/qualification -> RTL-024's
+    // registered internal_source_vector_q (C.1 ID 3) -> RTL-014's real
+    // term select -> violation/guard -> RTL-001 register readback, and
+    // RTL-014's fault_req_o -> RTL-013 fault_source_i[1] (C.6). gpio_i[1]
+    // was left high by the RTL-006 section above, so gpio_i[2] is used here.
+    // C.1 ID 29 (watchdog timeout) and ID 31 (fault active) are deliberately
+    // NOT used as terms: by this point both carry real, long-elapsed state
+    // from earlier sections (item 64).
+    // ------------------------------------------------------------------
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable SUBSYS_READY bit 13 (RTL-014) reflects RTL-014's real readiness ",
+           "with no SUBSYS_ENABLE write (mandatory class, D.1 bit 13)"},
+          rd_data[13], 1'b1);
+
+    gpio_i[2] = 1'b0;
+    // Entry 0: AND(ID 3 = qualified GPIO 2, ID 37, ID 37, ID 37), guard 0x01,
+    // enabled, response mask 0x1. Entries 1-7 keep their reset (legal,
+    // disabled) staged contents.
+    spi_write32(DFC_ADDR_ILOCK_ENTRY_SELECT, 32'd0, wr_status);
+    check("ILOCK_ENTRY_SELECT SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ILOCK_STAGE_TERMS, 32'h2525_2503, wr_status);
+    check("ILOCK_STAGE_TERMS SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ILOCK_STAGE_LOGIC, 32'h0000_0000, wr_status);   // AND, no inversion
+    check("ILOCK_STAGE_LOGIC SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ILOCK_STAGE_GUARD, 32'h0000_0001, wr_status);
+    check("ILOCK_STAGE_GUARD SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ILOCK_STAGE_ENABLE, 32'h0000_0001, wr_status);
+    check("ILOCK_STAGE_ENABLE SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ILOCK_STAGE_RESPONSE, 32'h0000_0001, wr_status);
+    check("ILOCK_STAGE_RESPONSE SPI write accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for ILOCK_CONTROL) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for ILOCK_CONTROL) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ILOCK_CONTROL, 32'h0000_0001, wr_status);       // ENABLE=1
+    check("ILOCK_CONTROL SPI write (ENABLE=1) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for ILOCK_VALIDATE_COMMIT) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for ILOCK_VALIDATE_COMMIT) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ILOCK_VALIDATE_COMMIT, 32'h0000_0001, wr_status);  // COMMIT_ALL
+    check("ILOCK_VALIDATE_COMMIT SPI write (COMMIT_ALL) accepted", |wr_status, 1'b0);
+    repeat (10) @(posedge core_clk_i); #1;
+
+    spi_read32(DFC_ADDR_ILOCK_STATUS, rd_data, rd_status);
+    check("ILOCK_STATUS SPI read accepted", |rd_status, 1'b0);
+    check("host-readable ILOCK_STATUS.COMMIT_COMPLETE reflects the real whole-bank commit", rd_data[16], 1'b1);
+    check({"host-readable ILOCK_STATUS.VIOLATION_ACTIVE[0] genuinely asserts: the real ",
+           "external gpio_i[2] pin is low, so AND(GPIO2, true, true, true) is false"},
+          rd_data[0], 1'b1);
+    spi_read32(DFC_ADDR_ILOCK_ACTIVE_RESULT, rd_data, rd_status);
+    check("ILOCK_ACTIVE_RESULT SPI read accepted", |rd_status, 1'b0);
+    check("host-readable GUARD_ALLOWED drops guard 0 only (0xFE)", (rd_data[15:8] == 8'hFE), 1'b1);
+    check("rtl014 interlock_inhibit_o inhibits guard 0 (white-box)", dut.u_rtl014.interlock_inhibit_o[0], 1'b1);
+    check("rtl014 lane-2 response_req_o.valid asserts (white-box; RTL-016 not built yet)",
+          dut.u_rtl014.response_req_o[dfc_types_pkg::DFC_SAFETY_RESPONSE_REQ__VALID_HI], 1'b1);
+
+    spi_read32(DFC_ADDR_FAULT_ACTIVE_SOURCE, rd_data, rd_status);
+    check("FAULT_ACTIVE_SOURCE SPI read accepted", |rd_status, 1'b0);
+    check({"RTL-013 genuinely observes RTL-014's real interlock violation on ",
+           "fault_source_i[1] (C.6 'Interlock violation') through the real top-level wiring"},
+          rd_data[1], 1'b1);
+
+    gpio_i[2] = 1'b1;   // real external pin now satisfies the expression
+    repeat (10) @(posedge core_clk_i); #1;
+    check("internal_source_vector_q[3] (C.1 ID 3) tracks the real gpio_i[2] pad", dut.internal_source_vector_q[3], 1'b1);
+    check("internal_source_vector_q[37] is constant true and [0] constant false",
+          (dut.internal_source_vector_q[37] == 1'b1) && (dut.internal_source_vector_q[0] == 1'b0), 1'b1);
+    spi_read32(DFC_ADDR_ILOCK_STATUS, rd_data, rd_status);
+    check("ILOCK_STATUS SPI read accepted", |rd_status, 1'b0);
+    check("host-readable VIOLATION_ACTIVE[0] clears once the real pin satisfies the expression", rd_data[0], 1'b0);
+    check("host-readable VIOLATION_STICKY[0] retains the real earlier violation", rd_data[8], 1'b1);
+    spi_read32(DFC_ADDR_ILOCK_ACTIVE_RESULT, rd_data, rd_status);
+    check("ILOCK_ACTIVE_RESULT SPI read accepted", |rd_status, 1'b0);
+    check("host-readable ENTRY_TRUE[0] set and every guard allowed again",
+          (rd_data[15:0] == 16'hFF01), 1'b1);
+
+    spi_write32(DFC_ADDR_ILOCK_ENTRY_SELECT, 32'd0, wr_status);
+    spi_read32(DFC_ADDR_ILOCK_ACTIVE_TERMS, rd_data, rd_status);
+    check("ILOCK_ACTIVE_TERMS SPI read accepted", |rd_status, 1'b0);
+    check("host-readable ILOCK_ACTIVE_TERMS reads entry 0's committed term IDs", (rd_data == 32'h2525_2503), 1'b1);
+
+    check({"RTL-012's own real WDOG_STATUS.SERVICE_ACCEPTED state is unaffected by RTL-014's ",
+           "real commit/evaluation just proven -- independent state inside the actual ",
+           "RTL-024 top-level integration"},
           dut.rtl012_status[dfc_types_pkg::DFC_RTL012_STATUS__WDOG_STATUS__SERVICE_ACCEPTED_HI],
           1'b1);
 

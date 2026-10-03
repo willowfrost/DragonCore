@@ -1,0 +1,1068 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md SS26 per-field bit tables (0x3200-0x323C), cited by contract ID. The five ILOCK_STAGE_* registers are declared in indexed_registers (reggen.py v5): eight stores each, written/read at ILOCK_ENTRY_SELECT.ENTRY (REG-3208; REG-COH-001 'selector writes do not change staged or active object contents'; REG-3228 'reads selected entry's staged response mask'; REG-GEN-015). Each stage field is forwarded twice: once as the selected-entry view (pre-existing dfc_rtl014_control_t members) and once per entry (ilock_stage_e<i>__*, added to ARCH-002 with dfc_rtl014_control_t's 68->513 growth) so RTL-014 can validate the complete staged bank at COMMIT_ALL (ARCH-SAFE-006, VP-SAFE-016, VP-CONS-015). ILOCK_STAGE_RESPONSE.SAFETY_RESPONSE_MASK's selected-entry member (REG-002 generation-check paragraph) and rtl014_evt_overflow_status__event_overflow (13th EVENT_OVERFLOW-clear instance) were added in the same growth. status_registers covers every external RTL-014 register from the start (OPEN_ISSUES item 21), including the five ILOCK_ACTIVE_* selected-entry readbacks added with dfc_rtl014_status_t's 53->108 growth. ILOCK_CONTROL/ENTRY_SELECT/STAGE_* are internal_reg (host read returns RTL-001's own store); ILOCK_VALIDATE_COMMIT is readback=zero (WO-CMD). ILOCK_STATUS.FIRST_ERROR_ENTRY/FIRST_ERROR_CODE (REG-3204 bits 20:18/24:21, added with dfc_rtl014_status_t's 108->115 growth) close REG-COH-003's first-error retention (OPEN_ISSUES item 69).",
+  "consumer_module": "RTL-014",
+  "control_struct": "dfc_rtl014_control_t",
+  "status_struct": "dfc_rtl014_status_t",
+  "indexed_registers": [
+    {
+      "register": "ILOCK_STAGE_TERMS",
+      "select_register": "ILOCK_ENTRY_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-320C; REG-3208; REG-COH-001"
+    },
+    {
+      "register": "ILOCK_STAGE_LOGIC",
+      "select_register": "ILOCK_ENTRY_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-3210; REG-3208; REG-COH-001"
+    },
+    {
+      "register": "ILOCK_STAGE_GUARD",
+      "select_register": "ILOCK_ENTRY_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-3214; REG-3208; REG-COH-001"
+    },
+    {
+      "register": "ILOCK_STAGE_ENABLE",
+      "select_register": "ILOCK_ENTRY_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-3218; REG-3208; REG-COH-001"
+    },
+    {
+      "register": "ILOCK_STAGE_RESPONSE",
+      "select_register": "ILOCK_ENTRY_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-3228; REG-3208; REG-COH-001"
+    }
+  ],
+  "control_registers": [
+    {
+      "register": "ILOCK_CONTROL",
+      "contract_id": "REG-3200",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "ilock_control__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "struct_field": "ilock_control__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "struct_field": "ilock_control__irq_enable"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_STATUS",
+      "contract_id": "REG-3204",
+      "fields": [
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "W1C",
+          "struct_field": "ilock_status__violation_sticky"
+        },
+        {
+          "reg_hi": 16,
+          "reg_lo": 16,
+          "class": "W1C",
+          "struct_field": "ilock_status__commit_complete"
+        },
+        {
+          "reg_hi": 17,
+          "reg_lo": 17,
+          "class": "W1C",
+          "struct_field": "ilock_status__commit_rejected"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_ENTRY_SELECT",
+      "contract_id": "REG-3208",
+      "fields": [
+        {
+          "reg_hi": 2,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "ilock_entry_select__entry"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_STAGE_TERMS",
+      "contract_id": "REG-320C",
+      "fields": [
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "ilock_stage_terms__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "struct_field": "ilock_stage_terms__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "struct_field": "ilock_stage_terms__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "struct_field": "ilock_stage_terms__term3"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__term3"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__term3"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__term3"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__term3"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__term3"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__term3"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__term3"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__term3"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_STAGE_LOGIC",
+      "contract_id": "REG-3210",
+      "fields": [
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "ilock_stage_logic__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "struct_field": "ilock_stage_logic__operator"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__operator"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__operator"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__operator"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__operator"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__operator"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__operator"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__operator"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__operator"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_STAGE_GUARD",
+      "contract_id": "REG-3214",
+      "fields": [
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "ilock_stage_guard__guard_mask"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__guard_mask"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__guard_mask"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__guard_mask"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__guard_mask"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__guard_mask"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__guard_mask"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__guard_mask"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__guard_mask"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_STAGE_ENABLE",
+      "contract_id": "REG-3218",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "ilock_stage_enable__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "struct_field": "ilock_stage_enable__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "struct_field": "ilock_stage_enable__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "struct_field": "ilock_stage_enable__irq_enable"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__irq_enable"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__irq_enable"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__irq_enable"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__irq_enable"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__irq_enable"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__irq_enable"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__irq_enable"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__irq_enable"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_STAGE_RESPONSE",
+      "contract_id": "REG-3228",
+      "fields": [
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "ilock_stage_response__safety_response_mask"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "ilock_stage_e0__safety_response_mask"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "ilock_stage_e1__safety_response_mask"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "ilock_stage_e2__safety_response_mask"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "ilock_stage_e3__safety_response_mask"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "ilock_stage_e4__safety_response_mask"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "ilock_stage_e5__safety_response_mask"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "ilock_stage_e6__safety_response_mask"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "ilock_stage_e7__safety_response_mask"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_VALIDATE_COMMIT",
+      "contract_id": "REG-321C",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "WO-CMD",
+          "struct_field": "ilock_validate_commit__commit_all"
+        }
+      ]
+    },
+    {
+      "register": "RTL014_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-3224",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "W1C",
+          "struct_field": "rtl014_evt_overflow_status__event_overflow"
+        }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "ILOCK_STATUS",
+      "contract_id": "REG-3204",
+      "fields": [
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "struct_field": "ilock_status__violation_active"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "struct_field": "ilock_status__violation_sticky"
+        },
+        {
+          "reg_hi": 16,
+          "reg_lo": 16,
+          "struct_field": "ilock_status__commit_complete"
+        },
+        {
+          "reg_hi": 17,
+          "reg_lo": 17,
+          "struct_field": "ilock_status__commit_rejected"
+        },
+        {
+          "reg_hi": 20,
+          "reg_lo": 18,
+          "struct_field": "ilock_status__first_error_entry"
+        },
+        {
+          "reg_hi": 24,
+          "reg_lo": 21,
+          "struct_field": "ilock_status__first_error_code"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_ACTIVE_RESULT",
+      "contract_id": "REG-3220",
+      "fields": [
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "struct_field": "ilock_active_result__entry_true"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "struct_field": "ilock_active_result__guard_allowed"
+        }
+      ]
+    },
+    {
+      "register": "RTL014_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-3224",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "struct_field": "event_overflow"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 8,
+          "struct_field": "event_drop_count"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_ACTIVE_TERMS",
+      "contract_id": "REG-322C",
+      "fields": [
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "struct_field": "ilock_active_terms__term0"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "struct_field": "ilock_active_terms__term1"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "struct_field": "ilock_active_terms__term2"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 24,
+          "struct_field": "ilock_active_terms__term3"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_ACTIVE_LOGIC",
+      "contract_id": "REG-3230",
+      "fields": [
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "struct_field": "ilock_active_logic__invert_mask"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 4,
+          "struct_field": "ilock_active_logic__operator"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_ACTIVE_GUARD",
+      "contract_id": "REG-3234",
+      "fields": [
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "struct_field": "ilock_active_guard__guard_mask"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_ACTIVE_ENABLE",
+      "contract_id": "REG-3238",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "struct_field": "ilock_active_enable__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "struct_field": "ilock_active_enable__latch_violation"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "struct_field": "ilock_active_enable__event_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "struct_field": "ilock_active_enable__irq_enable"
+        }
+      ]
+    },
+    {
+      "register": "ILOCK_ACTIVE_RESPONSE",
+      "contract_id": "REG-323C",
+      "fields": [
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "struct_field": "ilock_active_response__safety_response_mask"
+        }
+      ]
+    }
+  ]
+}

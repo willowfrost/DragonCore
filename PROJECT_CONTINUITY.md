@@ -495,8 +495,9 @@ written in this project going forward, not just a historical note.
   - `tools/reggen/` — `reggen.py` (now v3: real cross-module control/
     status forwarding, not just address decode — see Section 4),
     `dfc_rtl001_regbank_slice.json`, and one `rtl<NNN>_field_map.json`
-    per module that's had this real forwarding wired up (currently just
-    `rtl002_field_map.json`) — each hand-verified directly against
+    per module that's had this real forwarding wired up (as of RTL-014:
+    `rtl002` through `rtl014_field_map.json`; `reggen.py` is now v5, adding
+    selector-indexed staged registers) — each hand-verified directly against
     REG-002.md's own per-field bit tables, cited by contract ID. This is
     NOT yet a fully generic, auto-extracted mechanism for all 353
     registers (`extract_registers.py` doesn't preserve per-field bit
@@ -2622,12 +2623,132 @@ written in this project going forward, not just a historical note.
     to an existing hub") should have that aggregation's own output
     registered from the start, before it reaches further combinational
     logic.
-- **RTL-014 through RTL-023:** spec-complete (all 24 module specs,
-  including RTL-001 through RTL-013/024, exist and are citation-verified
-  against the `-002` baseline) but **not yet implemented as real RTL.**
-  This is the actual next phase of work — see Section 5. RTL-013 (Fault
-  Manager) completed the first two Safety-domain modules alongside
-  RTL-012; RTL-014 (Interlock Engine) is next.
+- **RTL-014 (Interlock Engine): real, implemented and integrated into
+  `dfc_rtl024.sv` (2026-10-02).** The third Safety-domain module. It
+  evaluates eight atomically committed four-term expressions (AND / OR /
+  3-of-4 / `(t0&t1)|(t2&t3)`, with per-term inversion), produces
+  guarded-action permission and violation evidence, and requests lane 2 of
+  the safety-response matrix (ARCH-SAFE-003/006, ARCH-RTL014-001,
+  ARCH-VAL-014). Module spec corrected to `docs/rtl_specs/RTL-014_RevB.md`
+  (Rev A retired: wrong 19-port list, "10 registers", no staging/commit
+  detail). All 16 REG-002 0x3200-0x323C registers are forwarded for
+  real through `tools/reggen/rtl014_field_map.json`. Full disclosed design:
+  `dfc_rtl014.sv`'s own header and `OPEN_ISSUES.md` items 66-79.
+  - **Decisions were made under the person's explicit "run it end to end,
+    stop stopping" instruction**, not item-by-item approval. Every one is
+    logged in OPEN_ISSUES 66-79 for review. Read those before extending
+    RTL-014 or building RTL-016, its consumer.
+  - **ARCH-002 growth.** `dfc_rtl014_control_t` grew 68→513 bits. It gained
+    the REG-002-mandated selected-entry `SAFETY_RESPONSE_MASK` member (a
+    REG-002-vs-ARCH-002 conflict), the 13th EVENT_OVERFLOW-clear field, and
+    the complete 8×55-bit staged bank. `dfc_rtl014_status_t` grew 53→108
+    bits for the five `ILOCK_ACTIVE_*` selected-entry readbacks, which
+    previously had no status fields at all, then grew to 115 bits for the
+    new REG-002 `ILOCK_STATUS.FIRST_ERROR_ENTRY`/`FIRST_ERROR_CODE` fields.
+    Those closed REG-COH-003's first-error retention, and ARCH-VAL-014 now
+    owns the field order and code table (item 69). Every pre-existing field
+    kept its bit position (item 67).
+  - **`reggen.py` v5: selector-indexed staged registers (item 68).** This
+    is a genuinely new generator capability, needed because REG-COH-001/
+    REG-3228/VP-SAFE-016 require 8 independent staged entries, but each
+    STAGE_* register was a single store. The five STAGE_* registers are now
+    8 stores each, written and read at `ILOCK_ENTRY_SELECT`, and the whole
+    bank is forwarded to RTL-014. Outside RTL-014, the regeneration diff is
+    two cosmetic lines (version header, one trailing comma). Every other
+    consumer is byte-identical. A future module with a selector-indexed
+    staging bank (RTL-015 monitors, RTL-016 channels, RTL-021 routes) can
+    reuse this by declaring `indexed_registers` in its own field-map.
+  - **THE `internal_source_vector` GAP IS CLOSED (item 76).** ARCH-002's
+    `dragon_core_top.internal_source_vector[63:0]` never existed before.
+    `dfc_rtl024.sv` now builds it per C.1 from real RTL-006/007/008/009/
+    010/011/012/013/014 status, with bit 30 (RTL-015) a disclosed stub and
+    bits 33-36 (RTL-022) permanently zero. **It is registered from the
+    start** (`internal_source_vector_q`), applying the item-65 lesson
+    proactively rather than after a failure.
+  - **Wiring.** RTL-014's `fault_req_o` now reaches RTL-013
+    `fault_source_i[1]` (C.6 "Interlock violation" — an earlier briefing
+    wrongly said RTL-014 doesn't feed RTL-013). `irq_req_o` reaches
+    RTL-003 `irq_source_i[15]`. Events reach RTL-005 slot 13, and
+    ready/fault reach RTL-002 bit 13. `interlock_satisfied_o`/
+    `interlock_inhibit_o`/`response_req_o` are real but unconsumed until
+    RTL-016 exists. No physical pin (item 77). Mandatory class, ready from
+    reset (D.1 bit 13).
+  - **Same-edge guard rule (ARCH-SAFE-006 / VP-SAFE-007).** Violation,
+    guard, inhibit, satisfied, response, and fault outputs all register
+    from one evaluation on one edge. It is proven on every clock edge in
+    `rtl014_integration_tb.sv` Part 6, and a real **negative control**
+    (inhibit made one cycle late) was confirmed to fail that check. A
+    violation on a freshly committed bank asserts on the very next edge
+    (no grace period), also proven.
+  - **Tests.**
+    - `rtl014_integration_tb.sv`: 105/105 checks. It uses real RTL-006 GPIO
+      pins as the term producer and a real RTL-013 as the fault consumer.
+      It covers whole-bank atomicity (entry 7 bad → entries 0-6 not
+      committed, prior bank and staged bank preserved), first error by
+      entry and by field, every illegal term/operator/guard class, all
+      four operators and inversion, sticky/latch policy, lane-2 priority,
+      ENABLE=0, events, and the EVENT_OVERFLOW round trip.
+    - `rtl024_skeleton_tb.sv`: 152→185 checks. It adds a real SPI
+      stage+protected-commit and a real external `gpio_i[2]` pad driving a
+      host-readable violation/guard change through the registered source
+      vector, plus RTL-013 seeing fault source 1.
+  - **Other testbench changes.** The RTL-014 stub pair was added to all 12
+    `rtl0NN_integration_tb.sv` files and `dri_transaction_tb.sv`.
+    `regbank_smoke_tb.sv` Check 3 was redirected a 13th time
+    (ILOCK_STATUS → LLINK_STATUS); its 5 previously floating
+    `ilock_active_*` inputs are now moot.
+  - **Real lesson (item 79a): Git Bash on this machine has no `iverilog` on
+    PATH.** An `iverilog ... | head` pipeline reports success even when
+    the compiler was never found. All real compile/sim/build runs must use
+    the PowerShell scripts or the PowerShell tool.
+  - **New project-wide open question (item 74).** All 13 event producers
+    put the C.5 *index* in `evt_record.source_id`, but C.5's "Source ID"
+    column is index+1. Not fixed; it needs a decision.
+  - **Verified on the person's machine.** `gate.ps1` passed clean:
+    - lint PASSED;
+    - `sim.ps1` 18/18 testbenches, **894/894 checks**, hand-summed from
+      each testbench's own reported count:
+      12+12+16+28+30+24+43+35+44+47+60+50+60+59+71+105+185+13=894;
+    - `formal.ps1` `bmc` and `prove` both PASS;
+    - coverage 168/353, up exactly 16 from 152, matching RTL-014's 16
+      registers.
+
+    **Real builds, three of them, every result reported:**
+    1. Build `20261002_130553` (before the item-69 first-error fields)
+       passed at 52.18 MHz.
+    2. The final-tree build `20261002_164121` **FAILED at 48.41 MHz**
+       (3.61 ns logic / 17.04 ns routing; router 11159 s). The worst path
+       was entirely inside already-shipped RTL-005's push cone. Its
+       lowest-set-bit encoders were "last assignment wins" `for` loops,
+       which synthesize as a 24-deep serial chain (the same shape as item
+       65 fix 1), feeding a binary-indexed 24:1 × 128-bit record read.
+       RTL-014 made slot 13 a live producer, which widened that mux.
+       Fixed in `dfc_rtl005.sv` (timing fix #3: parallel one-hot grant,
+       one-hot AND-OR read, OR-encoded `push_idx`, identical semantics),
+       under the person's finish-without-stopping instruction. Disclosed in
+       `OPEN_ISSUES.md` item 80.
+    3. After the fix, `gate.ps1` passed again (894/894). Build
+       `20261002_203309` (default invocation) **passed at 55.02 MHz PASS
+       at 50 MHz required**. That is the real, final post-route line; the
+       pre-route estimate read 42.89 MHz. Critical path 2.18 ns logic +
+       10.08 ns routing. TRELLIS_COMB 30251/83640 (36%), TRELLIS_FF
+       19045/83640 (22%), MULT18X18D 12/156. "Program finished normally";
+       no `--timing-allow-fail`.
+
+    This is the widest margin since RTL-010, and router time dropped
+    11159 s → 1356 s. The new worst path starts at RTL-001's `req_accept`
+    and no longer touches RTL-005. `dfc_rtl014.sv` was picked up by
+    `build_ecp5.ps1`'s auto-discovery with no script edit (item 58).
+
+    **Real lesson for RTL-015 onward:** every new event producer makes
+    RTL-005's slot mux genuinely wider, because a previously constant-zero
+    slot stops being optimized away. Also, when running builds here, launch
+    `build_ecp5.ps1` as a detached process and never concurrently with
+    `gate.ps1`. place-and-route can run for over two hours, beyond a tool
+    call's limit, and running it alongside the gate killed one synthesis
+    run outright.
+- **RTL-015 through RTL-023:** spec-complete but **not yet implemented as
+  real RTL.** RTL-015 (Lost-Link Supervisor) is next — see Section 5.
 - **Build script structural fix (2026-08-26): `build_ecp5.ps1`'s
   `$SourceFiles` list is no longer hardcoded.** This exact gap had been
   hit and reactively fixed 4 separate times (RTL-002, RTL-004, RTL-009,
@@ -2933,11 +3054,16 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-013 are now all real and implemented — RTL-012
-  (Watchdog Manager) and RTL-013 (Fault Manager) are the first two of the
-  Safety domain's five modules (RTL-012 through RTL-016); the next real
-  step is RTL-014 (Interlock Engine)**, one module at a time, using the
-  exact same real-verification discipline as RTL-001 through RTL-013
+- **RTL-002 through RTL-014 are now all real and implemented — RTL-012
+  (Watchdog Manager), RTL-013 (Fault Manager) and RTL-014 (Interlock
+  Engine) are the first three of the Safety domain's five modules (RTL-012
+  through RTL-016); the next real step is RTL-015 (Lost-Link Supervisor)**
+  — read `OPEN_ISSUES.md` items 66-79 first: RTL-015 feeds
+  `internal_source_vector` bit 30 (replace the stub) and RTL-013
+  `fault_source_i[2]`, has its own selector-indexed monitor bank (reuse
+  `reggen.py` v5's `indexed_registers`), and inherits the open event
+  `source_id` question (item 74). One module at a time, using the
+  exact same real-verification discipline as RTL-001 through RTL-014
   (compile, simulate, and only then trust — never claim something works
   without actually running it). Then the rest of Safety, then Databus, in
   that order (Programmable is now out of scope entirely — see the

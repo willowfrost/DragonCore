@@ -3860,8 +3860,8 @@
     },
     {
       "name": "dfc_rtl014_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl014_control_t (68 bits, rich format)",
-      "width": 68,
+      "trace": "ARCH-002 Appendix B dfc_rtl014_control_t (513 bits, rich format)",
+      "width": 513,
       "fields": [
         {
           "name": "ilock_control__enable",
@@ -4033,13 +4033,895 @@
           "signed": false,
           "reset": "0",
           "semantic": "command_pulse"
+        },
+        {
+          "name": "ilock_stage_response__safety_response_mask",
+          "hi": 71,
+          "lo": 68,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "rtl014_evt_overflow_status__event_overflow",
+          "hi": 72,
+          "lo": 72,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
+        },
+        {
+          "name": "ilock_stage_e0__term0",
+          "hi": 80,
+          "lo": 73,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__term1",
+          "hi": 88,
+          "lo": 81,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__term2",
+          "hi": 96,
+          "lo": 89,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__term3",
+          "hi": 104,
+          "lo": 97,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__invert_mask",
+          "hi": 108,
+          "lo": 105,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__operator",
+          "hi": 111,
+          "lo": 109,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__guard_mask",
+          "hi": 119,
+          "lo": 112,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__enable",
+          "hi": 120,
+          "lo": 120,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__latch_violation",
+          "hi": 121,
+          "lo": 121,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__event_enable",
+          "hi": 122,
+          "lo": 122,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__irq_enable",
+          "hi": 123,
+          "lo": 123,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e0__safety_response_mask",
+          "hi": 127,
+          "lo": 124,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__term0",
+          "hi": 135,
+          "lo": 128,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__term1",
+          "hi": 143,
+          "lo": 136,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__term2",
+          "hi": 151,
+          "lo": 144,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__term3",
+          "hi": 159,
+          "lo": 152,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__invert_mask",
+          "hi": 163,
+          "lo": 160,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__operator",
+          "hi": 166,
+          "lo": 164,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__guard_mask",
+          "hi": 174,
+          "lo": 167,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__enable",
+          "hi": 175,
+          "lo": 175,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__latch_violation",
+          "hi": 176,
+          "lo": 176,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__event_enable",
+          "hi": 177,
+          "lo": 177,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__irq_enable",
+          "hi": 178,
+          "lo": 178,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e1__safety_response_mask",
+          "hi": 182,
+          "lo": 179,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__term0",
+          "hi": 190,
+          "lo": 183,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__term1",
+          "hi": 198,
+          "lo": 191,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__term2",
+          "hi": 206,
+          "lo": 199,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__term3",
+          "hi": 214,
+          "lo": 207,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__invert_mask",
+          "hi": 218,
+          "lo": 215,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__operator",
+          "hi": 221,
+          "lo": 219,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__guard_mask",
+          "hi": 229,
+          "lo": 222,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__enable",
+          "hi": 230,
+          "lo": 230,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__latch_violation",
+          "hi": 231,
+          "lo": 231,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__event_enable",
+          "hi": 232,
+          "lo": 232,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__irq_enable",
+          "hi": 233,
+          "lo": 233,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e2__safety_response_mask",
+          "hi": 237,
+          "lo": 234,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__term0",
+          "hi": 245,
+          "lo": 238,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__term1",
+          "hi": 253,
+          "lo": 246,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__term2",
+          "hi": 261,
+          "lo": 254,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__term3",
+          "hi": 269,
+          "lo": 262,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__invert_mask",
+          "hi": 273,
+          "lo": 270,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__operator",
+          "hi": 276,
+          "lo": 274,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__guard_mask",
+          "hi": 284,
+          "lo": 277,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__enable",
+          "hi": 285,
+          "lo": 285,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__latch_violation",
+          "hi": 286,
+          "lo": 286,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__event_enable",
+          "hi": 287,
+          "lo": 287,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__irq_enable",
+          "hi": 288,
+          "lo": 288,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e3__safety_response_mask",
+          "hi": 292,
+          "lo": 289,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__term0",
+          "hi": 300,
+          "lo": 293,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__term1",
+          "hi": 308,
+          "lo": 301,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__term2",
+          "hi": 316,
+          "lo": 309,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__term3",
+          "hi": 324,
+          "lo": 317,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__invert_mask",
+          "hi": 328,
+          "lo": 325,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__operator",
+          "hi": 331,
+          "lo": 329,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__guard_mask",
+          "hi": 339,
+          "lo": 332,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__enable",
+          "hi": 340,
+          "lo": 340,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__latch_violation",
+          "hi": 341,
+          "lo": 341,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__event_enable",
+          "hi": 342,
+          "lo": 342,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__irq_enable",
+          "hi": 343,
+          "lo": 343,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e4__safety_response_mask",
+          "hi": 347,
+          "lo": 344,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__term0",
+          "hi": 355,
+          "lo": 348,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__term1",
+          "hi": 363,
+          "lo": 356,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__term2",
+          "hi": 371,
+          "lo": 364,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__term3",
+          "hi": 379,
+          "lo": 372,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__invert_mask",
+          "hi": 383,
+          "lo": 380,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__operator",
+          "hi": 386,
+          "lo": 384,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__guard_mask",
+          "hi": 394,
+          "lo": 387,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__enable",
+          "hi": 395,
+          "lo": 395,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__latch_violation",
+          "hi": 396,
+          "lo": 396,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__event_enable",
+          "hi": 397,
+          "lo": 397,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__irq_enable",
+          "hi": 398,
+          "lo": 398,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e5__safety_response_mask",
+          "hi": 402,
+          "lo": 399,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__term0",
+          "hi": 410,
+          "lo": 403,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__term1",
+          "hi": 418,
+          "lo": 411,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__term2",
+          "hi": 426,
+          "lo": 419,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__term3",
+          "hi": 434,
+          "lo": 427,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__invert_mask",
+          "hi": 438,
+          "lo": 435,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__operator",
+          "hi": 441,
+          "lo": 439,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__guard_mask",
+          "hi": 449,
+          "lo": 442,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__enable",
+          "hi": 450,
+          "lo": 450,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__latch_violation",
+          "hi": 451,
+          "lo": 451,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__event_enable",
+          "hi": 452,
+          "lo": 452,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__irq_enable",
+          "hi": 453,
+          "lo": 453,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e6__safety_response_mask",
+          "hi": 457,
+          "lo": 454,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__term0",
+          "hi": 465,
+          "lo": 458,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__term1",
+          "hi": 473,
+          "lo": 466,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__term2",
+          "hi": 481,
+          "lo": 474,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__term3",
+          "hi": 489,
+          "lo": 482,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__invert_mask",
+          "hi": 493,
+          "lo": 490,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__operator",
+          "hi": 496,
+          "lo": 494,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__guard_mask",
+          "hi": 504,
+          "lo": 497,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__enable",
+          "hi": 505,
+          "lo": 505,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__latch_violation",
+          "hi": 506,
+          "lo": 506,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__event_enable",
+          "hi": 507,
+          "lo": 507,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__irq_enable",
+          "hi": 508,
+          "lo": 508,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "ilock_stage_e7__safety_response_mask",
+          "hi": 512,
+          "lo": 509,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
         }
       ]
     },
     {
       "name": "dfc_rtl014_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl014_status_t (53 bits, rich format)",
-      "width": 53,
+      "trace": "ARCH-002 Appendix B dfc_rtl014_status_t (115 bits, rich format)",
+      "width": 115,
       "fields": [
         {
           "name": "ready",
@@ -4130,6 +5012,132 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "ilock_active_terms__term0",
+          "hi": 60,
+          "lo": 53,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_terms__term1",
+          "hi": 68,
+          "lo": 61,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_terms__term2",
+          "hi": 76,
+          "lo": 69,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_terms__term3",
+          "hi": 84,
+          "lo": 77,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_logic__invert_mask",
+          "hi": 88,
+          "lo": 85,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_logic__operator",
+          "hi": 91,
+          "lo": 89,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_guard__guard_mask",
+          "hi": 99,
+          "lo": 92,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_enable__enable",
+          "hi": 100,
+          "lo": 100,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_enable__latch_violation",
+          "hi": 101,
+          "lo": 101,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_enable__event_enable",
+          "hi": 102,
+          "lo": 102,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_enable__irq_enable",
+          "hi": 103,
+          "lo": 103,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_active_response__safety_response_mask",
+          "hi": 107,
+          "lo": 104,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_status__first_error_entry",
+          "hi": 110,
+          "lo": 108,
+          "width": 3,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "ilock_status__first_error_code",
+          "hi": 114,
+          "lo": 111,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
         }
       ]
     },

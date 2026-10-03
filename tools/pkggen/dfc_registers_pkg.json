@@ -11300,11 +11300,25 @@
           "reset": "0"
         },
         {
+          "name": "FIRST_ERROR_ENTRY",
+          "hi": 20,
+          "lo": 18,
+          "access": "RO",
+          "reset": "0x0"
+        },
+        {
+          "name": "FIRST_ERROR_CODE",
+          "hi": 24,
+          "lo": 21,
+          "access": "RO",
+          "reset": "0x0"
+        },
+        {
           "name": "RSV0",
           "hi": 31,
-          "lo": 18,
+          "lo": 25,
           "access": "RSV0",
-          "reset": "0x0000"
+          "reset": "0x00"
         }
       ]
     },

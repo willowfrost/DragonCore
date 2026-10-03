@@ -94,6 +94,10 @@ module dri_transaction_tb;
   // is left unread.
   logic [dfc_types_pkg::DFC_RTL013_CONTROL_WIDTH-1:0] rtl013_control_o;
   logic [dfc_types_pkg::DFC_RTL013_STATUS_WIDTH-1:0]  rtl013_status_i = '0;
+  // Same isolation choice for RTL-014 (added during RTL-014's own
+  // integration session): disclosed stub, control left unread.
+  logic [dfc_types_pkg::DFC_RTL014_CONTROL_WIDTH-1:0] rtl014_control_o;
+  logic [dfc_types_pkg::DFC_RTL014_STATUS_WIDTH-1:0]  rtl014_status_i = '0;
   // RTL-001's own new real status_o -- unused by this testbench (which
   // exercises DRI protocol correctness, not RTL-001's own readiness).
   logic [dfc_types_pkg::DFC_RTL001_STATUS_WIDTH-1:0] status_o;

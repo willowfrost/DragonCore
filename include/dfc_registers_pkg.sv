@@ -5693,7 +5693,9 @@ package dfc_registers_pkg;
 
   // REG-002 ILOCK_STATUS (0x3204) field layout
   typedef struct packed {
-    logic [13:0] RSV0;  // access=RSV0 reset=0x0000
+    logic [6:0] RSV0;  // access=RSV0 reset=0x00
+    logic [3:0] FIRST_ERROR_CODE;  // access=RO reset=0x0
+    logic [2:0] FIRST_ERROR_ENTRY;  // access=RO reset=0x0
     logic COMMIT_REJECTED;  // access=W1C reset=0
     logic COMMIT_COMPLETE;  // access=W1C reset=0
     logic [7:0] VIOLATION_STICKY;  // access=W1C reset=0x00
@@ -5710,8 +5712,12 @@ package dfc_registers_pkg;
   localparam int unsigned DFC_REG_ILOCK_STATUS__COMMIT_COMPLETE_LO = 16;
   localparam int unsigned DFC_REG_ILOCK_STATUS__COMMIT_REJECTED_HI = 17;
   localparam int unsigned DFC_REG_ILOCK_STATUS__COMMIT_REJECTED_LO = 17;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__FIRST_ERROR_ENTRY_HI = 20;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__FIRST_ERROR_ENTRY_LO = 18;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__FIRST_ERROR_CODE_HI = 24;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__FIRST_ERROR_CODE_LO = 21;
   localparam int unsigned DFC_REG_ILOCK_STATUS__RSV0_HI = 31;
-  localparam int unsigned DFC_REG_ILOCK_STATUS__RSV0_LO = 18;
+  localparam int unsigned DFC_REG_ILOCK_STATUS__RSV0_LO = 25;
 
   // REG-002 ILOCK_ENTRY_SELECT (0x3208) field layout
   typedef struct packed {

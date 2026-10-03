@@ -616,8 +616,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl012_status_i | input | dfc_rtl012_status_t / 58 | RTL-012.status_o | RTL-001.rtl012_status_i; RTL-002.module_ready_i[11]; RTL-002.module_fault_i[11] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl013_control_o | output | dfc_rtl013_control_t / 112 | RTL-001.rtl013_control_o | RTL-013.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl013_status_i | input | dfc_rtl013_status_t / 106 | RTL-013.status_o | RTL-001.rtl013_status_i; RTL-002.module_ready_i[12]; RTL-002.module_fault_i[12] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl014_control_o | output | dfc_rtl014_control_t / 68 | RTL-001.rtl014_control_o | RTL-014.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl014_status_i | input | dfc_rtl014_status_t / 53 | RTL-014.status_o | RTL-001.rtl014_status_i; RTL-002.module_ready_i[13]; RTL-002.module_fault_i[13] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl014_control_o | output | dfc_rtl014_control_t / 513 | RTL-001.rtl014_control_o | RTL-014.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl014_status_i | input | dfc_rtl014_status_t / 115 | RTL-014.status_o | RTL-001.rtl014_status_i; RTL-002.module_ready_i[13]; RTL-002.module_fault_i[13] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl015_control_o | output | dfc_rtl015_control_t / 128 | RTL-001.rtl015_control_o | RTL-015.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl015_status_i | input | dfc_rtl015_status_t / 75 | RTL-015.status_o | RTL-001.rtl015_status_i; RTL-002.module_ready_i[14]; RTL-002.module_fault_i[14] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl016_control_o | output | dfc_rtl016_control_t / 53 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
@@ -935,8 +935,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-014.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-014.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[13] | RTL-014.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl014_control_t / 68 | RTL-001.rtl014_control_o | RTL-014.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl014_status_t / 53 | RTL-014.status_o | RTL-001.rtl014_status_i; RTL-002.module_ready_i[13]; RTL-002.module_fault_i[13] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl014_control_t / 513 | RTL-001.rtl014_control_o | RTL-014.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl014_status_t / 115 | RTL-014.status_o | RTL-001.rtl014_status_i; RTL-002.module_ready_i[13]; RTL-002.module_fault_i[13] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-014.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-014.evt_valid_o | RTL-005.evt_valid_i[13] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[13] | RTL-014.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -1852,7 +1852,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 89:58 | fault_latched_source__latched_source | 32 | unsigned | 0 | readback_value |
 | 105:90 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### dfc_rtl014_control_t — 68 bits
+### dfc_rtl014_control_t — 513 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1875,8 +1875,106 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 65 | ilock_stage_enable__event_enable | 1 | unsigned | 0 | control_value |
 | 66 | ilock_stage_enable__irq_enable | 1 | unsigned | 0 | control_value |
 | 67 | ilock_validate_commit__commit_all | 1 | unsigned | 0 | command_pulse |
+| 71:68 | ilock_stage_response__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 72 | rtl014_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
+| 80:73 | ilock_stage_e0__term0 | 8 | unsigned | 0 | control_value |
+| 88:81 | ilock_stage_e0__term1 | 8 | unsigned | 0 | control_value |
+| 96:89 | ilock_stage_e0__term2 | 8 | unsigned | 0 | control_value |
+| 104:97 | ilock_stage_e0__term3 | 8 | unsigned | 0 | control_value |
+| 108:105 | ilock_stage_e0__invert_mask | 4 | unsigned | 0 | control_value |
+| 111:109 | ilock_stage_e0__operator | 3 | unsigned | 0 | control_value |
+| 119:112 | ilock_stage_e0__guard_mask | 8 | unsigned | 0 | control_value |
+| 120 | ilock_stage_e0__enable | 1 | unsigned | 0 | control_value |
+| 121 | ilock_stage_e0__latch_violation | 1 | unsigned | 0 | control_value |
+| 122 | ilock_stage_e0__event_enable | 1 | unsigned | 0 | control_value |
+| 123 | ilock_stage_e0__irq_enable | 1 | unsigned | 0 | control_value |
+| 127:124 | ilock_stage_e0__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 135:128 | ilock_stage_e1__term0 | 8 | unsigned | 0 | control_value |
+| 143:136 | ilock_stage_e1__term1 | 8 | unsigned | 0 | control_value |
+| 151:144 | ilock_stage_e1__term2 | 8 | unsigned | 0 | control_value |
+| 159:152 | ilock_stage_e1__term3 | 8 | unsigned | 0 | control_value |
+| 163:160 | ilock_stage_e1__invert_mask | 4 | unsigned | 0 | control_value |
+| 166:164 | ilock_stage_e1__operator | 3 | unsigned | 0 | control_value |
+| 174:167 | ilock_stage_e1__guard_mask | 8 | unsigned | 0 | control_value |
+| 175 | ilock_stage_e1__enable | 1 | unsigned | 0 | control_value |
+| 176 | ilock_stage_e1__latch_violation | 1 | unsigned | 0 | control_value |
+| 177 | ilock_stage_e1__event_enable | 1 | unsigned | 0 | control_value |
+| 178 | ilock_stage_e1__irq_enable | 1 | unsigned | 0 | control_value |
+| 182:179 | ilock_stage_e1__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 190:183 | ilock_stage_e2__term0 | 8 | unsigned | 0 | control_value |
+| 198:191 | ilock_stage_e2__term1 | 8 | unsigned | 0 | control_value |
+| 206:199 | ilock_stage_e2__term2 | 8 | unsigned | 0 | control_value |
+| 214:207 | ilock_stage_e2__term3 | 8 | unsigned | 0 | control_value |
+| 218:215 | ilock_stage_e2__invert_mask | 4 | unsigned | 0 | control_value |
+| 221:219 | ilock_stage_e2__operator | 3 | unsigned | 0 | control_value |
+| 229:222 | ilock_stage_e2__guard_mask | 8 | unsigned | 0 | control_value |
+| 230 | ilock_stage_e2__enable | 1 | unsigned | 0 | control_value |
+| 231 | ilock_stage_e2__latch_violation | 1 | unsigned | 0 | control_value |
+| 232 | ilock_stage_e2__event_enable | 1 | unsigned | 0 | control_value |
+| 233 | ilock_stage_e2__irq_enable | 1 | unsigned | 0 | control_value |
+| 237:234 | ilock_stage_e2__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 245:238 | ilock_stage_e3__term0 | 8 | unsigned | 0 | control_value |
+| 253:246 | ilock_stage_e3__term1 | 8 | unsigned | 0 | control_value |
+| 261:254 | ilock_stage_e3__term2 | 8 | unsigned | 0 | control_value |
+| 269:262 | ilock_stage_e3__term3 | 8 | unsigned | 0 | control_value |
+| 273:270 | ilock_stage_e3__invert_mask | 4 | unsigned | 0 | control_value |
+| 276:274 | ilock_stage_e3__operator | 3 | unsigned | 0 | control_value |
+| 284:277 | ilock_stage_e3__guard_mask | 8 | unsigned | 0 | control_value |
+| 285 | ilock_stage_e3__enable | 1 | unsigned | 0 | control_value |
+| 286 | ilock_stage_e3__latch_violation | 1 | unsigned | 0 | control_value |
+| 287 | ilock_stage_e3__event_enable | 1 | unsigned | 0 | control_value |
+| 288 | ilock_stage_e3__irq_enable | 1 | unsigned | 0 | control_value |
+| 292:289 | ilock_stage_e3__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 300:293 | ilock_stage_e4__term0 | 8 | unsigned | 0 | control_value |
+| 308:301 | ilock_stage_e4__term1 | 8 | unsigned | 0 | control_value |
+| 316:309 | ilock_stage_e4__term2 | 8 | unsigned | 0 | control_value |
+| 324:317 | ilock_stage_e4__term3 | 8 | unsigned | 0 | control_value |
+| 328:325 | ilock_stage_e4__invert_mask | 4 | unsigned | 0 | control_value |
+| 331:329 | ilock_stage_e4__operator | 3 | unsigned | 0 | control_value |
+| 339:332 | ilock_stage_e4__guard_mask | 8 | unsigned | 0 | control_value |
+| 340 | ilock_stage_e4__enable | 1 | unsigned | 0 | control_value |
+| 341 | ilock_stage_e4__latch_violation | 1 | unsigned | 0 | control_value |
+| 342 | ilock_stage_e4__event_enable | 1 | unsigned | 0 | control_value |
+| 343 | ilock_stage_e4__irq_enable | 1 | unsigned | 0 | control_value |
+| 347:344 | ilock_stage_e4__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 355:348 | ilock_stage_e5__term0 | 8 | unsigned | 0 | control_value |
+| 363:356 | ilock_stage_e5__term1 | 8 | unsigned | 0 | control_value |
+| 371:364 | ilock_stage_e5__term2 | 8 | unsigned | 0 | control_value |
+| 379:372 | ilock_stage_e5__term3 | 8 | unsigned | 0 | control_value |
+| 383:380 | ilock_stage_e5__invert_mask | 4 | unsigned | 0 | control_value |
+| 386:384 | ilock_stage_e5__operator | 3 | unsigned | 0 | control_value |
+| 394:387 | ilock_stage_e5__guard_mask | 8 | unsigned | 0 | control_value |
+| 395 | ilock_stage_e5__enable | 1 | unsigned | 0 | control_value |
+| 396 | ilock_stage_e5__latch_violation | 1 | unsigned | 0 | control_value |
+| 397 | ilock_stage_e5__event_enable | 1 | unsigned | 0 | control_value |
+| 398 | ilock_stage_e5__irq_enable | 1 | unsigned | 0 | control_value |
+| 402:399 | ilock_stage_e5__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 410:403 | ilock_stage_e6__term0 | 8 | unsigned | 0 | control_value |
+| 418:411 | ilock_stage_e6__term1 | 8 | unsigned | 0 | control_value |
+| 426:419 | ilock_stage_e6__term2 | 8 | unsigned | 0 | control_value |
+| 434:427 | ilock_stage_e6__term3 | 8 | unsigned | 0 | control_value |
+| 438:435 | ilock_stage_e6__invert_mask | 4 | unsigned | 0 | control_value |
+| 441:439 | ilock_stage_e6__operator | 3 | unsigned | 0 | control_value |
+| 449:442 | ilock_stage_e6__guard_mask | 8 | unsigned | 0 | control_value |
+| 450 | ilock_stage_e6__enable | 1 | unsigned | 0 | control_value |
+| 451 | ilock_stage_e6__latch_violation | 1 | unsigned | 0 | control_value |
+| 452 | ilock_stage_e6__event_enable | 1 | unsigned | 0 | control_value |
+| 453 | ilock_stage_e6__irq_enable | 1 | unsigned | 0 | control_value |
+| 457:454 | ilock_stage_e6__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 465:458 | ilock_stage_e7__term0 | 8 | unsigned | 0 | control_value |
+| 473:466 | ilock_stage_e7__term1 | 8 | unsigned | 0 | control_value |
+| 481:474 | ilock_stage_e7__term2 | 8 | unsigned | 0 | control_value |
+| 489:482 | ilock_stage_e7__term3 | 8 | unsigned | 0 | control_value |
+| 493:490 | ilock_stage_e7__invert_mask | 4 | unsigned | 0 | control_value |
+| 496:494 | ilock_stage_e7__operator | 3 | unsigned | 0 | control_value |
+| 504:497 | ilock_stage_e7__guard_mask | 8 | unsigned | 0 | control_value |
+| 505 | ilock_stage_e7__enable | 1 | unsigned | 0 | control_value |
+| 506 | ilock_stage_e7__latch_violation | 1 | unsigned | 0 | control_value |
+| 507 | ilock_stage_e7__event_enable | 1 | unsigned | 0 | control_value |
+| 508 | ilock_stage_e7__irq_enable | 1 | unsigned | 0 | control_value |
+| 512:509 | ilock_stage_e7__safety_response_mask | 4 | unsigned | 0 | control_value |
 
-### dfc_rtl014_status_t — 53 bits
+### dfc_rtl014_status_t — 115 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -1890,6 +1988,20 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 28:21 | ilock_active_result__entry_true | 8 | unsigned | 0 | readback_value |
 | 36:29 | ilock_active_result__guard_allowed | 8 | unsigned | 0 | readback_value |
 | 52:37 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
+| 60:53 | ilock_active_terms__term0 | 8 | unsigned | 0 | readback_value |
+| 68:61 | ilock_active_terms__term1 | 8 | unsigned | 0 | readback_value |
+| 76:69 | ilock_active_terms__term2 | 8 | unsigned | 0 | readback_value |
+| 84:77 | ilock_active_terms__term3 | 8 | unsigned | 0 | readback_value |
+| 88:85 | ilock_active_logic__invert_mask | 4 | unsigned | 0 | readback_value |
+| 91:89 | ilock_active_logic__operator | 3 | unsigned | 0 | readback_value |
+| 99:92 | ilock_active_guard__guard_mask | 8 | unsigned | 0 | readback_value |
+| 100 | ilock_active_enable__enable | 1 | unsigned | 0 | readback_value |
+| 101 | ilock_active_enable__latch_violation | 1 | unsigned | 0 | readback_value |
+| 102 | ilock_active_enable__event_enable | 1 | unsigned | 0 | readback_value |
+| 103 | ilock_active_enable__irq_enable | 1 | unsigned | 0 | readback_value |
+| 107:104 | ilock_active_response__safety_response_mask | 4 | unsigned | 0 | readback_value |
+| 110:108 | ilock_status__first_error_entry | 3 | unsigned | 0 | readback_value |
+| 114:111 | ilock_status__first_error_code | 4 | unsigned | 0 | readback_value |
 
 ### dfc_rtl015_control_t — 128 bits
 
@@ -2795,7 +2907,7 @@ For per-channel master enables, the corresponding channel master replaces `MODUL
 | ARCH-VAL-011 | RTL-011 | Qualification is 0–100 ms; each event/IRQ mask may set only the F.3 bits allocated to RTL-011. |
 | ARCH-VAL-012 | RTL-012 | `MIN_WINDOW_US < MAX_WINDOW_US`, MAX is nonzero, response mask is four bits, and service key is exact. Enable or recovery command with invalid timing is rejected. |
 | ARCH-VAL-013 | RTL-013 | Source/configuration masks may set only bits 0–16; recoverability readback is fixed `0x00017FEF`; injection requires test-active; response request mask is four bits. |
-| ARCH-VAL-014 | RTL-014 | Entry 0–7, operator 0–3, term IDs per C.3, nonzero legal guard mask, four-bit response mask, and zero reserved bits are validated for all eight entries at COMMIT_ALL. |
+| ARCH-VAL-014 | RTL-014 | Entry 0–7, operator 0–3, term IDs per C.3, nonzero legal guard mask, four-bit response mask, and zero reserved bits are validated for all eight entries at COMMIT_ALL. Within an entry the field order is TERM0, TERM1, TERM2, TERM3, OPERATOR, then the enabled-entry nonzero-guard relation. The first error is reported as an entry index and a code — 1–4 TERM0–TERM3 illegal, 5 OPERATOR illegal, 6 enabled entry with zero guard mask; 0 none; 7–15 reserved — retained in ILOCK_STATUS.FIRST_ERROR_ENTRY/FIRST_ERROR_CODE and in event 0x0042 subtype 3 detail until COMMIT_REJECTED is cleared. |
 | ARCH-VAL-015 | RTL-015 | Monitor 0–7, activity source 0–7, `QUALIFY_US < TIMEOUT_US`, nonzero timeout, nonzero recovery interval, four-bit response mask, and legal injection are required. |
 | ARCH-VAL-016 | RTL-016 | Channel 0–3, legal active polarity, 32-bit authorization with only C.8 legal bits, eight-bit interlock mask, and no nonzero response mask for a disabled channel. |
 | ARCH-VAL-017 | RTL-017 | RX speed is low or high, parity acceptance is Boolean, and queue commands require the applicable nonempty state. Adapter metadata errors do not make an illegal configuration legal. |

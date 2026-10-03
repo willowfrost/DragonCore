@@ -143,6 +143,8 @@ module regbank_smoke_tb;
   // ports.
   logic [dfc_types_pkg::DFC_RTL013_STATUS_WIDTH-1:0]  rtl013_status_i;
   logic [dfc_types_pkg::DFC_RTL013_CONTROL_WIDTH-1:0] rtl013_control_o;
+  logic [dfc_types_pkg::DFC_RTL014_STATUS_WIDTH-1:0]  rtl014_status_i;
+  logic [dfc_types_pkg::DFC_RTL014_CONTROL_WIDTH-1:0] rtl014_control_o;
   logic [31:0] host_status_status_i;
   logic [31:0] host_last_result_status_i;
   logic [31:0] host_last_address_status_i;
@@ -194,9 +196,6 @@ module regbank_smoke_tb;
   logic [31:0] route_active_filter_mask_status_i;
   logic [31:0] route_entry_status_status_i;
   logic [31:0] rtl021_evt_overflow_status_status_i;
-  logic [31:0] ilock_status_status_i;
-  logic [31:0] ilock_active_result_status_i;
-  logic [31:0] rtl014_evt_overflow_status_status_i;
   logic [31:0] llink_status_status_i;
   logic [31:0] llink_elapsed_us_status_i;
   logic [31:0] rtl015_evt_overflow_status_status_i;
@@ -326,9 +325,8 @@ module regbank_smoke_tb;
     .rtl012_control_o(rtl012_control_o),
     .rtl013_status_i(rtl013_status_i),
     .rtl013_control_o(rtl013_control_o),
-    .ilock_status_status_i(ilock_status_status_i),
-    .ilock_active_result_status_i(ilock_active_result_status_i),
-    .rtl014_evt_overflow_status_status_i(rtl014_evt_overflow_status_status_i),
+    .rtl014_status_i(rtl014_status_i),
+    .rtl014_control_o(rtl014_control_o),
     .llink_status_status_i(llink_status_status_i),
     .llink_elapsed_us_status_i(llink_elapsed_us_status_i),
     .rtl015_evt_overflow_status_status_i(rtl015_evt_overflow_status_status_i),
@@ -417,9 +415,7 @@ module regbank_smoke_tb;
     rtl011_status_i = '0;
     rtl012_status_i = '0;
     rtl013_status_i = '0;
-    ilock_status_status_i = 32'h0;
-    ilock_active_result_status_i = 32'h0;
-    rtl014_evt_overflow_status_status_i = 32'h0;
+    rtl014_status_i = '0;
     llink_status_status_i = 32'h0;
     llink_elapsed_us_status_i = 32'h0;
     rtl015_evt_overflow_status_status_i = 32'h0;
@@ -468,22 +464,22 @@ module regbank_smoke_tb;
     // integration), then to PULSE0_STATUS (RTL-008 integration), then to
     // SENSOR_STATUS (RTL-009 integration), then to HEALTH_RAW_IN (RTL-010
     // integration), then to WDOG_STATUS (RTL-011 integration), then to
-    // FAULT_STATUS (RTL-012 integration), and now redirected a twelfth time
-    // this session to ILOCK_STATUS: FAULT_STATUS's own status_i is no
-    // longer an individual port either (it's now aggregated into
-    // rtl013_status_i, real cross-module wiring covered by
-    // rtl013_integration_tb.sv instead). ILOCK_STATUS (RTL-014, not yet
-    // real) is untouched by that change and still uses the original generic
-    // per-register status_i mechanism this check is actually meant to
-    // exercise.
-    ilock_status_status_i = 32'hA5A5_0018;
-    addr_i = DFC_ADDR_ILOCK_STATUS;
+    // FAULT_STATUS (RTL-012 integration), then to ILOCK_STATUS (RTL-013
+    // integration), and now redirected a thirteenth time (RTL-014
+    // integration) to LLINK_STATUS: ILOCK_STATUS's own status_i is no longer
+    // an individual port (aggregated into rtl014_status_i, real wiring
+    // covered by rtl014_integration_tb.sv). LLINK_STATUS (RTL-015, not yet
+    // real, readback=external) still uses the original generic per-register
+    // status_i mechanism this check is meant to exercise -- confirmed
+    // against the regenerated dfc_config_regbank_regs.sv port list.
+    llink_status_status_i = 32'hA5A5_0018;
+    addr_i = DFC_ADDR_LLINK_STATUS;
     #1;
-    check("ILOCK_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
-    check_bit("ILOCK_STATUS write_illegal (external)", write_illegal_o, 1'b1);
-    ilock_status_status_i = 32'h0000_0041;
+    check("LLINK_STATUS mirrors status_i", rdata_o, 32'hA5A5_0018);
+    check_bit("LLINK_STATUS write_illegal (external)", write_illegal_o, 1'b1);
+    llink_status_status_i = 32'h0000_0041;
     #1;
-    check("ILOCK_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
+    check("LLINK_STATUS tracks status_i change combinationally", rdata_o, 32'h0000_0041);
 
     // ---- Check 4: internal_reg updates only via addr-decoded write_en_i ----
     addr_i = DFC_ADDR_SYS_CONTROL;

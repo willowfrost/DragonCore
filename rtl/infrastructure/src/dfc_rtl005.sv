@@ -355,46 +355,58 @@ module dfc_rtl005 (
   wire [23:0] high_group = slot_valid_q & rr_mask_q;   // indices AFTER last serviced
   wire [23:0] low_group  = slot_valid_q & ~rr_mask_q;  // indices AT/BEFORE (wrap-around)
 
-  logic [4:0] high_idx, low_idx;
-  logic       high_found, low_found;
+  // TIMING FIX #3 (RTL-014 integration session, OPEN_ISSUES.md item 80):
+  // the two lowest-set-bit encoders below were originally `for` loops whose
+  // every iteration overwrote the previous one's result ("last assignment
+  // wins"), which synthesizes as a 24-deep SERIAL priority chain -- the
+  // identical shape OPEN_ISSUES item 65 fix 1 removed from RTL-013 -- and
+  // their binary push_idx then drove a binary-indexed 24:1 x 128-bit read
+  // (`slot_record_q[push_idx]`) into pending_write_data_q. A real
+  // `build_ecp5.ps1` run (Build ID 20261002_164121, 48.41 MHz FAIL) named
+  // exactly that cone as the worst path once RTL-014 made slot 13 a live
+  // producer. Rewritten with IDENTICAL selection semantics (lowest set bit
+  // of high_group, else of low_group; slot 4's overflow records first):
+  // each candidate's "no lower bit set" term is an independent parallel
+  // OR-reduction (no loop-carried dependency), the grant is ONE-HOT, the
+  // record is read through a one-hot AND-OR mux, and push_idx is encoded
+  // from the one-hot grant (each index bit an independent OR). Push timing,
+  // arbitration order, and every downstream use of push_idx are unchanged.
+  logic [23:0] high_onehot, low_onehot;
   always_comb begin
-    high_idx = 5'd0; high_found = 1'b0;
-    for (int i = 23; i >= 0; i--) begin
-      if (high_group[i]) begin high_idx = i[4:0]; high_found = 1'b1; end
+    for (int i = 0; i < 24; i++) begin
+      high_onehot[i] = high_group[i] && ((high_group & ((24'd1 << i) - 24'd1)) == 24'd0);
+      low_onehot[i]  = low_group[i]  && ((low_group  & ((24'd1 << i) - 24'd1)) == 24'd0);
     end
   end
-  always_comb begin
-    low_idx = 5'd0; low_found = 1'b0;
-    for (int i = 23; i >= 0; i--) begin
-      if (low_group[i]) begin low_idx = i[4:0]; low_found = 1'b1; end
-    end
-  end
-
+  wire        high_found     = (high_group != 24'd0);
+  wire        low_found      = (low_group  != 24'd0);
   wire        ordinary_found = high_found || low_found;
-  wire [4:0]  ordinary_idx   = high_found ? high_idx : low_idx;
+  wire [23:0] ordinary_onehot = high_found ? high_onehot : low_onehot;
 
-  logic       push_valid_comb;
+  wire        push_overflow_slot4 = slot4_is_007F || slot4_is_007E;
+  wire [23:0] push_onehot = push_overflow_slot4 ? 24'h000010 : (ordinary_found ? ordinary_onehot : 24'h0);
+
   logic [4:0] push_idx_comb;
-  logic       push_ordinary_comb;
-
   always_comb begin
-    push_valid_comb    = 1'b0;
-    push_idx_comb       = 5'd0;
-    push_ordinary_comb  = 1'b0;
-    if (slot4_is_007F || slot4_is_007E) begin
-      push_valid_comb   = 1'b1;
-      push_idx_comb      = 5'd4;
-      push_ordinary_comb = 1'b0;
-    end else if (ordinary_found) begin
-      push_valid_comb   = 1'b1;
-      push_idx_comb      = ordinary_idx;
-      push_ordinary_comb = 1'b1;
+    for (int b = 0; b < 5; b++) begin
+      push_idx_comb[b] = 1'b0;
+      for (int i = 0; i < 24; i++) begin
+        if (((i >> b) & 1) == 1) push_idx_comb[b] = push_idx_comb[b] | push_onehot[i];
+      end
     end
   end
 
-  wire        push_valid        = push_valid_comb;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] push_record_comb;
+  always_comb begin
+    push_record_comb = '0;
+    for (int i = 0; i < 24; i++) begin
+      push_record_comb = push_record_comb | (slot_record_q[i] & {dfc_types_pkg::DFC_EVENT_RECORD_WIDTH{push_onehot[i]}});
+    end
+  end
+
+  wire        push_valid        = push_overflow_slot4 || ordinary_found;
   wire [4:0]  push_idx          = push_idx_comb;
-  wire        push_ordinary     = push_ordinary_comb;
+  wire        push_ordinary     = !push_overflow_slot4 && ordinary_found;
   wire        accepted_clear_all = ctl_clear_all;
   wire        do_push           = push_valid && !accepted_clear_all;
   wire        pushing_overflow_rec = do_push && !push_ordinary;  // slot 4 holding 0x007E/0x007F
@@ -530,7 +542,7 @@ module dfc_rtl005 (
         end
         pending_write_q <= do_push;
         if (do_push) begin
-          pending_write_data_q <= slot_record_q[push_idx];
+          pending_write_data_q <= push_record_comb;   // one-hot AND-OR read (timing fix #3)
           pending_write_addr_q <= tail_q;
         end
 

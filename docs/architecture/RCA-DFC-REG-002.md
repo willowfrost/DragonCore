@@ -5745,7 +5745,7 @@ Eight atomically committed four-term expressions with fixed operators, guards, r
 | Register reset | 0x00000000 |
 | Owner | RTL-014 |
 | Protection | No |
-| Register behavior | Aggregate interlock state and sticky validation/violation evidence. |
+| Register behavior | Aggregate interlock state, sticky validation/violation evidence, and the retained first COMMIT_ALL validation error (REG-COH-003). |
 | Register-level side effect | None |
 
 | Bits | Field | Access | Reset | Legal values/range | Write validation | Read behavior | Side effect | Simultaneous-condition priority | Architecture source |
@@ -5754,7 +5754,9 @@ Eight atomically committed four-term expressions with fixed operators, guards, r
 | 15:8 | `VIOLATION_STICKY` | W1C | 0x00 | 0-0xFF | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
 | 16 | `COMMIT_COMPLETE` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
 | 17 | `COMMIT_REJECTED` | W1C | 0 | 0 or 1 | One requests clear; zero has no effect | Reads current retained value | Requests clear of selected sticky evidence only | Reset/disable, then new evidence, then clear | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
-| 31:18 | `RSV0` | RSV0 | 0x0000 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
+| 20:18 | `FIRST_ERROR_ENTRY` | RO | 0x0 | 0-7 | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads the entry of the first validation error of the earliest COMMIT_ALL rejected since COMMIT_REJECTED was last clear; zero when COMMIT_REJECTED is clear | None | Reset, then new rejection while COMMIT_REJECTED is clear (or cleared the same cycle), then COMMIT_REJECTED clear | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
+| 24:21 | `FIRST_ERROR_CODE` | RO | 0x0 | 0 none; 1-4 TERM0-TERM3 illegal; 5 OPERATOR illegal; 6 enabled entry with zero guard mask; 7-15 reserved, never reported | Pure-RO register writes reject; in a mixed register host writes zero to this field and nonzero rejects | Reads the retained first-error code paired with FIRST_ERROR_ENTRY (ARCH-VAL-014) | None | Same as FIRST_ERROR_ENTRY | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
+| 31:25 | `RSV0` | RSV0 | 0x00 | 0 only | A written one rejects the entire 32-bit write | Reads zero | None | Architecture producer priority; reset dominates | ARCH-MOD-014, ARCH-RTL014-001, ARCH-VAL-014 |
 
 ### ILOCK_ENTRY_SELECT (`0x3208`)
 
