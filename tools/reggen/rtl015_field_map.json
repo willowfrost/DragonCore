@@ -1,0 +1,690 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md SS27 per-field bit tables (0x3300-0x3324), cited by contract ID. LLINK_MONITOR_CONTROL/LLINK_QUALIFY_US/LLINK_TIMEOUT_US/LLINK_RECOVERY_US are each REG-002's own 'selected monitor' register, declared in indexed_registers (reggen.py v5, same mechanism RTL-014's session built, OPEN_ISSUES item 68) -- eight real stores each, written/read at LLINK_MONITOR_SELECT.MONITOR (REG-3308, REG-COH-001). The complete 8-monitor bank is forwarded to dfc_rtl015_control_t's new llink_monitor_m<0..7>__* fields (struct grown 128->961 bits this session) since RTL-015 must run all eight monitors simultaneously and continuously -- a single selected-view field cannot carry that. Each of these four registers' field list carries BOTH the struct's pre-existing selected-view fields (plain, driven by the indexed-register generator's own {name}_q selected-entry mux -- forwarded but functionally unused by dfc_rtl015.sv, item 73 precedent) AND the 8 new per-monitor array entries, since every bit of the control struct must be covered by exactly one field-map entry and reggen.py keys control_registers by register name (one dict entry per register, not two). rtl015_evt_overflow_status__event_overflow (14th EVENT_OVERFLOW-clear-field gap instance) was added in the same growth. LLINK_CONTROL/LLINK_MONITOR_SELECT/LLINK_ACTIVITY_INJECT are readback=internal_reg/zero; LLINK_STATUS/LLINK_ELAPSED_US/RTL015_EVT_OVERFLOW_STATUS are readback=external, closing the RTL-002/003/004-style host-READ gap (OPEN_ISSUES item 21) from the start.",
+  "consumer_module": "RTL-015",
+  "control_struct": "dfc_rtl015_control_t",
+  "status_struct": "dfc_rtl015_status_t",
+  "indexed_registers": [
+    {
+      "register": "LLINK_MONITOR_CONTROL",
+      "select_register": "LLINK_MONITOR_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-330C; REG-3308; REG-COH-001"
+    },
+    {
+      "register": "LLINK_QUALIFY_US",
+      "select_register": "LLINK_MONITOR_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-3310; REG-3308; REG-COH-001"
+    },
+    {
+      "register": "LLINK_TIMEOUT_US",
+      "select_register": "LLINK_MONITOR_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-3314; REG-3308; REG-COH-001"
+    },
+    {
+      "register": "LLINK_RECOVERY_US",
+      "select_register": "LLINK_MONITOR_SELECT",
+      "select_hi": 2,
+      "select_lo": 0,
+      "depth": 8,
+      "contract_id": "REG-3318; REG-3308; REG-COH-001"
+    }
+  ],
+  "control_registers": [
+    {
+      "register": "LLINK_CONTROL",
+      "contract_id": "REG-3300",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "llink_control__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "struct_field": "llink_control__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "struct_field": "llink_control__irq_enable"
+        }
+      ]
+    },
+    {
+      "register": "LLINK_STATUS",
+      "contract_id": "REG-3304",
+      "fields": [
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "class": "W1C",
+          "struct_field": "llink_status__lost_sticky"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "class": "W1C",
+          "struct_field": "llink_status__recovered"
+        }
+      ]
+    },
+    {
+      "register": "LLINK_MONITOR_SELECT",
+      "contract_id": "REG-3308",
+      "fields": [
+        {
+          "reg_hi": 2,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "llink_monitor_select__monitor"
+        }
+      ]
+    },
+    {
+      "register": "LLINK_ACTIVITY_INJECT",
+      "contract_id": "REG-3320",
+      "fields": [
+        {
+          "reg_hi": 1,
+          "reg_lo": 0,
+          "class": "WO-CMD",
+          "struct_field": "llink_activity_inject__heartbeat"
+        }
+      ]
+    },
+    {
+      "register": "RTL015_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-3324",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "W1C",
+          "struct_field": "rtl015_evt_overflow_status__event_overflow"
+        }
+      ]
+    },
+    {
+      "register": "LLINK_MONITOR_CONTROL",
+      "contract_id": "REG-330C",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "llink_monitor_control__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "struct_field": "llink_monitor_control__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "struct_field": "llink_monitor_control__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "struct_field": "llink_monitor_control__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "struct_field": "llink_monitor_control__safety_response_mask"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "llink_monitor_m0__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "llink_monitor_m0__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "llink_monitor_m0__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "llink_monitor_m0__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "llink_monitor_m0__safety_response_mask"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "llink_monitor_m1__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "llink_monitor_m1__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "llink_monitor_m1__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "llink_monitor_m1__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "llink_monitor_m1__safety_response_mask"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "llink_monitor_m2__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "llink_monitor_m2__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "llink_monitor_m2__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "llink_monitor_m2__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "llink_monitor_m2__safety_response_mask"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "llink_monitor_m3__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "llink_monitor_m3__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "llink_monitor_m3__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "llink_monitor_m3__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "llink_monitor_m3__safety_response_mask"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "llink_monitor_m4__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "llink_monitor_m4__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "llink_monitor_m4__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "llink_monitor_m4__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "llink_monitor_m4__safety_response_mask"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "llink_monitor_m5__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "llink_monitor_m5__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "llink_monitor_m5__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "llink_monitor_m5__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "llink_monitor_m5__safety_response_mask"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "llink_monitor_m6__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "llink_monitor_m6__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "llink_monitor_m6__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "llink_monitor_m6__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "llink_monitor_m6__safety_response_mask"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "llink_monitor_m7__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "llink_monitor_m7__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "llink_monitor_m7__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "llink_monitor_m7__fault_enable"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "llink_monitor_m7__safety_response_mask"
+        }
+      ]
+    },
+    {
+      "register": "LLINK_QUALIFY_US",
+      "contract_id": "REG-3310",
+      "fields": [
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "llink_qualify_us__qualify_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "llink_monitor_m0__qualify_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "llink_monitor_m1__qualify_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "llink_monitor_m2__qualify_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "llink_monitor_m3__qualify_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "llink_monitor_m4__qualify_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "llink_monitor_m5__qualify_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "llink_monitor_m6__qualify_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "llink_monitor_m7__qualify_us"
+        }
+      ]
+    },
+    {
+      "register": "LLINK_TIMEOUT_US",
+      "contract_id": "REG-3314",
+      "fields": [
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "llink_timeout_us__timeout_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "llink_monitor_m0__timeout_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "llink_monitor_m1__timeout_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "llink_monitor_m2__timeout_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "llink_monitor_m3__timeout_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "llink_monitor_m4__timeout_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "llink_monitor_m5__timeout_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "llink_monitor_m6__timeout_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "llink_monitor_m7__timeout_us"
+        }
+      ]
+    },
+    {
+      "register": "LLINK_RECOVERY_US",
+      "contract_id": "REG-3318",
+      "fields": [
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "llink_recovery_us__recovery_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "llink_monitor_m0__recovery_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "llink_monitor_m1__recovery_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "llink_monitor_m2__recovery_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "llink_monitor_m3__recovery_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 4,
+          "struct_field": "llink_monitor_m4__recovery_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 5,
+          "struct_field": "llink_monitor_m5__recovery_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 6,
+          "struct_field": "llink_monitor_m6__recovery_us"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 7,
+          "struct_field": "llink_monitor_m7__recovery_us"
+        }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "LLINK_STATUS",
+      "contract_id": "REG-3304",
+      "fields": [
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "struct_field": "llink_status__lost_active"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 8,
+          "struct_field": "llink_status__lost_sticky"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 16,
+          "struct_field": "llink_status__recovered"
+        }
+      ]
+    },
+    {
+      "register": "LLINK_ELAPSED_US",
+      "contract_id": "REG-331C",
+      "fields": [
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "struct_field": "llink_elapsed_us__elapsed_us"
+        }
+      ]
+    },
+    {
+      "register": "RTL015_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-3324",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "struct_field": "event_overflow"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 8,
+          "struct_field": "event_drop_count"
+        }
+      ]
+    }
+  ]
+}

@@ -68,7 +68,7 @@
 // (RTL-012 - Watchdog Manager) before writing this file: every port is
 // either the standard clock/reset/control/status/event/irq/fault group, an
 // internal same-domain signal to another not-yet-existing RTL module
-// (response_req_o -> RTL-016, service_activity_o -> RTL-015), or a
+// (response_req_o -> RTL-016, service_activity_o -> RTL-015.activity_i[7]), or a
 // broadcast input from an already-real module (timestamp_i, operating_
 // state_i, observational_mode_i). No external pad, no CDC/RDC inventory
 // entry names this module. No fpga/ecp5/ulx3s_dfc.lpf or
@@ -255,7 +255,8 @@ module dfc_rtl012 (
   input  logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i,
   input  logic         observational_mode_i,
 
-  output logic         service_activity_o, // RTL-015.activity_i[1] -- real
+  output logic         service_activity_o, // RTL-015.activity_i[7] (C.1 ID 7, watchdog-
+                                            // service pulse -- OPEN_ISSUES item 83) -- real
                                             // output, genuinely unconsumed
                                             // (RTL-015 does not exist yet).
 

@@ -105,6 +105,9 @@ module rtl005_integration_tb;
   // RTL-014 register-bus pair -- disclosed stub (RTL-014 not under test here).
   logic [dfc_types_pkg::DFC_RTL014_CONTROL_WIDTH-1:0] rtl014_control_unused;
   logic [dfc_types_pkg::DFC_RTL014_STATUS_WIDTH-1:0]  rtl014_status_stub = '0;
+  // RTL-015 register-bus pair -- disclosed stub (RTL-015 not under test here).
+  logic [dfc_types_pkg::DFC_RTL015_CONTROL_WIDTH-1:0] rtl015_control_unused;
+  logic [dfc_types_pkg::DFC_RTL015_STATUS_WIDTH-1:0]  rtl015_status_stub = '0;
 
   logic [63:0] rtl004_timestamp;
 
@@ -174,6 +177,8 @@ module rtl005_integration_tb;
     .rtl013_status_i        (rtl013_status_stub),
     .rtl014_control_o       (rtl014_control_unused),
     .rtl014_status_i        (rtl014_status_stub),
+    .rtl015_control_o       (rtl015_control_unused),
+    .rtl015_status_i        (rtl015_status_stub),
     .status_o               (),
     .dbg_regbank_write_en_o (dbg_regbank_write_en_o)
   );

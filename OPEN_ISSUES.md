@@ -2034,3 +2034,211 @@ reversed through the normal process, not a silently settled fact.
         RTL-005 entirely.
     - **Verified:** a full `gate.ps1` after the fix passed (lint; sim 18/18,
       894/894; formal bmc+prove; coverage 168/353).
+
+## RTL-015 (Lost-Link Supervisor) integration
+
+**Approval note, read first (same as item 66's own note for RTL-014):**
+every ARCH-002/generator decision below was made under the person's
+explicit instruction to run the RTL-015 task end to end without stopping
+for item-by-item approval. Each one is a real, disclosed decision, logged
+here so it can be reviewed and reversed through the normal process, not a
+silently settled fact.
+
+81. **RESOLVED (2026-10-03): the monitor index and the activity-ID index are
+    the SAME fixed space, not two separate configurable spaces.** The
+    task's own briefing (and `RTL-015_RevA.md` SS4's "Per-monitor
+    activity-ID select" prose) assumed each of the 8 monitors selects
+    which activity ID it watches. REG-002's real field table for
+    `LLINK_MONITOR_CONTROL` (REG-330C) has **no such field** -- only
+    `ENABLE`/`EVENT_ENABLE`/`IRQ_ENABLE`/`FAULT_ENABLE`/
+    `SAFETY_RESPONSE_MASK`. Monitor `m` is hardwired to `activity_i[m]`;
+    `LLINK_MONITOR_SELECT` (REG-3308) selects which monitor's
+    config/readback you are addressing (the same role as RTL-014's
+    `ILOCK_ENTRY_SELECT`), not an activity source. `dfc_rtl015.sv`
+    implements the fixed mapping; `RTL-015_RevB.md` corrects the prose.
+    This also means VP-SAFE-008's "every reserved identifier (8-15)"
+    clause is structurally unreachable, not something a register check
+    enforces: `activity_i` is 8 bits wide and no field anywhere accepts an
+    ID 0-15 selector, so IDs 8-15 simply have no wire to reach.
+
+82. **RESOLVED (2026-10-03), ARCH-002 struct growth, reusing RTL-014's
+    item-68 generator mechanism with zero new `reggen.py` work.**
+    - **The gap:** REG-002 describes `LLINK_MONITOR_CONTROL`/
+      `QUALIFY_US`/`TIMEOUT_US`/`RECOVERY_US` as "selected monitor"
+      registers, but all 8 monitors run simultaneously and continuously --
+      a single selected-only view in `control_i` cannot carry that (the
+      exact same architectural problem item 68 solved for RTL-014's
+      staged bank).
+    - **Fix:** these four registers are declared in
+      `rtl015_field_map.json`'s `indexed_registers` (reggen.py v5, reused
+      unchanged), giving 8 real stores each in RTL-001, selected by
+      `LLINK_MONITOR_SELECT.MONITOR`. The complete bank reaches RTL-015 as
+      `llink_monitor_m<0..7>__*`. `dfc_rtl015_control_t` grew 128->961
+      bits: 8 x 104 bits (enable/event/irq/fault/mask[4]/qualify_us[32]/
+      timeout_us[32]/recovery_us[32] per monitor) plus the 14th
+      EVENT_OVERFLOW-clear-field instance.
+    - **Each of the four field-map entries carries BOTH the struct's
+      pre-existing selected-view fields (plain, driven by the generic
+      `{name}_q` the indexed-register generator already emits) and the new
+      8-wide array**, in one combined `fields` list per register, since
+      every bit of the control struct must be covered exactly once and
+      `reggen.py` keys `control_registers` by register name. The
+      selected-view fields are forwarded but functionally unused in
+      `dfc_rtl015.sv` (item 73's RTL-014 precedent).
+    - `dfc_rtl015_status_t` needed **no growth** (unlike RTL-014's status
+      struct): `LLINK_STATUS.LOST_ACTIVE/STICKY/RECOVERED` are already
+      full 8-bit vectors, and `LLINK_ELAPSED_US` is intentionally a single
+      selected-monitor readback (RTL-015 mutes its own 8 internal counters
+      with the live selector, the same pattern as RTL-014's
+      `ILOCK_ACTIVE_RESULT`).
+    - **Proof of no side effects:** the regeneration diff of
+      `dfc_config_regbank_regs.sv` outside RTL-015 is exactly the version
+      header and a trailing comma on the previous last port. Every other
+      consumer's output is byte-identical.
+
+83. **RESOLVED (2026-10-03), the `activity_i` bit wiring -- the exact class
+    of discrepancy the task's own briefing anticipated, confirmed and
+    found to be larger than expected (five conflicting rows, not one).**
+    ARCH-002's own `RTL-015.activity_i` row (in RTL-015's own Appendix A
+    catalog) gives the producer order verbatim, matching `ARCH-SAFE-007`'s
+    ID list word for word: 0 accepted host command, 1 ARINC RX word, 2 CAN
+    RX frame, 3 UART RX byte, 4 any qualified GPIO transition, 5 any
+    qualified health transition, 6 synchronized user diagnostic
+    transition, 7 accepted external watchdog-service pulse. Five OTHER
+    Appendix A rows, each in a DIFFERENT module's own port catalog
+    (`RTL-012.service_activity_o`->`activity_i[1]`,
+    `RTL-017.activity_o`->`[2]`, `RTL-019.activity_o`->`[3]`,
+    `RTL-020.activity_o`->`[4]`, `RTL-021.activity_o`->`[5]`) conflict both
+    with this order and with each other -- and `RTL-021` (Databus Routing)
+    is not even one of the eight legal activity IDs at all. Resolved in
+    favor of RTL-015's own port-catalog row, per CHTR-DOC-003 (the port's
+    own definition owns the fact of its wiring) and the project's own
+    established precedent for exactly this conflict class (items
+    1/10/11/13/19/22/37/44/61/74) -- the tenth instance, and the largest
+    (five conflicting rows, not one or two). `dfc_rtl012.sv`'s own stale
+    comment (`service_activity_o // RTL-015.activity_i[1]`) was fixed to
+    `[7]` in the same pass, since it was simply wrong, not merely
+    unverified.
+
+84. **Real, disclosed gap -- logged, not invented around.** Activity ID 0
+    ("accepted host command") has **no real Appendix A port anywhere** to
+    source it from: RTL-001's own real, complete 74-port catalog has
+    nothing resembling a "command accepted" pulse (the closest internal
+    candidate, `dfc_rtl001.sv`'s own `req_accept` wire, is not a port at
+    all, and the project's existing `dbg_regbank_write_en_o` observability
+    port is both not in Appendix A and write-only, not matching "accepted
+    host command" which should include reads too per RTLSTD-DRI-011's
+    accept semantics). `rtl015_activity_vector_comb[0]` is a disclosed
+    stub 0 in `dfc_rtl024.sv`. Real, disclosed future work: ARCH-002 needs
+    a real port added to RTL-001's own catalog (e.g. `host_cmd_accept_o`)
+    before this activity ID can ever be exercised for real.
+
+85. **Real, disclosed design: the QUALIFY_US/TIMEOUT_US/RECOVERY_US
+    algorithm (CHTR-DOC-006, no bit-exact algorithm is given in any owning
+    document).** Two free-running per-monitor microsecond counters sharing
+    one module-wide `us_tick` (the same CORE_CLK/50 divider idiom as
+    `dfc_rtl012.sv`'s `elapsed_us_q`):
+    - `elapsed_us_q[m]`: time since the last qualifying activity; resets
+      to 0 on every effective (natural or injected) activity pulse; LOST
+      declares the tick it first reaches `TIMEOUT_US[m]`.
+    - `recovery_progress_q[m]`: accumulates while `elapsed_us_q[m]` stays
+      within `QUALIFY_US[m]` ("continuous qualified activity"); resets the
+      instant a gap exceeds it. RECOVERED (clears LOST) the tick this
+      first reaches `RECOVERY_US[m]`. `QUALIFY_US[m]==0` bypasses the gap
+      check entirely (same "zero disables" idiom as RTL-010's
+      `MAX_AGE_MS`).
+    - `ARCH-VAL-015`'s own "QUALIFY_US < TIMEOUT_US" requirement makes the
+      LOST-set and RECOVERED-clear conditions mutually exclusive by
+      construction -- no extra priority logic needed between them.
+    - `TIMEOUT_US==0`, `RECOVERY_US==0` (both required nonzero by
+      ARCH-VAL-015), and `QUALIFY_US>=TIMEOUT_US` are each a live
+      "configuration rejected" condition feeding `status_o.fault`, the
+      same "defend against what RTL-001 doesn't yet reject" precedent
+      every prior monitoring module uses (item 4).
+
+86. **Real, disclosed design: injection (ARCH-SAFE-008).**
+    `LLINK_ACTIVITY_INJECT.HEARTBEAT` targets the CURRENTLY SELECTED
+    monitor, accepted only while `operating_state_i==TEST_DEBUG`: value 1
+    injects one activity pulse (ORed into the same effective-activity path
+    a natural pulse uses -- no separate tag, since its only observable
+    effect is resetting `elapsed_us_q` exactly as real activity would);
+    value 2 injects loss evidence (ORs into the LOST-set trigger, taking
+    effect only while not already active, the same "first equals" semantics
+    the natural trigger uses); value 3 is reserved, defended by simply
+    never matching it (item 4 precedent). "Natural loss has priority over
+    injected evidence": when both triggers are true the same cycle, the
+    SET is tagged natural, never injected. A set caused by the injected
+    path is reported as event subtype 3 "injection" **instead of** subtype
+    0 "lost" (replacing, not adding a parallel event) -- this satisfies
+    "tagged injected, distinguishable from natural evidence" using the
+    event record's own subtype field, with no extra bits needed.
+
+87. **Real, disclosed, PROJECT-WIDE finding, not fixed -- same open
+    question as item 74, now with a 14th instance.** RTL-015 follows the
+    bare-index `source_id` convention all 13 prior producers use
+    (`EVT_SOURCE_INDEX_RTL015 = 8'd14`), not Appendix C.5's own
+    index+1 "Source ID" column (`0x0F`). Still needs a project-wide
+    decision; not resolved here, to stay consistent with the 13 modules
+    already shipped.
+
+88. **RESOLVED (2026-10-03), a real bug found and fixed during this
+    module's own bring-up -- confirmed by a real simulation trace, not by
+    inspection.** The first draft of `recovery_progress_q[m]` free-ran
+    whenever `within_qualify[m]` held, completely independent of whether
+    the monitor was actually LOST (`active_q[m]`). With `QUALIFY_US=0`
+    ("disabled", so `within_qualify` is always true), this let
+    `recovery_progress_q[m]` accumulate stale credit continuously, even
+    BEFORE any loss ever began. The instant `active_q[m]` set (a genuine
+    timeout), `recovery_clear[m]` was ALREADY true from that stale credit,
+    clearing `active_q[m]` again the very next cycle -- which let
+    `natural_set[m]` re-fire immediately (nothing else had changed), which
+    set `active_q[m]` again, which cleared again, forever. A real,
+    continuous one-cycle oscillation, confirmed directly via a per-cycle
+    simulation trace (`active_q` alternating `00100000`/`00000000` every
+    single edge) before being traced to its root cause. **Fix:**
+    `recovery_progress_q[m]` is now held at zero whenever `!active_q[m]`,
+    so recovery always starts counting fresh from the moment a loss is
+    genuinely declared, never with head-start credit from before it began.
+
+89. **RESOLVED (2026-10-03), a related real gap found and fixed in the same
+    bring-up session: per-monitor `ENABLE` never actually gated anything.**
+    The first draft extracted `ctl_m_enable[m]` but never referenced it
+    anywhere in the timer/active logic -- every monitor's absence timer
+    ran, and could declare LOST, regardless of its own `ENABLE` bit. Fixed
+    two ways, both disclosed, same "disable releases" precedent RTL-014
+    already established for its own module-wide `ENABLE=0`:
+    - `elapsed_us_q[m]`/`recovery_progress_q[m]` are held at zero while
+      `!ctl_m_enable[m]`, so re-enabling a monitor later starts clean
+      rather than with a stale timeout.
+    - **Disabling a monitor also clears an already-latched
+      `LOST_ACTIVE[m]`**, not just future sets -- found directly from a
+      real test failure: a monitor that had genuinely timed out from a
+      leftover real timer elapsing during an unrelated, earlier test part
+      (the same real effect `PROJECT_CONTINUITY.md`/item 64 already
+      documented for RTL-013's own whole-system test) stayed permanently
+      stuck LOST after being disabled, with no way to clear it short of a
+      full module reset, until this fix.
+    `rtl015_integration_tb.sv`'s own Part 11/12 needed a matching fix
+    (explicitly disabling monitor 2 after exercising it, the same
+    discipline RTL-013's own session applied to `WDOG_CONTROL`) once this
+    real effect was confirmed, not assumed.
+
+**Verified on the person's machine.** `gate.ps1` passed clean:
+- `lint.ps1`: PASSED (24 files)
+- `sim.ps1`: 19/19 testbenches, 0 failed, 946/946 checks total
+  (12+12+16+28+30+24+43+35+44+47+60+50+60+59+71+105+40+197+13)
+- `formal.ps1`: 2/2 tasks PASSED (bmc + prove)
+- `check_coverage.py`: 178/353 registers referenced (+10 over the
+  RTL-014 baseline, matching RTL-015's 10 new registers exactly)
+
+`build_ecp5.ps1` (LFE5U-85F-6BG381C, `ulx3s_dfc_top`) then built clean:
+real, final (last line in `pnr.log`, per this project's own standing
+convention that earlier lines are pessimistic pre-route estimates) timing
+result **PASS**: `Max frequency for clock '$glbnet$core_clk': 50.53 MHz
+(PASS at 50.00 MHz)`. Worst path (posedge->posedge, RTL-010 to RTL-005):
+4.30 ns logic, 15.49 ns routing, 19.79 ns total. Utilization:
+TRELLIS_COMB 33811/83640 (40%), TRELLIS_FF 20549/83640 (24%),
+MULT18X18D 12/156 (7%), TRELLIS_IO 34/365 (9%), EHXPLLL 1/4 (25%).
+Build ID `20261003_145704`; bitstream
+`output/bitstreams/ulx3s_dfc_20261003_145704.bit`
+(SHA-256 `7E7AFD52AA194FF3B3ABB672A8C910406B36C224B083C39891BA7A2C21D1AF63`).

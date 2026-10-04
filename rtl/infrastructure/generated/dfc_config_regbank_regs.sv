@@ -13,6 +13,7 @@
 // Cross-module forwarding: RTL-012 (see tools/reggen/rtl012_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-013 (see tools/reggen/rtl013_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-014 (see tools/reggen/rtl014_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-015 (see tools/reggen/rtl015_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -41,6 +42,8 @@
   // Aggregated real RTL-013 control, replacing the prior disconnected placeholder for: DEGRADED_STATUS, FAULT_CONTROL, FAULT_LATCHED_SOURCE, FAULT_RECOVERABLE_MASK, FAULT_RESPONSE, FAULT_STATUS, RTL013_EVT_OVERFLOW_STATUS, TEST_FAULT_INJECT
   // Aggregated real RTL-014 status, replacing individual ports for: ILOCK_ACTIVE_ENABLE, ILOCK_ACTIVE_GUARD, ILOCK_ACTIVE_LOGIC, ILOCK_ACTIVE_RESPONSE, ILOCK_ACTIVE_RESULT, ILOCK_ACTIVE_TERMS, ILOCK_STATUS, RTL014_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-014 control, replacing the prior disconnected placeholder for: ILOCK_CONTROL, ILOCK_ENTRY_SELECT, ILOCK_STAGE_ENABLE, ILOCK_STAGE_GUARD, ILOCK_STAGE_LOGIC, ILOCK_STAGE_RESPONSE, ILOCK_STAGE_TERMS, ILOCK_STATUS, ILOCK_VALIDATE_COMMIT, RTL014_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-015 status, replacing individual ports for: LLINK_ELAPSED_US, LLINK_STATUS, RTL015_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-015 control, replacing the prior disconnected placeholder for: LLINK_ACTIVITY_INJECT, LLINK_CONTROL, LLINK_MONITOR_CONTROL, LLINK_MONITOR_SELECT, LLINK_QUALIFY_US, LLINK_RECOVERY_US, LLINK_STATUS, LLINK_TIMEOUT_US, RTL015_EVT_OVERFLOW_STATUS
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -126,9 +129,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  route_destination_drop_count_2_3_status_i,
   input  logic [31:0]  route_destination_drop_count_4_status_i,
   input  logic [31:0]  route_active_control_status_i,
-  input  logic [31:0]  llink_status_status_i,
-  input  logic [31:0]  llink_elapsed_us_status_i,
-  input  logic [31:0]  rtl015_evt_overflow_status_status_i,
   input  logic [31:0]  safety_status_status_i,
   input  logic [31:0]  safety_channel_status_status_i,
   input  logic [31:0]  rtl016_evt_overflow_status_status_i,
@@ -172,7 +172,9 @@ module dfc_config_regbank_regs (
   input  logic [105:0]  rtl013_status_i,
   output logic [112:0] rtl013_control_o,
   input  logic [114:0]  rtl014_status_i,
-  output logic [512:0] rtl014_control_o
+  output logic [512:0] rtl014_control_o,
+  input  logic [74:0]  rtl015_status_i,
+  output logic [960:0] rtl015_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -2015,8 +2017,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) llink_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_CONTROL)) llink_control_q <= wdata_i;
 
-  // LLINK_STATUS (0x3304) -- external passthrough, owner RTL-015
-  wire [31:0] llink_status_q = llink_status_status_i;
+  // LLINK_STATUS (0x3304) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-015, real
+  //   generation per contract REG-3304, not a permanent tie.
+  logic [31:0] llink_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_status_pulse_q <= 32'h0;
+    else llink_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_STATUS)) ? wdata_i : 32'h0;
+
+  // LLINK_STATUS (0x3304) -- external passthrough, owner RTL-015. Reconstructed from the aggregated rtl015_status_i input (contract REG-3304), not an individual per-register port.
+  wire [31:0] llink_status_q = {8'h0, rtl015_status_i[26:19], rtl015_status_i[18:11], rtl015_status_i[10:3]};
 
   // LLINK_MONITOR_SELECT (0x3308) -- Mixed: RW, RSV0, owner RTL-001 / RTL-015
   logic [31:0] llink_monitor_select_q;
@@ -2024,38 +2034,226 @@ module dfc_config_regbank_regs (
     if (!rst_ni) llink_monitor_select_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_SELECT)) llink_monitor_select_q <= wdata_i;
 
-  // LLINK_MONITOR_CONTROL (0x330C) -- Mixed: RW, RSV0, owner RTL-001 / RTL-015
+  // LLINK_MONITOR_CONTROL (0x330C) -- Mixed: RW, RSV0, owner RTL-001 / RTL-015; selector-indexed x8 by LLINK_MONITOR_SELECT[2:0] (REG-330C; REG-3308; REG-COH-001)
+  logic [31:0] llink_monitor_control_e0_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_monitor_control_e0_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) && (llink_monitor_select_q[2:0] == 3'd0)) llink_monitor_control_e0_q <= wdata_i;
+  logic [31:0] llink_monitor_control_e1_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_monitor_control_e1_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) && (llink_monitor_select_q[2:0] == 3'd1)) llink_monitor_control_e1_q <= wdata_i;
+  logic [31:0] llink_monitor_control_e2_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_monitor_control_e2_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) && (llink_monitor_select_q[2:0] == 3'd2)) llink_monitor_control_e2_q <= wdata_i;
+  logic [31:0] llink_monitor_control_e3_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_monitor_control_e3_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) && (llink_monitor_select_q[2:0] == 3'd3)) llink_monitor_control_e3_q <= wdata_i;
+  logic [31:0] llink_monitor_control_e4_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_monitor_control_e4_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) && (llink_monitor_select_q[2:0] == 3'd4)) llink_monitor_control_e4_q <= wdata_i;
+  logic [31:0] llink_monitor_control_e5_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_monitor_control_e5_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) && (llink_monitor_select_q[2:0] == 3'd5)) llink_monitor_control_e5_q <= wdata_i;
+  logic [31:0] llink_monitor_control_e6_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_monitor_control_e6_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) && (llink_monitor_select_q[2:0] == 3'd6)) llink_monitor_control_e6_q <= wdata_i;
+  logic [31:0] llink_monitor_control_e7_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_monitor_control_e7_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) && (llink_monitor_select_q[2:0] == 3'd7)) llink_monitor_control_e7_q <= wdata_i;
   logic [31:0] llink_monitor_control_q;
-  always_ff @(posedge clk_i or negedge rst_ni)
-    if (!rst_ni) llink_monitor_control_q <= 32'h00000000;
-    else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL)) llink_monitor_control_q <= wdata_i;
+  always_comb begin
+    llink_monitor_control_q = 32'h00000000;
+    case (llink_monitor_select_q[2:0])
+      3'd0: llink_monitor_control_q = llink_monitor_control_e0_q;
+      3'd1: llink_monitor_control_q = llink_monitor_control_e1_q;
+      3'd2: llink_monitor_control_q = llink_monitor_control_e2_q;
+      3'd3: llink_monitor_control_q = llink_monitor_control_e3_q;
+      3'd4: llink_monitor_control_q = llink_monitor_control_e4_q;
+      3'd5: llink_monitor_control_q = llink_monitor_control_e5_q;
+      3'd6: llink_monitor_control_q = llink_monitor_control_e6_q;
+      3'd7: llink_monitor_control_q = llink_monitor_control_e7_q;
+      default: llink_monitor_control_q = 32'h00000000;
+    endcase
+  end
 
-  // LLINK_QUALIFY_US (0x3310) -- RW, owner RTL-015
+  // LLINK_QUALIFY_US (0x3310) -- RW, owner RTL-015; selector-indexed x8 by LLINK_MONITOR_SELECT[2:0] (REG-3310; REG-3308; REG-COH-001)
+  logic [31:0] llink_qualify_us_e0_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_qualify_us_e0_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) && (llink_monitor_select_q[2:0] == 3'd0)) llink_qualify_us_e0_q <= wdata_i;
+  logic [31:0] llink_qualify_us_e1_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_qualify_us_e1_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) && (llink_monitor_select_q[2:0] == 3'd1)) llink_qualify_us_e1_q <= wdata_i;
+  logic [31:0] llink_qualify_us_e2_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_qualify_us_e2_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) && (llink_monitor_select_q[2:0] == 3'd2)) llink_qualify_us_e2_q <= wdata_i;
+  logic [31:0] llink_qualify_us_e3_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_qualify_us_e3_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) && (llink_monitor_select_q[2:0] == 3'd3)) llink_qualify_us_e3_q <= wdata_i;
+  logic [31:0] llink_qualify_us_e4_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_qualify_us_e4_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) && (llink_monitor_select_q[2:0] == 3'd4)) llink_qualify_us_e4_q <= wdata_i;
+  logic [31:0] llink_qualify_us_e5_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_qualify_us_e5_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) && (llink_monitor_select_q[2:0] == 3'd5)) llink_qualify_us_e5_q <= wdata_i;
+  logic [31:0] llink_qualify_us_e6_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_qualify_us_e6_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) && (llink_monitor_select_q[2:0] == 3'd6)) llink_qualify_us_e6_q <= wdata_i;
+  logic [31:0] llink_qualify_us_e7_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_qualify_us_e7_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) && (llink_monitor_select_q[2:0] == 3'd7)) llink_qualify_us_e7_q <= wdata_i;
   logic [31:0] llink_qualify_us_q;
-  always_ff @(posedge clk_i or negedge rst_ni)
-    if (!rst_ni) llink_qualify_us_q <= 32'h00000000;
-    else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US)) llink_qualify_us_q <= wdata_i;
+  always_comb begin
+    llink_qualify_us_q = 32'h00000000;
+    case (llink_monitor_select_q[2:0])
+      3'd0: llink_qualify_us_q = llink_qualify_us_e0_q;
+      3'd1: llink_qualify_us_q = llink_qualify_us_e1_q;
+      3'd2: llink_qualify_us_q = llink_qualify_us_e2_q;
+      3'd3: llink_qualify_us_q = llink_qualify_us_e3_q;
+      3'd4: llink_qualify_us_q = llink_qualify_us_e4_q;
+      3'd5: llink_qualify_us_q = llink_qualify_us_e5_q;
+      3'd6: llink_qualify_us_q = llink_qualify_us_e6_q;
+      3'd7: llink_qualify_us_q = llink_qualify_us_e7_q;
+      default: llink_qualify_us_q = 32'h00000000;
+    endcase
+  end
 
-  // LLINK_TIMEOUT_US (0x3314) -- RW, owner RTL-015
+  // LLINK_TIMEOUT_US (0x3314) -- RW, owner RTL-015; selector-indexed x8 by LLINK_MONITOR_SELECT[2:0] (REG-3314; REG-3308; REG-COH-001)
+  logic [31:0] llink_timeout_us_e0_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_timeout_us_e0_q <= 32'h000F4240;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) && (llink_monitor_select_q[2:0] == 3'd0)) llink_timeout_us_e0_q <= wdata_i;
+  logic [31:0] llink_timeout_us_e1_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_timeout_us_e1_q <= 32'h000F4240;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) && (llink_monitor_select_q[2:0] == 3'd1)) llink_timeout_us_e1_q <= wdata_i;
+  logic [31:0] llink_timeout_us_e2_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_timeout_us_e2_q <= 32'h000F4240;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) && (llink_monitor_select_q[2:0] == 3'd2)) llink_timeout_us_e2_q <= wdata_i;
+  logic [31:0] llink_timeout_us_e3_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_timeout_us_e3_q <= 32'h000F4240;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) && (llink_monitor_select_q[2:0] == 3'd3)) llink_timeout_us_e3_q <= wdata_i;
+  logic [31:0] llink_timeout_us_e4_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_timeout_us_e4_q <= 32'h000F4240;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) && (llink_monitor_select_q[2:0] == 3'd4)) llink_timeout_us_e4_q <= wdata_i;
+  logic [31:0] llink_timeout_us_e5_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_timeout_us_e5_q <= 32'h000F4240;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) && (llink_monitor_select_q[2:0] == 3'd5)) llink_timeout_us_e5_q <= wdata_i;
+  logic [31:0] llink_timeout_us_e6_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_timeout_us_e6_q <= 32'h000F4240;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) && (llink_monitor_select_q[2:0] == 3'd6)) llink_timeout_us_e6_q <= wdata_i;
+  logic [31:0] llink_timeout_us_e7_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_timeout_us_e7_q <= 32'h000F4240;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) && (llink_monitor_select_q[2:0] == 3'd7)) llink_timeout_us_e7_q <= wdata_i;
   logic [31:0] llink_timeout_us_q;
-  always_ff @(posedge clk_i or negedge rst_ni)
-    if (!rst_ni) llink_timeout_us_q <= 32'h000F4240;
-    else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_TIMEOUT_US)) llink_timeout_us_q <= wdata_i;
+  always_comb begin
+    llink_timeout_us_q = 32'h00000000;
+    case (llink_monitor_select_q[2:0])
+      3'd0: llink_timeout_us_q = llink_timeout_us_e0_q;
+      3'd1: llink_timeout_us_q = llink_timeout_us_e1_q;
+      3'd2: llink_timeout_us_q = llink_timeout_us_e2_q;
+      3'd3: llink_timeout_us_q = llink_timeout_us_e3_q;
+      3'd4: llink_timeout_us_q = llink_timeout_us_e4_q;
+      3'd5: llink_timeout_us_q = llink_timeout_us_e5_q;
+      3'd6: llink_timeout_us_q = llink_timeout_us_e6_q;
+      3'd7: llink_timeout_us_q = llink_timeout_us_e7_q;
+      default: llink_timeout_us_q = 32'h00000000;
+    endcase
+  end
 
-  // LLINK_RECOVERY_US (0x3318) -- RW, owner RTL-015
+  // LLINK_RECOVERY_US (0x3318) -- RW, owner RTL-015; selector-indexed x8 by LLINK_MONITOR_SELECT[2:0] (REG-3318; REG-3308; REG-COH-001)
+  logic [31:0] llink_recovery_us_e0_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_recovery_us_e0_q <= 32'h000186A0;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) && (llink_monitor_select_q[2:0] == 3'd0)) llink_recovery_us_e0_q <= wdata_i;
+  logic [31:0] llink_recovery_us_e1_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_recovery_us_e1_q <= 32'h000186A0;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) && (llink_monitor_select_q[2:0] == 3'd1)) llink_recovery_us_e1_q <= wdata_i;
+  logic [31:0] llink_recovery_us_e2_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_recovery_us_e2_q <= 32'h000186A0;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) && (llink_monitor_select_q[2:0] == 3'd2)) llink_recovery_us_e2_q <= wdata_i;
+  logic [31:0] llink_recovery_us_e3_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_recovery_us_e3_q <= 32'h000186A0;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) && (llink_monitor_select_q[2:0] == 3'd3)) llink_recovery_us_e3_q <= wdata_i;
+  logic [31:0] llink_recovery_us_e4_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_recovery_us_e4_q <= 32'h000186A0;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) && (llink_monitor_select_q[2:0] == 3'd4)) llink_recovery_us_e4_q <= wdata_i;
+  logic [31:0] llink_recovery_us_e5_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_recovery_us_e5_q <= 32'h000186A0;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) && (llink_monitor_select_q[2:0] == 3'd5)) llink_recovery_us_e5_q <= wdata_i;
+  logic [31:0] llink_recovery_us_e6_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_recovery_us_e6_q <= 32'h000186A0;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) && (llink_monitor_select_q[2:0] == 3'd6)) llink_recovery_us_e6_q <= wdata_i;
+  logic [31:0] llink_recovery_us_e7_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) llink_recovery_us_e7_q <= 32'h000186A0;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) && (llink_monitor_select_q[2:0] == 3'd7)) llink_recovery_us_e7_q <= wdata_i;
   logic [31:0] llink_recovery_us_q;
+  always_comb begin
+    llink_recovery_us_q = 32'h00000000;
+    case (llink_monitor_select_q[2:0])
+      3'd0: llink_recovery_us_q = llink_recovery_us_e0_q;
+      3'd1: llink_recovery_us_q = llink_recovery_us_e1_q;
+      3'd2: llink_recovery_us_q = llink_recovery_us_e2_q;
+      3'd3: llink_recovery_us_q = llink_recovery_us_e3_q;
+      3'd4: llink_recovery_us_q = llink_recovery_us_e4_q;
+      3'd5: llink_recovery_us_q = llink_recovery_us_e5_q;
+      3'd6: llink_recovery_us_q = llink_recovery_us_e6_q;
+      3'd7: llink_recovery_us_q = llink_recovery_us_e7_q;
+      default: llink_recovery_us_q = 32'h00000000;
+    endcase
+  end
+
+  // LLINK_ELAPSED_US (0x331C) -- external passthrough, owner RTL-015. Reconstructed from the aggregated rtl015_status_i input (contract REG-331C), not an individual per-register port.
+  wire [31:0] llink_elapsed_us_q = {rtl015_status_i[58:27]};
+
+  // LLINK_ACTIVITY_INJECT (0x3320) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-015, real
+  //   generation per contract REG-3320, not a permanent tie.
+  logic [31:0] llink_activity_inject_pulse_q;
   always_ff @(posedge clk_i or negedge rst_ni)
-    if (!rst_ni) llink_recovery_us_q <= 32'h000186A0;
-    else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US)) llink_recovery_us_q <= wdata_i;
+    if (!rst_ni) llink_activity_inject_pulse_q <= 32'h0;
+    else llink_activity_inject_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_ACTIVITY_INJECT)) ? wdata_i : 32'h0;
 
-  // LLINK_ELAPSED_US (0x331C) -- external passthrough, owner RTL-015
-  wire [31:0] llink_elapsed_us_q = llink_elapsed_us_status_i;
-
-  // LLINK_ACTIVITY_INJECT (0x3320) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_LLINK_ACTIVITY_INJECT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // LLINK_ACTIVITY_INJECT (0x3320) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-015 via llink_activity_inject_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] llink_activity_inject_q = 32'h00000000;
 
-  // RTL015_EVT_OVERFLOW_STATUS (0x3324) -- external passthrough, owner RTL-015
-  wire [31:0] rtl015_evt_overflow_status_q = rtl015_evt_overflow_status_status_i;
+  // RTL015_EVT_OVERFLOW_STATUS (0x3324) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-015, real
+  //   generation per contract REG-3324, not a permanent tie.
+  logic [31:0] rtl015_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl015_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl015_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL015_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
+  // RTL015_EVT_OVERFLOW_STATUS (0x3324) -- external passthrough, owner RTL-015. Reconstructed from the aggregated rtl015_status_i input (contract REG-3324), not an individual per-register port.
+  wire [31:0] rtl015_evt_overflow_status_q = {8'h0, rtl015_status_i[74:59], 7'h0, rtl015_status_i[2:2]};
 
   // SAFETY_CONTROL (0x3400) -- Mixed: RW, RSV0, owner RTL-016
   logic [31:0] safety_control_q;
@@ -2659,6 +2857,94 @@ module dfc_config_regbank_regs (
   assign rtl014_control_o[1] = ilock_control_q[1:1];  // ILOCK_CONTROL.ilock_control__event_enable
   assign rtl014_control_o[0] = ilock_control_q[0:0];  // ILOCK_CONTROL.ilock_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl015_control_o -- real forwarding to RTL-015, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl015_control_t defines --
+  // cross-checked at generation time (961/961 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl015_control_o[960:929] = llink_recovery_us_e7_q[31:0];  // LLINK_RECOVERY_US.llink_monitor_m7__recovery_us
+  assign rtl015_control_o[928:897] = llink_timeout_us_e7_q[31:0];  // LLINK_TIMEOUT_US.llink_monitor_m7__timeout_us
+  assign rtl015_control_o[896:865] = llink_qualify_us_e7_q[31:0];  // LLINK_QUALIFY_US.llink_monitor_m7__qualify_us
+  assign rtl015_control_o[864:861] = llink_monitor_control_e7_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_m7__safety_response_mask
+  assign rtl015_control_o[860] = llink_monitor_control_e7_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_m7__fault_enable
+  assign rtl015_control_o[859] = llink_monitor_control_e7_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_m7__irq_enable
+  assign rtl015_control_o[858] = llink_monitor_control_e7_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_m7__event_enable
+  assign rtl015_control_o[857] = llink_monitor_control_e7_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_m7__enable
+  assign rtl015_control_o[856:825] = llink_recovery_us_e6_q[31:0];  // LLINK_RECOVERY_US.llink_monitor_m6__recovery_us
+  assign rtl015_control_o[824:793] = llink_timeout_us_e6_q[31:0];  // LLINK_TIMEOUT_US.llink_monitor_m6__timeout_us
+  assign rtl015_control_o[792:761] = llink_qualify_us_e6_q[31:0];  // LLINK_QUALIFY_US.llink_monitor_m6__qualify_us
+  assign rtl015_control_o[760:757] = llink_monitor_control_e6_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_m6__safety_response_mask
+  assign rtl015_control_o[756] = llink_monitor_control_e6_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_m6__fault_enable
+  assign rtl015_control_o[755] = llink_monitor_control_e6_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_m6__irq_enable
+  assign rtl015_control_o[754] = llink_monitor_control_e6_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_m6__event_enable
+  assign rtl015_control_o[753] = llink_monitor_control_e6_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_m6__enable
+  assign rtl015_control_o[752:721] = llink_recovery_us_e5_q[31:0];  // LLINK_RECOVERY_US.llink_monitor_m5__recovery_us
+  assign rtl015_control_o[720:689] = llink_timeout_us_e5_q[31:0];  // LLINK_TIMEOUT_US.llink_monitor_m5__timeout_us
+  assign rtl015_control_o[688:657] = llink_qualify_us_e5_q[31:0];  // LLINK_QUALIFY_US.llink_monitor_m5__qualify_us
+  assign rtl015_control_o[656:653] = llink_monitor_control_e5_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_m5__safety_response_mask
+  assign rtl015_control_o[652] = llink_monitor_control_e5_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_m5__fault_enable
+  assign rtl015_control_o[651] = llink_monitor_control_e5_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_m5__irq_enable
+  assign rtl015_control_o[650] = llink_monitor_control_e5_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_m5__event_enable
+  assign rtl015_control_o[649] = llink_monitor_control_e5_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_m5__enable
+  assign rtl015_control_o[648:617] = llink_recovery_us_e4_q[31:0];  // LLINK_RECOVERY_US.llink_monitor_m4__recovery_us
+  assign rtl015_control_o[616:585] = llink_timeout_us_e4_q[31:0];  // LLINK_TIMEOUT_US.llink_monitor_m4__timeout_us
+  assign rtl015_control_o[584:553] = llink_qualify_us_e4_q[31:0];  // LLINK_QUALIFY_US.llink_monitor_m4__qualify_us
+  assign rtl015_control_o[552:549] = llink_monitor_control_e4_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_m4__safety_response_mask
+  assign rtl015_control_o[548] = llink_monitor_control_e4_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_m4__fault_enable
+  assign rtl015_control_o[547] = llink_monitor_control_e4_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_m4__irq_enable
+  assign rtl015_control_o[546] = llink_monitor_control_e4_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_m4__event_enable
+  assign rtl015_control_o[545] = llink_monitor_control_e4_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_m4__enable
+  assign rtl015_control_o[544:513] = llink_recovery_us_e3_q[31:0];  // LLINK_RECOVERY_US.llink_monitor_m3__recovery_us
+  assign rtl015_control_o[512:481] = llink_timeout_us_e3_q[31:0];  // LLINK_TIMEOUT_US.llink_monitor_m3__timeout_us
+  assign rtl015_control_o[480:449] = llink_qualify_us_e3_q[31:0];  // LLINK_QUALIFY_US.llink_monitor_m3__qualify_us
+  assign rtl015_control_o[448:445] = llink_monitor_control_e3_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_m3__safety_response_mask
+  assign rtl015_control_o[444] = llink_monitor_control_e3_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_m3__fault_enable
+  assign rtl015_control_o[443] = llink_monitor_control_e3_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_m3__irq_enable
+  assign rtl015_control_o[442] = llink_monitor_control_e3_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_m3__event_enable
+  assign rtl015_control_o[441] = llink_monitor_control_e3_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_m3__enable
+  assign rtl015_control_o[440:409] = llink_recovery_us_e2_q[31:0];  // LLINK_RECOVERY_US.llink_monitor_m2__recovery_us
+  assign rtl015_control_o[408:377] = llink_timeout_us_e2_q[31:0];  // LLINK_TIMEOUT_US.llink_monitor_m2__timeout_us
+  assign rtl015_control_o[376:345] = llink_qualify_us_e2_q[31:0];  // LLINK_QUALIFY_US.llink_monitor_m2__qualify_us
+  assign rtl015_control_o[344:341] = llink_monitor_control_e2_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_m2__safety_response_mask
+  assign rtl015_control_o[340] = llink_monitor_control_e2_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_m2__fault_enable
+  assign rtl015_control_o[339] = llink_monitor_control_e2_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_m2__irq_enable
+  assign rtl015_control_o[338] = llink_monitor_control_e2_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_m2__event_enable
+  assign rtl015_control_o[337] = llink_monitor_control_e2_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_m2__enable
+  assign rtl015_control_o[336:305] = llink_recovery_us_e1_q[31:0];  // LLINK_RECOVERY_US.llink_monitor_m1__recovery_us
+  assign rtl015_control_o[304:273] = llink_timeout_us_e1_q[31:0];  // LLINK_TIMEOUT_US.llink_monitor_m1__timeout_us
+  assign rtl015_control_o[272:241] = llink_qualify_us_e1_q[31:0];  // LLINK_QUALIFY_US.llink_monitor_m1__qualify_us
+  assign rtl015_control_o[240:237] = llink_monitor_control_e1_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_m1__safety_response_mask
+  assign rtl015_control_o[236] = llink_monitor_control_e1_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_m1__fault_enable
+  assign rtl015_control_o[235] = llink_monitor_control_e1_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_m1__irq_enable
+  assign rtl015_control_o[234] = llink_monitor_control_e1_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_m1__event_enable
+  assign rtl015_control_o[233] = llink_monitor_control_e1_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_m1__enable
+  assign rtl015_control_o[232:201] = llink_recovery_us_e0_q[31:0];  // LLINK_RECOVERY_US.llink_monitor_m0__recovery_us
+  assign rtl015_control_o[200:169] = llink_timeout_us_e0_q[31:0];  // LLINK_TIMEOUT_US.llink_monitor_m0__timeout_us
+  assign rtl015_control_o[168:137] = llink_qualify_us_e0_q[31:0];  // LLINK_QUALIFY_US.llink_monitor_m0__qualify_us
+  assign rtl015_control_o[136:133] = llink_monitor_control_e0_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_m0__safety_response_mask
+  assign rtl015_control_o[132] = llink_monitor_control_e0_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_m0__fault_enable
+  assign rtl015_control_o[131] = llink_monitor_control_e0_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_m0__irq_enable
+  assign rtl015_control_o[130] = llink_monitor_control_e0_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_m0__event_enable
+  assign rtl015_control_o[129] = llink_monitor_control_e0_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_m0__enable
+  assign rtl015_control_o[128] = rtl015_evt_overflow_status_pulse_q[0:0];  // RTL015_EVT_OVERFLOW_STATUS.rtl015_evt_overflow_status__event_overflow
+  assign rtl015_control_o[127:126] = llink_activity_inject_pulse_q[1:0];  // LLINK_ACTIVITY_INJECT.llink_activity_inject__heartbeat
+  assign rtl015_control_o[125:94] = llink_recovery_us_q[31:0];  // LLINK_RECOVERY_US.llink_recovery_us__recovery_us
+  assign rtl015_control_o[93:62] = llink_timeout_us_q[31:0];  // LLINK_TIMEOUT_US.llink_timeout_us__timeout_us
+  assign rtl015_control_o[61:30] = llink_qualify_us_q[31:0];  // LLINK_QUALIFY_US.llink_qualify_us__qualify_us
+  assign rtl015_control_o[29:26] = llink_monitor_control_q[7:4];  // LLINK_MONITOR_CONTROL.llink_monitor_control__safety_response_mask
+  assign rtl015_control_o[25] = llink_monitor_control_q[3:3];  // LLINK_MONITOR_CONTROL.llink_monitor_control__fault_enable
+  assign rtl015_control_o[24] = llink_monitor_control_q[2:2];  // LLINK_MONITOR_CONTROL.llink_monitor_control__irq_enable
+  assign rtl015_control_o[23] = llink_monitor_control_q[1:1];  // LLINK_MONITOR_CONTROL.llink_monitor_control__event_enable
+  assign rtl015_control_o[22] = llink_monitor_control_q[0:0];  // LLINK_MONITOR_CONTROL.llink_monitor_control__enable
+  assign rtl015_control_o[21:19] = llink_monitor_select_q[2:0];  // LLINK_MONITOR_SELECT.llink_monitor_select__monitor
+  assign rtl015_control_o[18:11] = llink_status_pulse_q[23:16];  // LLINK_STATUS.llink_status__recovered
+  assign rtl015_control_o[10:3] = llink_status_pulse_q[15:8];  // LLINK_STATUS.llink_status__lost_sticky
+  assign rtl015_control_o[2] = llink_control_q[2:2];  // LLINK_CONTROL.llink_control__irq_enable
+  assign rtl015_control_o[1] = llink_control_q[1:1];  // LLINK_CONTROL.llink_control__event_enable
+  assign rtl015_control_o[0] = llink_control_q[0:0];  // LLINK_CONTROL.llink_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -2970,7 +3256,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ILOCK_ACTIVE_ENABLE: begin rdata_o = ilock_active_enable_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ILOCK_ACTIVE_RESPONSE: begin rdata_o = ilock_active_response_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_LLINK_CONTROL: begin rdata_o = llink_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_LLINK_STATUS: begin rdata_o = llink_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_LLINK_STATUS: begin rdata_o = llink_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_SELECT: begin rdata_o = llink_monitor_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_LLINK_MONITOR_CONTROL: begin rdata_o = llink_monitor_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_LLINK_QUALIFY_US: begin rdata_o = llink_qualify_us_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
@@ -2978,7 +3264,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_LLINK_RECOVERY_US: begin rdata_o = llink_recovery_us_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_LLINK_ELAPSED_US: begin rdata_o = llink_elapsed_us_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_LLINK_ACTIVITY_INJECT: begin rdata_o = llink_activity_inject_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL015_EVT_OVERFLOW_STATUS: begin rdata_o = rtl015_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL015_EVT_OVERFLOW_STATUS: begin rdata_o = rtl015_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_CONTROL: begin rdata_o = safety_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_STATUS: begin rdata_o = safety_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_SELECT: begin rdata_o = safety_channel_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

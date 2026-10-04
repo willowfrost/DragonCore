@@ -827,16 +827,16 @@ module rtl024_skeleton_tb;
            "as RTL-012"},
           rd_data[12], 1'b1);
 
-    // The stub topology's remaining mandatory-mask modules (RTL-015
-    // and RTL-016, now that RTL-014 is real) never report ready, so RTL-002 is expected to run
+    // The stub topology's remaining mandatory-mask module (RTL-016, now
+    // that RTL-014/RTL-015 are both real) never reports ready, so RTL-002 is expected to run
     // out its full 499,000-cycle mandatory-init timeout and land in
     // FAULTED -- this is the disclosed, real consequence of the current
     // stub topology (see dfc_rtl024.sv's RTL-002 integration comment), not
     // a defect in RTL-002 itself. RTL-003/RTL-004/RTL-005/RTL-012/RTL-013
     // are now real, but none is a mandatory-mask module dependency RTL-002
     // can still rely on being ready for this specific timeout path --
-    // RTL-002 already relies on other, still-unready mandatory members
-    // (RTL-015 and RTL-016), so this test's long-standing "reaches
+    // RTL-002 already relies on another, still-unready mandatory member
+    // (RTL-016), so this test's long-standing "reaches
     // FAULTED" outcome is unchanged in kind, only in which remaining stub
     // modules are responsible for it.
     begin
@@ -1079,6 +1079,74 @@ module rtl024_skeleton_tb;
     check({"RTL-012's own real WDOG_STATUS.SERVICE_ACCEPTED state is unaffected by RTL-014's ",
            "real commit/evaluation just proven -- independent state inside the actual ",
            "RTL-024 top-level integration"},
+          dut.rtl012_status[dfc_types_pkg::DFC_RTL012_STATUS__WDOG_STATUS__SERVICE_ACCEPTED_HI],
+          1'b1);
+
+    // ------------------------------------------------------------------
+    // RTL-015 (Lost-Link Supervisor) whole-system checks -- real, added in
+    // RTL-015's own session. Sequenced AFTER the RTL-014 section above
+    // (OPEN_ISSUES.md items 81-89). Monitor 4 is used deliberately: C.1's
+    // fixed 1:1 monitor<->activity-ID mapping (item 81) makes activity ID 4
+    // ("any qualified GPIO transition") the natural choice for this
+    // whole-system proof, reinforcing that same finding here, not just in
+    // rtl015_integration_tb.sv. gpio_i[3] is a fresh pin (gpio_i[0] unused,
+    // [1]/[2] already left high by earlier sections).
+    // ------------------------------------------------------------------
+    spi_read32(DFC_ADDR_SUBSYS_READY, rd_data, rd_status);
+    check("SUBSYS_READY SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable SUBSYS_READY bit 14 (RTL-015) reflects RTL-015's real readiness ",
+           "with no SUBSYS_ENABLE write (mandatory class, D.1 bit 14)"},
+          rd_data[14], 1'b1);
+
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    spi_write32(DFC_ADDR_LLINK_CONTROL, 32'h0000_0007, wr_status);  // ENABLE+EVENT+IRQ
+    check("LLINK_CONTROL SPI write accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_LLINK_MONITOR_SELECT, 32'd4, wr_status);
+    check("LLINK_MONITOR_SELECT SPI write accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    spi_write32(DFC_ADDR_LLINK_MONITOR_CONTROL, 32'h0000_001F, wr_status);  // en/ev/irq/fault=1, mask=1
+    check("LLINK_MONITOR_CONTROL SPI write (monitor 4) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_LLINK_QUALIFY_US, 32'd0, wr_status);
+    spi_write32(DFC_ADDR_LLINK_TIMEOUT_US, 32'd20, wr_status);      // 20us = 1000 CORE_CLK
+    spi_write32(DFC_ADDR_LLINK_RECOVERY_US, 32'd10, wr_status);
+    check("LLINK_TIMEOUT_US/RECOVERY_US SPI writes accepted", |wr_status, 1'b0);
+
+    gpio_i[3] = 1'b1;  // real external pin transition -> real qualified GPIO
+                       // activity -> RTL-024's registered rtl015_activity_
+                       // vector_q[4] -> RTL-015's real monitor 4
+    repeat (10) @(posedge core_clk_i); #1;
+    gpio_i[3] = 1'b0;
+    repeat (5) @(posedge core_clk_i); #1;
+    // White-box (hierarchical reference, same precedent as this file's own
+    // internal_source_vector_q checks above) rather than a real SPI
+    // readback: a real bit-banged SPI transaction's own overhead (many
+    // hundred CORE_CLK cycles) would itself let the 20us TIMEOUT_US elapse
+    // before the response came back, defeating a "still near zero" check --
+    // confirmed as a real, observed effect during this section's own
+    // bring-up, not assumed.
+    check({"the real external gpio_i[3] transition genuinely reached monitor 4's ",
+           "elapsed-time counter through the real registered activity vector"},
+          (dut.u_rtl015.elapsed_us_q[4] < 32'd5), 1'b1);
+
+    repeat (20 * 50 + 100) @(posedge core_clk_i); #1;  // real TIMEOUT_US + margin
+    spi_read32(DFC_ADDR_LLINK_STATUS, rd_data, rd_status);
+    check("LLINK_STATUS SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable LLINK_STATUS.LOST_ACTIVE[4] genuinely asserts: no further ",
+           "real activity arrived after the one gpio_i[3] transition above"},
+          rd_data[4], 1'b1);
+
+    spi_read32(DFC_ADDR_FAULT_ACTIVE_SOURCE, rd_data, rd_status);
+    check("FAULT_ACTIVE_SOURCE SPI read accepted", |rd_status, 1'b0);
+    check({"RTL-013 genuinely observes RTL-015's real lost-link condition on ",
+           "fault_source_i[2] (C.6 'Lost-link condition') through the real top-level wiring"},
+          rd_data[2], 1'b1);
+
+    check({"RTL-012's own real WDOG_STATUS.SERVICE_ACCEPTED state is unaffected by RTL-015's ",
+           "real monitor just proven -- independent state inside the actual RTL-024 ",
+           "top-level integration"},
           dut.rtl012_status[dfc_types_pkg::DFC_RTL012_STATUS__WDOG_STATUS__SERVICE_ACCEPTED_HI],
           1'b1);
 

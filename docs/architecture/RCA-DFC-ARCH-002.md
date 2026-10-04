@@ -618,7 +618,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl013_status_i | input | dfc_rtl013_status_t / 106 | RTL-013.status_o | RTL-001.rtl013_status_i; RTL-002.module_ready_i[12]; RTL-002.module_fault_i[12] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl014_control_o | output | dfc_rtl014_control_t / 513 | RTL-001.rtl014_control_o | RTL-014.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl014_status_i | input | dfc_rtl014_status_t / 115 | RTL-014.status_o | RTL-001.rtl014_status_i; RTL-002.module_ready_i[13]; RTL-002.module_fault_i[13] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl015_control_o | output | dfc_rtl015_control_t / 128 | RTL-001.rtl015_control_o | RTL-015.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl015_control_o | output | dfc_rtl015_control_t / 961 | RTL-001.rtl015_control_o | RTL-015.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl015_status_i | input | dfc_rtl015_status_t / 75 | RTL-015.status_o | RTL-001.rtl015_status_i; RTL-002.module_ready_i[14]; RTL-002.module_fault_i[14] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl016_control_o | output | dfc_rtl016_control_t / 53 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl016_status_i | input | dfc_rtl016_status_t / 52 | RTL-016.status_o | RTL-001.rtl016_status_i; RTL-002.module_ready_i[15]; RTL-002.module_fault_i[15] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
@@ -959,7 +959,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-015.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-015.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[14] | RTL-015.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl015_control_t / 128 | RTL-001.rtl015_control_o | RTL-015.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| control_i | input | dfc_rtl015_control_t / 961 | RTL-001.rtl015_control_o | RTL-015.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
 | status_o | output | dfc_rtl015_status_t / 75 | RTL-015.status_o | RTL-001.rtl015_status_i; RTL-002.module_ready_i[14]; RTL-002.module_fault_i[14] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-015.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-015.evt_valid_o | RTL-005.evt_valid_i[14] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
@@ -2003,7 +2003,7 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 110:108 | ilock_status__first_error_entry | 3 | unsigned | 0 | readback_value |
 | 114:111 | ilock_status__first_error_code | 4 | unsigned | 0 | readback_value |
 
-### dfc_rtl015_control_t — 128 bits
+### dfc_rtl015_control_t — 961 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2022,6 +2022,71 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 93:62 | llink_timeout_us__timeout_us | 32 | unsigned | 1000000 | control_value |
 | 125:94 | llink_recovery_us__recovery_us | 32 | unsigned | 100000 | control_value |
 | 127:126 | llink_activity_inject__heartbeat | 2 | unsigned | 0 | command_pulse |
+| 128 | rtl015_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
+| 129 | llink_monitor_m0__enable | 1 | unsigned | 0 | control_value |
+| 130 | llink_monitor_m0__event_enable | 1 | unsigned | 0 | control_value |
+| 131 | llink_monitor_m0__irq_enable | 1 | unsigned | 0 | control_value |
+| 132 | llink_monitor_m0__fault_enable | 1 | unsigned | 0 | control_value |
+| 136:133 | llink_monitor_m0__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 168:137 | llink_monitor_m0__qualify_us | 32 | unsigned | 0 | control_value |
+| 200:169 | llink_monitor_m0__timeout_us | 32 | unsigned | 0 | control_value |
+| 232:201 | llink_monitor_m0__recovery_us | 32 | unsigned | 0 | control_value |
+| 233 | llink_monitor_m1__enable | 1 | unsigned | 0 | control_value |
+| 234 | llink_monitor_m1__event_enable | 1 | unsigned | 0 | control_value |
+| 235 | llink_monitor_m1__irq_enable | 1 | unsigned | 0 | control_value |
+| 236 | llink_monitor_m1__fault_enable | 1 | unsigned | 0 | control_value |
+| 240:237 | llink_monitor_m1__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 272:241 | llink_monitor_m1__qualify_us | 32 | unsigned | 0 | control_value |
+| 304:273 | llink_monitor_m1__timeout_us | 32 | unsigned | 0 | control_value |
+| 336:305 | llink_monitor_m1__recovery_us | 32 | unsigned | 0 | control_value |
+| 337 | llink_monitor_m2__enable | 1 | unsigned | 0 | control_value |
+| 338 | llink_monitor_m2__event_enable | 1 | unsigned | 0 | control_value |
+| 339 | llink_monitor_m2__irq_enable | 1 | unsigned | 0 | control_value |
+| 340 | llink_monitor_m2__fault_enable | 1 | unsigned | 0 | control_value |
+| 344:341 | llink_monitor_m2__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 376:345 | llink_monitor_m2__qualify_us | 32 | unsigned | 0 | control_value |
+| 408:377 | llink_monitor_m2__timeout_us | 32 | unsigned | 0 | control_value |
+| 440:409 | llink_monitor_m2__recovery_us | 32 | unsigned | 0 | control_value |
+| 441 | llink_monitor_m3__enable | 1 | unsigned | 0 | control_value |
+| 442 | llink_monitor_m3__event_enable | 1 | unsigned | 0 | control_value |
+| 443 | llink_monitor_m3__irq_enable | 1 | unsigned | 0 | control_value |
+| 444 | llink_monitor_m3__fault_enable | 1 | unsigned | 0 | control_value |
+| 448:445 | llink_monitor_m3__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 480:449 | llink_monitor_m3__qualify_us | 32 | unsigned | 0 | control_value |
+| 512:481 | llink_monitor_m3__timeout_us | 32 | unsigned | 0 | control_value |
+| 544:513 | llink_monitor_m3__recovery_us | 32 | unsigned | 0 | control_value |
+| 545 | llink_monitor_m4__enable | 1 | unsigned | 0 | control_value |
+| 546 | llink_monitor_m4__event_enable | 1 | unsigned | 0 | control_value |
+| 547 | llink_monitor_m4__irq_enable | 1 | unsigned | 0 | control_value |
+| 548 | llink_monitor_m4__fault_enable | 1 | unsigned | 0 | control_value |
+| 552:549 | llink_monitor_m4__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 584:553 | llink_monitor_m4__qualify_us | 32 | unsigned | 0 | control_value |
+| 616:585 | llink_monitor_m4__timeout_us | 32 | unsigned | 0 | control_value |
+| 648:617 | llink_monitor_m4__recovery_us | 32 | unsigned | 0 | control_value |
+| 649 | llink_monitor_m5__enable | 1 | unsigned | 0 | control_value |
+| 650 | llink_monitor_m5__event_enable | 1 | unsigned | 0 | control_value |
+| 651 | llink_monitor_m5__irq_enable | 1 | unsigned | 0 | control_value |
+| 652 | llink_monitor_m5__fault_enable | 1 | unsigned | 0 | control_value |
+| 656:653 | llink_monitor_m5__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 688:657 | llink_monitor_m5__qualify_us | 32 | unsigned | 0 | control_value |
+| 720:689 | llink_monitor_m5__timeout_us | 32 | unsigned | 0 | control_value |
+| 752:721 | llink_monitor_m5__recovery_us | 32 | unsigned | 0 | control_value |
+| 753 | llink_monitor_m6__enable | 1 | unsigned | 0 | control_value |
+| 754 | llink_monitor_m6__event_enable | 1 | unsigned | 0 | control_value |
+| 755 | llink_monitor_m6__irq_enable | 1 | unsigned | 0 | control_value |
+| 756 | llink_monitor_m6__fault_enable | 1 | unsigned | 0 | control_value |
+| 760:757 | llink_monitor_m6__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 792:761 | llink_monitor_m6__qualify_us | 32 | unsigned | 0 | control_value |
+| 824:793 | llink_monitor_m6__timeout_us | 32 | unsigned | 0 | control_value |
+| 856:825 | llink_monitor_m6__recovery_us | 32 | unsigned | 0 | control_value |
+| 857 | llink_monitor_m7__enable | 1 | unsigned | 0 | control_value |
+| 858 | llink_monitor_m7__event_enable | 1 | unsigned | 0 | control_value |
+| 859 | llink_monitor_m7__irq_enable | 1 | unsigned | 0 | control_value |
+| 860 | llink_monitor_m7__fault_enable | 1 | unsigned | 0 | control_value |
+| 864:861 | llink_monitor_m7__safety_response_mask | 4 | unsigned | 0 | control_value |
+| 896:865 | llink_monitor_m7__qualify_us | 32 | unsigned | 0 | control_value |
+| 928:897 | llink_monitor_m7__timeout_us | 32 | unsigned | 0 | control_value |
+| 960:929 | llink_monitor_m7__recovery_us | 32 | unsigned | 0 | control_value |
 
 ### dfc_rtl015_status_t — 75 bits
 

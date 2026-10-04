@@ -2747,8 +2747,100 @@ written in this project going forward, not just a historical note.
     `gate.ps1`. place-and-route can run for over two hours, beyond a tool
     call's limit, and running it alongside the gate killed one synthesis
     run outright.
-- **RTL-015 through RTL-023:** spec-complete but **not yet implemented as
-  real RTL.** RTL-015 (Lost-Link Supervisor) is next — see Section 5.
+- **RTL-015 (Lost-Link Supervisor): real, implemented and integrated into
+  `dfc_rtl024.sv` (2026-10-03).** The fourth Safety-domain module. Eight
+  independent activity monitors with qualification/absence-timeout/
+  recovery, bounded test injection, and lane-3 safety requests
+  (ARCH-SAFE-007/008, ARCH-RTL015-001, ARCH-VAL-015). All 10 REG-002
+  0x3300-0x3324 registers forwarded for real through
+  `tools/reggen/rtl015_field_map.json`, reusing RTL-014's `reggen.py` v5
+  `indexed_registers` mechanism unchanged. Full disclosed design:
+  `dfc_rtl015.sv`'s own header and `OPEN_ISSUES.md` items 81-89.
+  - **Decisions made under the person's "run it end to end" instruction**,
+    logged in OPEN_ISSUES 81-89 for review, same discipline as RTL-014's
+    own session (items 66-80).
+  - **Item 81, the biggest resolved finding: the monitor index and the
+    activity-ID index are the SAME fixed 1:1 space, not two separate
+    configurable spaces as RTL-015_RevA.md and the task's own briefing
+    both assumed.** REG-002's real `LLINK_MONITOR_CONTROL` field table has
+    no activity-ID-select field at all — `LLINK_MONITOR_SELECT` picks
+    which monitor's config/readback you're addressing, the same role as
+    RTL-014's `ILOCK_ENTRY_SELECT`, never an activity source.
+  - **Item 83: the `activity_i` bit wiring had FIVE conflicting Appendix A
+    rows**, not one — the largest instance yet of the recurring
+    "later/sibling row disagrees with the port's own definition" class
+    (items 1/10/11/13/19/22/37/44/61/74, now a tenth instance). One of the
+    five (RTL-021/Databus Routing) wasn't even a legal activity ID.
+    Resolved in favor of RTL-015's own Appendix A row, which restates
+    ARCH-SAFE-007's ID order verbatim.
+  - **ARCH-002 growth (item 82):** `dfc_rtl015_control_t` grew 128→961
+    bits — 8×104 bits for a complete per-monitor config bank (all 8
+    monitors run simultaneously; the pre-existing selected-view struct
+    fields can't carry that) plus the 14th EVENT_OVERFLOW-clear field.
+    `dfc_rtl015_status_t` needed **no growth** — `LLINK_STATUS`'s LOST_*
+    fields were already full 8-bit vectors, and `LLINK_ELAPSED_US` was
+    already architected as a single selected-monitor readback.
+  - **Real producers wired for the first time:** RTL-012's own
+    `service_activity_o` port — real since RTL-012's own session, sitting
+    unconsumed ever since — now genuinely reaches RTL-015
+    `activity_i[7]`. GPIO transition (`activity_i[4]`) and health
+    transition (`activity_i[5]`) are derived fresh in `dfc_rtl024.sv` via
+    edge detection on RTL-006's/RTL-011's already-real qualified levels
+    (no module exposes a dedicated pulse port for this), registered one
+    cycle before RTL-015 sees it. `internal_source_vector` bit 30 ("any
+    lost link") is now RTL-015's own real reduction-OR, replacing the
+    prior disclosed stub.
+  - **Two real RTL bugs were found and fixed during this module's own
+    bring-up, confirmed by real simulation traces, not by inspection
+    (items 88/89):**
+    1. `recovery_progress_q[m]` originally free-ran independent of
+       whether the monitor was actually LOST. With `QUALIFY_US=0`
+       ("disabled", always within-qualify), it accumulated stale credit
+       BEFORE a loss even began — the instant a real timeout set
+       `active_q[m]`, the stale credit already satisfied `RECOVERY_US`,
+       clearing it the very next cycle, which let the timeout re-fire
+       immediately, clearing again, forever. A genuine, continuous
+       one-cycle oscillation, caught by a real per-cycle trace. Fixed:
+       held at zero whenever not currently LOST.
+    2. Per-monitor `ENABLE` was extracted but never gated anything.
+       Fixed to hold the timers at zero while disabled, and — found via a
+       real test failure, the same `item 64`-class "a leftover real timer
+       elapses by the time a later test part runs" effect — to also
+       release an already-latched `LOST_ACTIVE[m]` the moment a monitor
+       is disabled, not just suppress future sets.
+  - **Tests.**
+    - `rtl015_integration_tb.sv`: 40/40 checks. Real RTL-006 GPIO and
+      real RTL-012 watchdog-service activity producers; a real RTL-013
+      fault consumer. Covers the fixed mapping, selector-indexed banking,
+      timeout/qualify/recovery timing, injection (natural-dominates,
+      test-inactive rejection, tagged event), configuration rejection,
+      simultaneous-loss priority, and the EVENT_OVERFLOW round trip.
+    - `rtl024_skeleton_tb.sv`: 185→197 checks. Adds a real SPI
+      configuration of monitor 4 and a real external `gpio_i[3]` pad
+      driving a host-readable LOST_ACTIVE through the registered activity
+      vector, plus RTL-013 seeing fault source 2.
+  - **Other testbench changes.** The RTL-015 stub pair was added to all 13
+    `rtl0NN_integration_tb.sv` files and `dri_transaction_tb.sv`.
+    `regbank_smoke_tb.sv` Check 3 was redirected a 14th time (LLINK_STATUS
+    → SAFETY_STATUS).
+  - **Module spec corrected:** `docs/rtl_specs/RTL-015_RevB.md` supersedes
+    Rev A (retired) — the activity-ID-select claim and the activity order
+    were both wrong; Rev A's "10 registers" count was correct, unlike
+    RTL-014's own Rev A.
+  - **Verified on the person's machine.** `gate.ps1`: lint PASSED (24
+    files); sim 19/19 testbenches, 946/946 checks total; formal 2/2
+    (bmc+prove) PASS; coverage 178/353 registers (+10, exactly RTL-015's
+    new register count). `build_ecp5.ps1` (LFE5U-85F-6BG381C) PASSED
+    timing: real, final `pnr.log` line (the last one, per this project's
+    standing convention that earlier lines are pessimistic pre-route
+    estimates) reads `Max frequency for clock '$glbnet$core_clk': 50.53
+    MHz (PASS at 50.00 MHz)`. Worst path (posedge→posedge, RTL-010→
+    RTL-005): 4.30 ns logic + 15.49 ns routing = 19.79 ns total.
+    Utilization: TRELLIS_COMB 33811/83640 (40%), TRELLIS_FF 20549/83640
+    (24%), MULT18X18D 12/156 (7%), TRELLIS_IO 34/365 (9%), EHXPLLL 1/4
+    (25%). Build ID `20261003_145704`.
+- **RTL-016 through RTL-023:** spec-complete but **not yet implemented as
+  real RTL.** RTL-016 (Safety Output Controller) is next — see Section 5.
 - **Build script structural fix (2026-08-26): `build_ecp5.ps1`'s
   `$SourceFiles` list is no longer hardcoded.** This exact gap had been
   hit and reactively fixed 4 separate times (RTL-002, RTL-004, RTL-009,
@@ -3054,16 +3146,20 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-014 are now all real and implemented — RTL-012
-  (Watchdog Manager), RTL-013 (Fault Manager) and RTL-014 (Interlock
-  Engine) are the first three of the Safety domain's five modules (RTL-012
-  through RTL-016); the next real step is RTL-015 (Lost-Link Supervisor)**
-  — read `OPEN_ISSUES.md` items 66-79 first: RTL-015 feeds
-  `internal_source_vector` bit 30 (replace the stub) and RTL-013
-  `fault_source_i[2]`, has its own selector-indexed monitor bank (reuse
-  `reggen.py` v5's `indexed_registers`), and inherits the open event
+- **RTL-002 through RTL-015 are now all real and implemented — RTL-012
+  (Watchdog Manager), RTL-013 (Fault Manager), RTL-014 (Interlock Engine)
+  and RTL-015 (Lost-Link Supervisor) are the first four of the Safety
+  domain's five modules (RTL-012 through RTL-016); the next real step is
+  RTL-016 (Safety Output Controller)** — read `OPEN_ISSUES.md` items 66-89
+  first: RTL-016 is the first real CONSUMER of RTL-012/013/014/015's own
+  `response_req_o` lanes (0-3) and RTL-014's `interlock_satisfied_o`/
+  `interlock_inhibit_o` (both still genuinely unconsumed), owns the
+  physical `safety_out_o[3:0]` pads, and its own `dfc_rtl016_control_t`
+  (53 bits, per REG-002's real `SAFETY_CHANNEL_SELECT`-indexed per-channel
+  registers) is very likely the next selector-indexed-bank candidate for
+  `reggen.py` v5's `indexed_registers`. It also inherits the open event
   `source_id` question (item 74). One module at a time, using the
-  exact same real-verification discipline as RTL-001 through RTL-014
+  exact same real-verification discipline as RTL-001 through RTL-015
   (compile, simulate, and only then trust — never claim something works
   without actually running it). Then the rest of Safety, then Databus, in
   that order (Programmable is now out of scope entirely — see the

@@ -5143,8 +5143,8 @@
     },
     {
       "name": "dfc_rtl015_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl015_control_t (128 bits, rich format)",
-      "width": 128,
+      "trace": "ARCH-002 Appendix B dfc_rtl015_control_t (961 bits, rich format)",
+      "width": 961,
       "fields": [
         {
           "name": "llink_control__enable",
@@ -5280,6 +5280,591 @@
           "signed": false,
           "reset": "0",
           "semantic": "command_pulse"
+        },
+        {
+          "name": "rtl015_evt_overflow_status__event_overflow",
+          "hi": 128,
+          "lo": 128,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
+        },
+        {
+          "name": "llink_monitor_m0__enable",
+          "hi": 129,
+          "lo": 129,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m0__event_enable",
+          "hi": 130,
+          "lo": 130,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m0__irq_enable",
+          "hi": 131,
+          "lo": 131,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m0__fault_enable",
+          "hi": 132,
+          "lo": 132,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m0__safety_response_mask",
+          "hi": 136,
+          "lo": 133,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m0__qualify_us",
+          "hi": 168,
+          "lo": 137,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m0__timeout_us",
+          "hi": 200,
+          "lo": 169,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m0__recovery_us",
+          "hi": 232,
+          "lo": 201,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m1__enable",
+          "hi": 233,
+          "lo": 233,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m1__event_enable",
+          "hi": 234,
+          "lo": 234,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m1__irq_enable",
+          "hi": 235,
+          "lo": 235,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m1__fault_enable",
+          "hi": 236,
+          "lo": 236,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m1__safety_response_mask",
+          "hi": 240,
+          "lo": 237,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m1__qualify_us",
+          "hi": 272,
+          "lo": 241,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m1__timeout_us",
+          "hi": 304,
+          "lo": 273,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m1__recovery_us",
+          "hi": 336,
+          "lo": 305,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m2__enable",
+          "hi": 337,
+          "lo": 337,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m2__event_enable",
+          "hi": 338,
+          "lo": 338,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m2__irq_enable",
+          "hi": 339,
+          "lo": 339,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m2__fault_enable",
+          "hi": 340,
+          "lo": 340,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m2__safety_response_mask",
+          "hi": 344,
+          "lo": 341,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m2__qualify_us",
+          "hi": 376,
+          "lo": 345,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m2__timeout_us",
+          "hi": 408,
+          "lo": 377,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m2__recovery_us",
+          "hi": 440,
+          "lo": 409,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m3__enable",
+          "hi": 441,
+          "lo": 441,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m3__event_enable",
+          "hi": 442,
+          "lo": 442,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m3__irq_enable",
+          "hi": 443,
+          "lo": 443,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m3__fault_enable",
+          "hi": 444,
+          "lo": 444,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m3__safety_response_mask",
+          "hi": 448,
+          "lo": 445,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m3__qualify_us",
+          "hi": 480,
+          "lo": 449,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m3__timeout_us",
+          "hi": 512,
+          "lo": 481,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m3__recovery_us",
+          "hi": 544,
+          "lo": 513,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m4__enable",
+          "hi": 545,
+          "lo": 545,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m4__event_enable",
+          "hi": 546,
+          "lo": 546,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m4__irq_enable",
+          "hi": 547,
+          "lo": 547,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m4__fault_enable",
+          "hi": 548,
+          "lo": 548,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m4__safety_response_mask",
+          "hi": 552,
+          "lo": 549,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m4__qualify_us",
+          "hi": 584,
+          "lo": 553,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m4__timeout_us",
+          "hi": 616,
+          "lo": 585,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m4__recovery_us",
+          "hi": 648,
+          "lo": 617,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m5__enable",
+          "hi": 649,
+          "lo": 649,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m5__event_enable",
+          "hi": 650,
+          "lo": 650,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m5__irq_enable",
+          "hi": 651,
+          "lo": 651,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m5__fault_enable",
+          "hi": 652,
+          "lo": 652,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m5__safety_response_mask",
+          "hi": 656,
+          "lo": 653,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m5__qualify_us",
+          "hi": 688,
+          "lo": 657,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m5__timeout_us",
+          "hi": 720,
+          "lo": 689,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m5__recovery_us",
+          "hi": 752,
+          "lo": 721,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m6__enable",
+          "hi": 753,
+          "lo": 753,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m6__event_enable",
+          "hi": 754,
+          "lo": 754,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m6__irq_enable",
+          "hi": 755,
+          "lo": 755,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m6__fault_enable",
+          "hi": 756,
+          "lo": 756,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m6__safety_response_mask",
+          "hi": 760,
+          "lo": 757,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m6__qualify_us",
+          "hi": 792,
+          "lo": 761,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m6__timeout_us",
+          "hi": 824,
+          "lo": 793,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m6__recovery_us",
+          "hi": 856,
+          "lo": 825,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m7__enable",
+          "hi": 857,
+          "lo": 857,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m7__event_enable",
+          "hi": 858,
+          "lo": 858,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m7__irq_enable",
+          "hi": 859,
+          "lo": 859,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m7__fault_enable",
+          "hi": 860,
+          "lo": 860,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m7__safety_response_mask",
+          "hi": 864,
+          "lo": 861,
+          "width": 4,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m7__qualify_us",
+          "hi": 896,
+          "lo": 865,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m7__timeout_us",
+          "hi": 928,
+          "lo": 897,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "llink_monitor_m7__recovery_us",
+          "hi": 960,
+          "lo": 929,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
         }
       ]
     },
