@@ -14,6 +14,7 @@
 // Cross-module forwarding: RTL-013 (see tools/reggen/rtl013_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-014 (see tools/reggen/rtl014_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-015 (see tools/reggen/rtl015_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-016 (see tools/reggen/rtl016_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -44,6 +45,8 @@
   // Aggregated real RTL-014 control, replacing the prior disconnected placeholder for: ILOCK_CONTROL, ILOCK_ENTRY_SELECT, ILOCK_STAGE_ENABLE, ILOCK_STAGE_GUARD, ILOCK_STAGE_LOGIC, ILOCK_STAGE_RESPONSE, ILOCK_STAGE_TERMS, ILOCK_STATUS, ILOCK_VALIDATE_COMMIT, RTL014_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-015 status, replacing individual ports for: LLINK_ELAPSED_US, LLINK_STATUS, RTL015_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-015 control, replacing the prior disconnected placeholder for: LLINK_ACTIVITY_INJECT, LLINK_CONTROL, LLINK_MONITOR_CONTROL, LLINK_MONITOR_SELECT, LLINK_QUALIFY_US, LLINK_RECOVERY_US, LLINK_STATUS, LLINK_TIMEOUT_US, RTL015_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-016 status, replacing individual ports for: RTL016_EVT_OVERFLOW_STATUS, SAFETY_CHANNEL_STATUS, SAFETY_STATUS
+  // Aggregated real RTL-016 control, replacing the prior disconnected placeholder for: RTL016_EVT_OVERFLOW_STATUS, SAFETY_CHANNEL_CONTROL, SAFETY_CHANNEL_SELECT, SAFETY_CONTROL, SAFETY_INTERLOCK_MASK, SAFETY_RESPONSE_MASK, SAFETY_STATUS
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -129,9 +132,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  route_destination_drop_count_2_3_status_i,
   input  logic [31:0]  route_destination_drop_count_4_status_i,
   input  logic [31:0]  route_active_control_status_i,
-  input  logic [31:0]  safety_status_status_i,
-  input  logic [31:0]  safety_channel_status_status_i,
-  input  logic [31:0]  rtl016_evt_overflow_status_status_i,
   input  logic [31:0]  uli_status_status_i,
   input  logic [31:0]  uli_in_level_status_i,
   input  logic [31:0]  uli_out_level_status_i,
@@ -174,7 +174,9 @@ module dfc_config_regbank_regs (
   input  logic [114:0]  rtl014_status_i,
   output logic [512:0] rtl014_control_o,
   input  logic [74:0]  rtl015_status_i,
-  output logic [960:0] rtl015_control_o
+  output logic [960:0] rtl015_control_o,
+  input  logic [51:0]  rtl016_status_i,
+  output logic [225:0] rtl016_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -2261,8 +2263,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) safety_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_CONTROL)) safety_control_q <= wdata_i;
 
-  // SAFETY_STATUS (0x3404) -- external passthrough, owner RTL-016
-  wire [31:0] safety_status_q = safety_status_status_i;
+  // SAFETY_STATUS (0x3404) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-016, real
+  //   generation per contract REG-3404, not a permanent tie.
+  logic [31:0] safety_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_status_pulse_q <= 32'h0;
+    else safety_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_STATUS)) ? wdata_i : 32'h0;
+
+  // SAFETY_STATUS (0x3404) -- external passthrough, owner RTL-016. Reconstructed from the aggregated rtl016_status_i input (contract REG-3404), not an individual per-register port.
+  wire [31:0] safety_status_q = {12'h0, rtl016_status_i[22:19], rtl016_status_i[18:15], rtl016_status_i[14:11], rtl016_status_i[10:7], rtl016_status_i[6:3]};
 
   // SAFETY_CHANNEL_SELECT (0x3408) -- Mixed: RW, RSV0, owner RTL-001 / RTL-016
   logic [31:0] safety_channel_select_q;
@@ -2270,29 +2280,106 @@ module dfc_config_regbank_regs (
     if (!rst_ni) safety_channel_select_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_SELECT)) safety_channel_select_q <= wdata_i;
 
-  // SAFETY_CHANNEL_CONTROL (0x340C) -- Mixed: RW, RSV0, owner RTL-001 / RTL-016
+  // SAFETY_CHANNEL_CONTROL (0x340C) -- Mixed: RW, RSV0, owner RTL-001 / RTL-016; selector-indexed x4 by SAFETY_CHANNEL_SELECT[1:0] (REG-340C; REG-3408; REG-COH-001)
+  logic [31:0] safety_channel_control_e0_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_channel_control_e0_q <= 32'h00000002;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_CONTROL)) && (safety_channel_select_q[1:0] == 2'd0)) safety_channel_control_e0_q <= wdata_i;
+  logic [31:0] safety_channel_control_e1_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_channel_control_e1_q <= 32'h00000002;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_CONTROL)) && (safety_channel_select_q[1:0] == 2'd1)) safety_channel_control_e1_q <= wdata_i;
+  logic [31:0] safety_channel_control_e2_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_channel_control_e2_q <= 32'h00000002;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_CONTROL)) && (safety_channel_select_q[1:0] == 2'd2)) safety_channel_control_e2_q <= wdata_i;
+  logic [31:0] safety_channel_control_e3_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_channel_control_e3_q <= 32'h00000002;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_CONTROL)) && (safety_channel_select_q[1:0] == 2'd3)) safety_channel_control_e3_q <= wdata_i;
   logic [31:0] safety_channel_control_q;
-  always_ff @(posedge clk_i or negedge rst_ni)
-    if (!rst_ni) safety_channel_control_q <= 32'h00000002;
-    else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_CONTROL)) safety_channel_control_q <= wdata_i;
+  always_comb begin
+    safety_channel_control_q = 32'h00000000;
+    case (safety_channel_select_q[1:0])
+      2'd0: safety_channel_control_q = safety_channel_control_e0_q;
+      2'd1: safety_channel_control_q = safety_channel_control_e1_q;
+      2'd2: safety_channel_control_q = safety_channel_control_e2_q;
+      2'd3: safety_channel_control_q = safety_channel_control_e3_q;
+      default: safety_channel_control_q = 32'h00000000;
+    endcase
+  end
 
-  // SAFETY_RESPONSE_MASK (0x3410) -- RW, owner RTL-001 / RTL-016
+  // SAFETY_RESPONSE_MASK (0x3410) -- RW, owner RTL-001 / RTL-016; selector-indexed x4 by SAFETY_CHANNEL_SELECT[1:0] (REG-3410; REG-3408; REG-COH-001)
+  logic [31:0] safety_response_mask_e0_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_response_mask_e0_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_RESPONSE_MASK)) && (safety_channel_select_q[1:0] == 2'd0)) safety_response_mask_e0_q <= wdata_i;
+  logic [31:0] safety_response_mask_e1_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_response_mask_e1_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_RESPONSE_MASK)) && (safety_channel_select_q[1:0] == 2'd1)) safety_response_mask_e1_q <= wdata_i;
+  logic [31:0] safety_response_mask_e2_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_response_mask_e2_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_RESPONSE_MASK)) && (safety_channel_select_q[1:0] == 2'd2)) safety_response_mask_e2_q <= wdata_i;
+  logic [31:0] safety_response_mask_e3_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_response_mask_e3_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_RESPONSE_MASK)) && (safety_channel_select_q[1:0] == 2'd3)) safety_response_mask_e3_q <= wdata_i;
   logic [31:0] safety_response_mask_q;
-  always_ff @(posedge clk_i or negedge rst_ni)
-    if (!rst_ni) safety_response_mask_q <= 32'h00000000;
-    else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_RESPONSE_MASK)) safety_response_mask_q <= wdata_i;
+  always_comb begin
+    safety_response_mask_q = 32'h00000000;
+    case (safety_channel_select_q[1:0])
+      2'd0: safety_response_mask_q = safety_response_mask_e0_q;
+      2'd1: safety_response_mask_q = safety_response_mask_e1_q;
+      2'd2: safety_response_mask_q = safety_response_mask_e2_q;
+      2'd3: safety_response_mask_q = safety_response_mask_e3_q;
+      default: safety_response_mask_q = 32'h00000000;
+    endcase
+  end
 
-  // SAFETY_INTERLOCK_MASK (0x3414) -- Mixed: RW, RSV0, owner RTL-001 / RTL-016
+  // SAFETY_INTERLOCK_MASK (0x3414) -- Mixed: RW, RSV0, owner RTL-001 / RTL-016; selector-indexed x4 by SAFETY_CHANNEL_SELECT[1:0] (REG-3414; REG-3408; REG-COH-001)
+  logic [31:0] safety_interlock_mask_e0_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_interlock_mask_e0_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_INTERLOCK_MASK)) && (safety_channel_select_q[1:0] == 2'd0)) safety_interlock_mask_e0_q <= wdata_i;
+  logic [31:0] safety_interlock_mask_e1_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_interlock_mask_e1_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_INTERLOCK_MASK)) && (safety_channel_select_q[1:0] == 2'd1)) safety_interlock_mask_e1_q <= wdata_i;
+  logic [31:0] safety_interlock_mask_e2_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_interlock_mask_e2_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_INTERLOCK_MASK)) && (safety_channel_select_q[1:0] == 2'd2)) safety_interlock_mask_e2_q <= wdata_i;
+  logic [31:0] safety_interlock_mask_e3_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) safety_interlock_mask_e3_q <= 32'h00000000;
+    else if ((write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_INTERLOCK_MASK)) && (safety_channel_select_q[1:0] == 2'd3)) safety_interlock_mask_e3_q <= wdata_i;
   logic [31:0] safety_interlock_mask_q;
+  always_comb begin
+    safety_interlock_mask_q = 32'h00000000;
+    case (safety_channel_select_q[1:0])
+      2'd0: safety_interlock_mask_q = safety_interlock_mask_e0_q;
+      2'd1: safety_interlock_mask_q = safety_interlock_mask_e1_q;
+      2'd2: safety_interlock_mask_q = safety_interlock_mask_e2_q;
+      2'd3: safety_interlock_mask_q = safety_interlock_mask_e3_q;
+      default: safety_interlock_mask_q = 32'h00000000;
+    endcase
+  end
+
+  // SAFETY_CHANNEL_STATUS (0x3418) -- external passthrough, owner RTL-016. Reconstructed from the aggregated rtl016_status_i input (contract REG-3418), not an individual per-register port.
+  wire [31:0] safety_channel_status_q = {19'h0, rtl016_status_i[51:51], rtl016_status_i[50:50], rtl016_status_i[49:49], rtl016_status_i[48:48], rtl016_status_i[47:47], rtl016_status_i[30:30], rtl016_status_i[29:29], rtl016_status_i[28:28], rtl016_status_i[27:27], rtl016_status_i[26:26], rtl016_status_i[25:25], rtl016_status_i[24:24], rtl016_status_i[23:23]};
+
+  // RTL016_EVT_OVERFLOW_STATUS (0x341C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-016, real
+  //   generation per contract REG-341C, not a permanent tie.
+  logic [31:0] rtl016_evt_overflow_status_pulse_q;
   always_ff @(posedge clk_i or negedge rst_ni)
-    if (!rst_ni) safety_interlock_mask_q <= 32'h00000000;
-    else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_SAFETY_INTERLOCK_MASK)) safety_interlock_mask_q <= wdata_i;
+    if (!rst_ni) rtl016_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl016_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL016_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // SAFETY_CHANNEL_STATUS (0x3418) -- external passthrough, owner RTL-016
-  wire [31:0] safety_channel_status_q = safety_channel_status_status_i;
-
-  // RTL016_EVT_OVERFLOW_STATUS (0x341C) -- external passthrough, owner RTL-016
-  wire [31:0] rtl016_evt_overflow_status_q = rtl016_evt_overflow_status_status_i;
+  // RTL016_EVT_OVERFLOW_STATUS (0x341C) -- external passthrough, owner RTL-016. Reconstructed from the aggregated rtl016_status_i input (contract REG-341C), not an individual per-register port.
+  wire [31:0] rtl016_evt_overflow_status_q = {8'h0, rtl016_status_i[46:31], 7'h0, rtl016_status_i[2:2]};
 
   // ULI_CONTROL (0x4000) -- Mixed: RW, WO-CMD, RSV0, owner RTL-022
   logic [31:0] uli_control_q;
@@ -2945,6 +3032,46 @@ module dfc_config_regbank_regs (
   assign rtl015_control_o[1] = llink_control_q[1:1];  // LLINK_CONTROL.llink_control__event_enable
   assign rtl015_control_o[0] = llink_control_q[0:0];  // LLINK_CONTROL.llink_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl016_control_o -- real forwarding to RTL-016, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl016_control_t defines --
+  // cross-checked at generation time (226/226 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl016_control_o[225] = rtl016_evt_overflow_status_pulse_q[0:0];  // RTL016_EVT_OVERFLOW_STATUS.rtl016_evt_overflow_status__event_overflow
+  assign rtl016_control_o[224:217] = safety_interlock_mask_e3_q[7:0];  // SAFETY_INTERLOCK_MASK.safety_channel_c3__required_interlocks
+  assign rtl016_control_o[216:185] = safety_response_mask_e3_q[31:0];  // SAFETY_RESPONSE_MASK.safety_channel_c3__response_source_mask
+  assign rtl016_control_o[184] = safety_channel_control_e3_q[1:1];  // SAFETY_CHANNEL_CONTROL.safety_channel_c3__active_high
+  assign rtl016_control_o[183] = safety_channel_control_e3_q[2:2];  // SAFETY_CHANNEL_CONTROL.safety_channel_c3__latch_response
+  assign rtl016_control_o[182] = safety_channel_control_e3_q[0:0];  // SAFETY_CHANNEL_CONTROL.safety_channel_c3__enable
+  assign rtl016_control_o[181:174] = safety_interlock_mask_e2_q[7:0];  // SAFETY_INTERLOCK_MASK.safety_channel_c2__required_interlocks
+  assign rtl016_control_o[173:142] = safety_response_mask_e2_q[31:0];  // SAFETY_RESPONSE_MASK.safety_channel_c2__response_source_mask
+  assign rtl016_control_o[141] = safety_channel_control_e2_q[1:1];  // SAFETY_CHANNEL_CONTROL.safety_channel_c2__active_high
+  assign rtl016_control_o[140] = safety_channel_control_e2_q[2:2];  // SAFETY_CHANNEL_CONTROL.safety_channel_c2__latch_response
+  assign rtl016_control_o[139] = safety_channel_control_e2_q[0:0];  // SAFETY_CHANNEL_CONTROL.safety_channel_c2__enable
+  assign rtl016_control_o[138:131] = safety_interlock_mask_e1_q[7:0];  // SAFETY_INTERLOCK_MASK.safety_channel_c1__required_interlocks
+  assign rtl016_control_o[130:99] = safety_response_mask_e1_q[31:0];  // SAFETY_RESPONSE_MASK.safety_channel_c1__response_source_mask
+  assign rtl016_control_o[98] = safety_channel_control_e1_q[1:1];  // SAFETY_CHANNEL_CONTROL.safety_channel_c1__active_high
+  assign rtl016_control_o[97] = safety_channel_control_e1_q[2:2];  // SAFETY_CHANNEL_CONTROL.safety_channel_c1__latch_response
+  assign rtl016_control_o[96] = safety_channel_control_e1_q[0:0];  // SAFETY_CHANNEL_CONTROL.safety_channel_c1__enable
+  assign rtl016_control_o[95:88] = safety_interlock_mask_e0_q[7:0];  // SAFETY_INTERLOCK_MASK.safety_channel_c0__required_interlocks
+  assign rtl016_control_o[87:56] = safety_response_mask_e0_q[31:0];  // SAFETY_RESPONSE_MASK.safety_channel_c0__response_source_mask
+  assign rtl016_control_o[55] = safety_channel_control_e0_q[1:1];  // SAFETY_CHANNEL_CONTROL.safety_channel_c0__active_high
+  assign rtl016_control_o[54] = safety_channel_control_e0_q[2:2];  // SAFETY_CHANNEL_CONTROL.safety_channel_c0__latch_response
+  assign rtl016_control_o[53] = safety_channel_control_e0_q[0:0];  // SAFETY_CHANNEL_CONTROL.safety_channel_c0__enable
+  assign rtl016_control_o[52] = safety_control_q[3:3];  // SAFETY_CONTROL.safety_control__global_inhibit
+  assign rtl016_control_o[51:44] = safety_interlock_mask_q[7:0];  // SAFETY_INTERLOCK_MASK.safety_interlock_mask__required_interlocks
+  assign rtl016_control_o[43:12] = safety_response_mask_q[31:0];  // SAFETY_RESPONSE_MASK.safety_response_mask__response_source_mask
+  assign rtl016_control_o[11] = safety_channel_control_q[1:1];  // SAFETY_CHANNEL_CONTROL.safety_channel_control__active_high
+  assign rtl016_control_o[10] = safety_channel_control_q[2:2];  // SAFETY_CHANNEL_CONTROL.safety_channel_control__latch_response
+  assign rtl016_control_o[9] = safety_channel_control_q[0:0];  // SAFETY_CHANNEL_CONTROL.safety_channel_control__enable
+  assign rtl016_control_o[8:7] = safety_channel_select_q[1:0];  // SAFETY_CHANNEL_SELECT.safety_channel_select__channel
+  assign rtl016_control_o[6:3] = safety_status_pulse_q[19:16];  // SAFETY_STATUS.safety_status__event
+  assign rtl016_control_o[2] = safety_control_q[2:2];  // SAFETY_CONTROL.safety_control__irq_enable
+  assign rtl016_control_o[1] = safety_control_q[1:1];  // SAFETY_CONTROL.safety_control__event_enable
+  assign rtl016_control_o[0] = safety_control_q[0:0];  // SAFETY_CONTROL.safety_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -3266,13 +3393,13 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_LLINK_ACTIVITY_INJECT: begin rdata_o = llink_activity_inject_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_RTL015_EVT_OVERFLOW_STATUS: begin rdata_o = rtl015_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_CONTROL: begin rdata_o = safety_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_SAFETY_STATUS: begin rdata_o = safety_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_SAFETY_STATUS: begin rdata_o = safety_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_SELECT: begin rdata_o = safety_channel_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_CONTROL: begin rdata_o = safety_channel_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_RESPONSE_MASK: begin rdata_o = safety_response_mask_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_INTERLOCK_MASK: begin rdata_o = safety_interlock_mask_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_STATUS: begin rdata_o = safety_channel_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL016_EVT_OVERFLOW_STATUS: begin rdata_o = rtl016_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL016_EVT_OVERFLOW_STATUS: begin rdata_o = rtl016_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_CONTROL: begin rdata_o = uli_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_ULI_STATUS: begin rdata_o = uli_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_PARAM0: begin rdata_o = uli_param0_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

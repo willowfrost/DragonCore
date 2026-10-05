@@ -107,6 +107,14 @@ each one is met; it does not restate the rules.
 - **Evaluation and violation** follow `ARCH-SAFE-006`.
   - `ILOCK_CONTROL.ENABLE` gates every entry (item 70).
   - Reset clears every active entry to disabled.
+  - **`interlock_terms_q` (item 99, real timing fix, added once RTL-016's
+    own build tipped an already-marginal path over 50 MHz):** the 64:1
+    term-select mux reads a second, free-running registered copy of
+    `interlock_terms_i`, NOT gated by `commit_accept`/`active_q`'s own
+    update -- this adds one CORE_CLK cycle between a real-world term
+    change and its reflection in violation state, but does not affect the
+    same-edge guard rule below (that rule is about the BANK's own commit
+    timing, not the term source's freshness).
 - **Same-edge guard rule** (`ARCH-SAFE-006` final clause, VP-SAFE-007).
   - The violation, guard, inhibit, satisfied, response, and fault outputs
     are all registered from one evaluation, on one edge.

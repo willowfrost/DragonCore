@@ -620,7 +620,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl014_status_i | input | dfc_rtl014_status_t / 115 | RTL-014.status_o | RTL-001.rtl014_status_i; RTL-002.module_ready_i[13]; RTL-002.module_fault_i[13] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl015_control_o | output | dfc_rtl015_control_t / 961 | RTL-001.rtl015_control_o | RTL-015.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl015_status_i | input | dfc_rtl015_status_t / 75 | RTL-015.status_o | RTL-001.rtl015_status_i; RTL-002.module_ready_i[14]; RTL-002.module_fault_i[14] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl016_control_o | output | dfc_rtl016_control_t / 53 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl016_control_o | output | dfc_rtl016_control_t / 226 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl016_status_i | input | dfc_rtl016_status_t / 52 | RTL-016.status_o | RTL-001.rtl016_status_i; RTL-002.module_ready_i[15]; RTL-002.module_fault_i[15] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl017_control_o | output | dfc_rtl017_control_t / 103 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl017_status_i | input | dfc_rtl017_status_t / 256 | RTL-017.status_o | RTL-001.rtl017_status_i; RTL-002.module_ready_i[16]; RTL-002.module_fault_i[16] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
@@ -981,7 +981,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-016.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-016.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[15] | RTL-016.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl016_control_t / 53 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| control_i | input | dfc_rtl016_control_t / 226 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
 | status_o | output | dfc_rtl016_status_t / 52 | RTL-016.status_o | RTL-001.rtl016_status_i; RTL-002.module_ready_i[15]; RTL-002.module_fault_i[15] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-016.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-016.evt_valid_o | RTL-005.evt_valid_i[15] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
@@ -2101,7 +2101,20 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 58:27 | llink_elapsed_us__elapsed_us | 32 | unsigned | 0x00000000 | readback_value |
 | 74:59 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 
-### `dfc_rtl016_control_t` — 53 bits
+### `dfc_rtl016_control_t` — 226 bits
+
+All four logical safety-output channels run simultaneously and
+continuously (each independently evaluates its own `PERMIT[c]` every
+cycle per SS10.4), so a single selected-only view of
+`SAFETY_CHANNEL_CONTROL`/`SAFETY_RESPONSE_MASK`/`SAFETY_INTERLOCK_MASK`
+cannot carry the live configuration of all four — the same architectural
+problem `dfc_rtl014_control_t` (item 68) and `dfc_rtl015_control_t`
+(item 82) already solved. The struct keeps the pre-existing
+selected-channel view (bits 9-11, 12-43, 44-51, forwarded but
+functionally unused by `dfc_rtl016.sv` per the item 73 precedent) and
+adds a complete 4-channel array (`safety_channel_c<0..3>__*`, 43 bits
+each) below, reusing `reggen.py` v5's `indexed_registers` mechanism
+unchanged (`OPEN_ISSUES.md` item 90).
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2116,6 +2129,27 @@ The following structures are exact packed interfaces between RTL-001 and the fun
 | 43:12 | safety_response_mask__response_source_mask | 32 | unsigned | 0 | control_value |
 | 51:44 | safety_interlock_mask__required_interlocks | 8 | unsigned | 0 | control_value |
 | 52 | safety_control__global_inhibit | 1 | unsigned | 1 | explicit global inhibit; independent of controller enable |
+| 53 | safety_channel_c0__enable | 1 | unsigned | 0 | control_value |
+| 54 | safety_channel_c0__latch_response | 1 | unsigned | 0 | control_value |
+| 55 | safety_channel_c0__active_high | 1 | unsigned | 1 | control_value |
+| 87:56 | safety_channel_c0__response_source_mask | 32 | unsigned | 0 | control_value |
+| 95:88 | safety_channel_c0__required_interlocks | 8 | unsigned | 0 | control_value |
+| 96 | safety_channel_c1__enable | 1 | unsigned | 0 | control_value |
+| 97 | safety_channel_c1__latch_response | 1 | unsigned | 0 | control_value |
+| 98 | safety_channel_c1__active_high | 1 | unsigned | 1 | control_value |
+| 130:99 | safety_channel_c1__response_source_mask | 32 | unsigned | 0 | control_value |
+| 138:131 | safety_channel_c1__required_interlocks | 8 | unsigned | 0 | control_value |
+| 139 | safety_channel_c2__enable | 1 | unsigned | 0 | control_value |
+| 140 | safety_channel_c2__latch_response | 1 | unsigned | 0 | control_value |
+| 141 | safety_channel_c2__active_high | 1 | unsigned | 1 | control_value |
+| 173:142 | safety_channel_c2__response_source_mask | 32 | unsigned | 0 | control_value |
+| 181:174 | safety_channel_c2__required_interlocks | 8 | unsigned | 0 | control_value |
+| 182 | safety_channel_c3__enable | 1 | unsigned | 0 | control_value |
+| 183 | safety_channel_c3__latch_response | 1 | unsigned | 0 | control_value |
+| 184 | safety_channel_c3__active_high | 1 | unsigned | 1 | control_value |
+| 216:185 | safety_channel_c3__response_source_mask | 32 | unsigned | 0 | control_value |
+| 224:217 | safety_channel_c3__required_interlocks | 8 | unsigned | 0 | control_value |
+| 225 | rtl016_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
 
 ### dfc_rtl016_status_t — 52 bits
 

@@ -2242,3 +2242,254 @@ MULT18X18D 12/156 (7%), TRELLIS_IO 34/365 (9%), EHXPLLL 1/4 (25%).
 Build ID `20261003_145704`; bitstream
 `output/bitstreams/ulx3s_dfc_20261003_145704.bit`
 (SHA-256 `7E7AFD52AA194FF3B3ABB672A8C910406B36C224B083C39891BA7A2C21D1AF63`).
+
+## RTL-016 (Safety Output Controller) integration — closes the Safety domain
+
+**Approval note, read first (same as item 66/81's own note):** every
+ARCH-002/generator decision below was made under the person's explicit
+instruction to run the RTL-016 task end to end without stopping for
+item-by-item approval. Each one is a real, disclosed decision, logged here
+so it can be reviewed and reversed through the normal process, not a
+silently settled fact.
+
+90. **RESOLVED (2026-10-04): the real Appendix A port list has 22 ports,
+    not ~16, and `dfc_rtl016_control_t` is really 226 bits (grown from
+    53), not RevA's claimed 52/47 for control/status.** RevA's own SS2
+    "RTL-016-specific" list named only `response_req_i`/`fault_inhibit_i`/
+    `safety_out_o` -- standard group (13) plus those three reaches 16, not
+    22. The real Appendix A rows add six more this module genuinely owns:
+    `irq_req_o` (RTL-003.irq_source_i[17]), `fault_req_o`
+    (RTL-013.fault_source_i[3]), `interlock_satisfied_i[7:0]`
+    (RTL-014.interlock_satisfied_o), `interlock_inhibit_i[7:0]`
+    (RTL-014.interlock_inhibit_o, idle 1), `effective_operational_enable_i`
+    (RTL-002), and `test_inhibit_i` (RTL-024, idle 1 during reset,
+    CDC-TEST-001). Built against the real 22-port list directly.
+    `dfc_rtl016_control_t` grew 53->226 bits: a complete 4-channel array
+    (`safety_channel_c<0..3>__*`, 43 bits each: enable/active_high/
+    latch_response/response_source_mask[32]/required_interlocks[8]) via
+    `reggen.py` v5's `indexed_registers` mechanism (reused unchanged a
+    third time, zero new generator work -- items 68/82 precedent), plus 1
+    bit for `rtl016_evt_overflow_status__event_overflow` -- a real gap
+    found while writing `rtl016_field_map.json`: ARCH-002's first-draft
+    `dfc_rtl016_control_t` omitted RTL-016's own EVENT_OVERFLOW-clear-
+    forwarding control field entirely, the 15th instance of this same gap
+    class (item 6 precedent). `dfc_rtl016_status_t` needed NO growth
+    (confirmed, not assumed): `SAFETY_STATUS`'s own `COMMANDED`/
+    `EFFECTIVE`/`INHIBITED`/`FAULTED`/`EVENT` fields are already complete
+    4-bit-per-channel aggregates, and `SAFETY_CHANNEL_STATUS` is
+    intentionally a single selected-channel view (same precedent as
+    RTL-014's `ILOCK_ACTIVE_RESULT`/RTL-015's `LLINK_ELAPSED_US`).
+    `RTL016_EVT_OVERFLOW_STATUS` (0x341C) was already present in REG-002
+    and already named in RevA -- unlike every module from RTL-002 through
+    RTL-015, this was NOT a gap to add; confirmed real and wired for real.
+
+91. **RESOLVED (2026-10-04): `GLOBAL_INHIBIT` is its own independent RW
+    field, not `!safety_control__enable` as RevA's own SS3 equation
+    claimed.** REG-002's real `SAFETY_CONTROL` (0x3400) has bit 0 `ENABLE`
+    (reset 0) and bit 3 `GLOBAL_INHIBIT` (reset 1) as two INDEPENDENT RW
+    fields -- `GLOBAL_INHIBIT`'s own write-validation text says explicitly
+    "does not alter controller enable." `SAFETY_CHANNEL_STATUS`
+    independently confirms with two separate readback bits
+    (`CONTROLLER_DISABLED` bit 10, `GLOBAL_INHIBIT` bit 11, both reset 1).
+    `dfc_rtl016.sv` uses both as separate PERMIT[c] AND terms -- collapsing
+    them into one signal (RevA's equation) would mean a host could never
+    inhibit outputs globally without fully disabling the controller, or
+    vice versa, a real functional/safety distinction.
+
+92. **RESOLVED (2026-10-04): `fault_inhibit_i` is genuinely per-channel,
+    not module-wide as RevA's own SS3 prose claimed ("asserted for EVERY
+    channel... RTL-013-wide, not per-channel-specific").** The real
+    Appendix A row for `fault_inhibit_i` says "per-channel active-high
+    inhibit," sourced from `RTL-013.safety_inhibit_o` -- a real 4-bit
+    port, not a single bit fanned out. Confirmed directly against
+    `dfc_rtl013.sv`'s own driving assignment:
+    `safety_inhibit_o = {4{ctl_enable && (|nonrecoverable_active17)}}` --
+    all four bits DO currently carry the same value (RTL-013 has no real
+    per-channel fault classification yet), but `dfc_rtl016.sv` indexes the
+    port per channel (`fault_inhibit_i[c]`), not as a single module-wide
+    gate, so a future RTL-013 revision with real per-channel fault scoping
+    needs no RTL-016 change.
+
+93. **RESOLVED (2026-10-04): TEST_DEBUG is a genuinely separate term this
+    module must OR in itself -- NOT already inside `test_inhibit_i`.**
+    ARCH-002 SS10.4 defines `TEST_INHIBIT` as the OR of (a) physical
+    production-test authorization, (b) qualified test-active, AND (c)
+    TEST_DEBUG. But `test_inhibit_i`'s own Appendix A producer description
+    is only "RTL-024 physical test authorization OR test-active" -- terms
+    (a) and (b), NOT (c). TEST_DEBUG (`dfc_operating_state_t` 3'b111) is a
+    distinct primary operating state this module already receives via
+    `operating_state_i`, orthogonal to the registered `test_active_i`
+    qualifier RTL-002 broadcasts separately. `dfc_rtl016.sv` therefore ORs
+    `operating_state_i==TEST_DEBUG` into `test_inhibit_i` itself to form
+    the single `TEST_INHIBIT` term PERMIT[c] uses -- algebraically
+    identical to RevA's own two separate `!test_inhibit & !TEST_DEBUG` AND
+    terms (De Morgan: `!A & !B` == `!(A|B)`), so RevA's PERMIT *value* was
+    actually right here even though its stated reasoning ("already
+    included") was not; the real canonical PERMIT[c] (ARCH-002 line 349)
+    has exactly ONE TEST_INHIBIT term, not two, and the combined value is
+    also what `SAFETY_CHANNEL_STATUS.TEST_INHIBIT` (bit 7) reports.
+
+94. **RESOLVED (2026-10-04): PERMIT[c] is a real nine-term AND, not RevA's
+    eight.** RevA omitted `RESET_HELD[c]` and conflated
+    `CONTROLLER_DISABLED` into `GLOBAL_INHIBIT` (item 91). The real
+    equation (ARCH-002 line 349): `PERMIT[c] = !CHANNEL_DISABLED[c] &
+    !CONTROLLER_DISABLED & !GLOBAL_INHIBIT & !OPERATIONAL_INHIBIT &
+    !OBSERVATIONAL_INHIBIT & !TEST_INHIBIT & !INTERLOCK_INHIBIT[c] &
+    !FAULT_INHIBIT[c] & !RESET_HELD[c]`. `RESET_HELD` is computed once
+    (shared across channels, no per-channel reset mechanism exists) as
+    `!core_rst_n_i | module_reset_i | (operating_state_i==RESET_ACTIVE)`
+    -- covering external reset, safety-domain/system reset (RTL-002
+    dispatches both to `module_reset_o[15]` per ARCH-RST-006), and
+    reset-release qualification. In practice every other PERMIT term
+    already independently reads its own "blocked" reset-default value
+    while truly in reset (the DRI bus cannot be written while held in
+    reset), so `RESET_HELD` is implemented faithfully per the literal
+    nine-term equation rather than omitted as provably redundant under
+    today's wiring (CHTR-DOC-006).
+
+95. **RESOLVED (2026-10-04), the single most structurally subtle finding
+    this session: `INTERLOCK_INHIBIT[c]` must use RTL-014's GUARD-indexed
+    `interlock_inhibit_o`, NOT its ENTRY-indexed `interlock_satisfied_o`.**
+    `dfc_rtl014.sv`'s own header comment (its own SS5 "GUARDS") is
+    unambiguous: `GUARD_ALLOWED[g]` = no effective-violated entry has bit
+    `g` in its guard mask; `interlock_inhibit_o = ~GUARD_ALLOWED` is
+    indexed PER GUARD (an 8-position space RTL-014's own per-entry 8-bit
+    `guard_mask` fields select into), while
+    `interlock_satisfied_o[e] = ENTRY_TRUE[e]` is indexed PER ENTRY
+    (RTL-014's own 8 interlock expressions) -- "the two ports would be
+    redundant complements if both were per guard" (RTL-014's own words).
+    These are NOT the same 8-bit space. REG-002's real
+    `SAFETY_INTERLOCK_MASK` (0x3414).`REQUIRED_INTERLOCKS` is "Required
+    interlock-permission mask for SELECTED CHANNEL" -- a per-channel
+    subset of the GUARD space, confirming
+    `INTERLOCK_INHIBIT[c] = OR over g in required_interlocks[c] of
+    interlock_inhibit_i[g]`. `interlock_satisfied_i` (entry-indexed) is
+    consequently a real Appendix A port this module receives with NO
+    functional use in the PERMIT equation and NO REG-002 status field
+    anywhere to expose it (`SAFETY_CHANNEL_STATUS` has no "satisfied" bit,
+    only `INTERLOCK_INHIBIT`) -- a disclosed, genuinely unused real input,
+    consumed only by the unused-port sink, confirmed by a real test
+    (toggling it has no effect) not just by inspection.
+
+96. **RESOLVED (2026-10-04), the two-layer response-authorization model --
+    resolved from first principles, since neither RevA nor ARCH-002
+    SS10.4's prose spells this out in full, though C.8 and REG-ENC-015
+    together fix it exactly.** Each lane's `dfc_safety_response_req_t`
+    carries THREE fields: valid, source_id (0-7, which of that lane's own
+    sources is currently winning), and response_mask (4 bits -- the
+    PRODUCER's own already-configured "which of RTL-016's 4 output
+    channels do I want" selection, e.g. RTL-014's own per-entry
+    SAFETY_RESPONSE_MASK field). SEPARATELY, THIS module's own
+    SAFETY_RESPONSE_MASK register (0x3410, selected-channel-indexed, 32
+    bits, legal bits only C.8's 0/8/16-23/24-31) is channel c's
+    AUTHORIZATION over the full 32-position (lane,source) space
+    (`mask_bit = 8*lane + source_id`, ARCH-002 SS10.2). `AUTHORIZED_REQ[c]`
+    therefore requires BOTH: the producer's own response_mask bit c set,
+    AND this module's own channel-c authorization bit (8*lane+source_id)
+    set -- a genuine two-key design (the source decides what it wants;
+    this module's own host-configured authorization independently decides
+    whether it is allowed), matching SS10.4's literal "whose response mask
+    contains c AND whose fixed authorization bit is set" wording. Verified
+    with both a positive test (both keys set -> authorized) and a negative
+    test (producer wants it, this module's own authorization bit for that
+    exact (lane,source) not set -> NOT authorized) in
+    `rtl016_integration_tb.sv` Part 6.
+
+97. **RESOLVED (2026-10-04), `LATCHED_REQUEST[c]` clear semantics --
+    ARCH-002 SS10.4's literal text, more specific than and not identical
+    to RTL-014/015's own "disable releases" precedent (items 68/89).** The
+    clear is qualified "after every contributing request is inactive" for
+    the level-held cause (channel disable): while disabled AND
+    `REQUESTED[c]` is still live, the latch HOLDS (new evidence dominates
+    a level-held clear attempt, the same project-wide sticky precedent)
+    and only actually clears the cycle `REQUESTED[c]` drops. "Re-enabling
+    a channel begins with its latch clear" is a SEPARATE, unconditional
+    edge-triggered override applied exactly on the disabled-to-enabled
+    transition, regardless of any request still live that cycle (a
+    deliberate host action; PERMIT[c] still gates the actual output
+    independently). `core_rst_n_i`/`module_reset_i` clear the latch
+    unconditionally via the ordinary reset branch, the same as every other
+    sticky/latch register in this project (RTLSTD-RST-005/008) --
+    satisfying "safety-domain reset, system reset, external reset"
+    without needing a request-inactive qualifier on the reset path itself.
+
+98. **REAL, EMPIRICALLY-CONFIRMED FINDING -- NOT caused by RTL-016, found
+    while verifying RTL-016's own whole-system integration.**
+    `rtl024_skeleton_tb.sv`'s long-standing "RTL-002 reaches FAULTED via
+    the ~499,000-cycle mandatory-init timeout" outcome was expected to
+    change now that every mandatory-mask module (RTL-001/002/004/005/
+    012/013/014/015/016/024) is finally real -- it does NOT, confirmed by
+    actually running the test (197/197, then 219/219 with the new RTL-016
+    section, both reaching FAULTED exactly as before), not by assuming the
+    fix would land automatically. The real root cause is a genuine
+    structural self-reference in RTL-002's own already-shipped FSM, found
+    by reading `dfc_rtl002.sv` directly after the empirical result
+    contradicted the expectation: `mandatory_ready_now` requires
+    `module_ready_i[1]` (RTL-002's OWN self-looped `status_o.ready`), but
+    RTL-002's own `status_o.ready = host_ready_q && init_complete_q`, and
+    `init_complete_q` is only set the cycle STARTUP transitions away
+    (which itself requires `mandatory_ready_now`) -- a self-referential
+    gate that can never be satisfied by `mandatory_ready_now` alone,
+    regardless of how many OTHER mandatory modules are real.
+    `init_timeout_expired` is therefore not a disclosed consequence of
+    incomplete stub topology (this project's own standing assumption,
+    carried in `rtl024_skeleton_tb.sv`'s own comments since early
+    sessions); it is the ONLY path STARTUP can ever leave by in the
+    current RTL-002 design. Not fixed here -- out of RTL-016's own scope,
+    a real, disclosed finding about already-shipped RTL-002, logged for
+    whoever picks up RTL-002 again, not silently worked around.
+    `rtl024_skeleton_tb.sv`'s own comment block was corrected in the same
+    pass (removing the now-wrong "remaining stub module" attribution).
+
+99. **REAL TIMING FIX, found by `build_ecp5.ps1`, not assumed: a real,
+    already-marginal path inside already-shipped `dfc_rtl014.sv` failed
+    for the first time once RTL-016's own added placement/routing
+    pressure tipped it over -- 49.52 MHz vs 50.00 MHz required.** The real
+    critical path report traced from a flop inside RTL-024's own
+    `internal_source_vector_q` (already registered, per items 48/57/65's
+    own fan-in-hub precedent), combinationally through RTL-014's own
+    64:1 term-select mux (`tv[e][k] = interlock_terms_i[active_q[...]] ^
+    active_q[...]`, 32 of these -- 8 entries x 4 terms, each a real 64:1
+    dynamic multiplexer) and expression evaluation, into `fault_q` -- one
+    long hop, 4.03 ns logic + 16.16 ns routing = 20.19 ns, the routing
+    portion dominated by the long physical distance between
+    `internal_source_vector_q`'s bits and RTL-014's own mux. **Fix:** a
+    new free-running `interlock_terms_q` register inside `dfc_rtl014.sv`
+    itself, registering `interlock_terms_i` again, UNCONDITIONALLY every
+    cycle -- deliberately NOT tied to `commit_accept`/`active_q`'s own
+    update, so it adds no delay to `ARCH-RTL014-001`'s own "same-edge
+    guard rule" / "no grace period for a freshly committed bank"
+    guarantee (that rule governs how fast the BANK's own configuration
+    takes effect, not how fresh the external term-source vector is). The
+    64:1 mux now reads `interlock_terms_q` instead of `interlock_terms_i`,
+    splitting the one long hop into two: external flop -> (already-
+    existing) `internal_source_vector_q` -> (new) `interlock_terms_q`,
+    then `interlock_terms_q` + `active_q` -> the SAME-EDGE evaluation ->
+    `fault_q`/etc, exactly as before. The only real, disclosed consequence
+    is one additional CORE_CLK cycle between a real-world
+    `interlock_terms_i` change and its reflection in violation state --
+    the same "capture this cycle, commit the next" precedent already used
+    repeatedly in this project (items 41/57/65), applied one stage closer
+    to this specific consumer. Re-ran the full `gate.ps1` regression after
+    the fix: identical results (`rtl014_integration_tb.sv` still 105/105,
+    `rtl024_skeleton_tb.sv` still 219/219) -- the extra cycle did not
+    break any existing check's own timing margin. This is the same
+    discipline the RTL-014 session's own RTL-005 fix established: a fix
+    to an already-shipped file is applied directly when a real build
+    demands it, fully disclosed here, verified via full regression, never
+    worked around with `--timing-allow-fail` or seed-hunting. Confirmed
+    by a real, complete rebuild: final `pnr.log` reads `Max frequency for
+    clock '$glbnet$core_clk': 51.22 MHz (PASS at 50.00 MHz)` (Build ID
+    `20261004_142815`), worst path 3.36 ns logic + 16.17 ns routing =
+    19.53 ns total.
+
+**Verified on the person's machine.** `gate.ps1` passed clean:
+- `lint.ps1`: PASSED (25 files, +1 for `dfc_rtl016.sv`)
+- `sim.ps1`: 20/20 testbenches, 0 failed, 1039/1039 checks total
+  (12+12+16+28+30+24+43+35+44+47+60+50+60+59+71+105+40+71+219+13 --
+  independently summed; equals the RTL-015-session baseline of 946 plus
+  71 new `rtl016_integration_tb.sv` checks plus 22 new
+  `rtl024_skeleton_tb.sv` checks, 946+71+22=1039, exact)
+- `formal.ps1`: 2/2 tasks PASSED (bmc + prove)
+- `check_coverage.py`: 186/353 registers referenced (+8 over the
+  RTL-015 baseline, exactly RTL-016's 8 new registers)

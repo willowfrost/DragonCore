@@ -103,6 +103,10 @@ module ulx3s_dfc_top (
   input  logic gp19,  // System Health channel 5 input (RTL-011)
   input  logic gp20,  // System Health channel 6 input (RTL-011)
   input  logic gp21,  // System Health channel 7 input (RTL-011)
+  output logic gn8,   // Safety output channel 0 (RTL-016)
+  output logic gn9,   // Safety output channel 1 (RTL-016)
+  output logic gn10,  // Safety output channel 2 (RTL-016)
+  output logic gn14,  // Safety output channel 3 (RTL-016)
   output logic [7:0] led
 );
 
@@ -200,7 +204,7 @@ module ulx3s_dfc_top (
     .pulse_i   ({gp10, gp9}),
     .health_i  ({gp21, gp20, gp19, gp18, gp17, gp16, gp15, gp14}),
 
-    .safety_out_o (),
+    .safety_out_o ({gn14, gn10, gn9, gn8}),
 
     .user_i    (4'h0),
     .user_o    (),

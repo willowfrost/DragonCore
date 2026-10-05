@@ -168,7 +168,7 @@ module rtl024_skeleton_tb;
     check("host_irq_n_o safe-high with no sources", host_irq_n_o, 1'b1);
     check("can_tx_o recessive high stub", can_tx_o, 1'b1);
     check("uart_tx_o idle high stub", uart_tx_o, 1'b1);
-    check("safety_out_o inactive stub", |safety_out_o, 1'b0);
+    check("safety_out_o inactive at reset (real RTL-016, unconfigured)", |safety_out_o, 1'b0);
     check("spi_miso_oe_o disabled while CS_N inactive", spi_miso_oe_o, 1'b0);
 
     // ------------------------------------------------------------------
@@ -827,18 +827,25 @@ module rtl024_skeleton_tb;
            "as RTL-012"},
           rd_data[12], 1'b1);
 
-    // The stub topology's remaining mandatory-mask module (RTL-016, now
-    // that RTL-014/RTL-015 are both real) never reports ready, so RTL-002 is expected to run
-    // out its full 499,000-cycle mandatory-init timeout and land in
-    // FAULTED -- this is the disclosed, real consequence of the current
-    // stub topology (see dfc_rtl024.sv's RTL-002 integration comment), not
-    // a defect in RTL-002 itself. RTL-003/RTL-004/RTL-005/RTL-012/RTL-013
-    // are now real, but none is a mandatory-mask module dependency RTL-002
-    // can still rely on being ready for this specific timeout path --
-    // RTL-002 already relies on another, still-unready mandatory member
-    // (RTL-016), so this test's long-standing "reaches
-    // FAULTED" outcome is unchanged in kind, only in which remaining stub
-    // modules are responsible for it.
+    // RTL-002 is still expected to run out its full 499,000-cycle
+    // mandatory-init timeout and land in FAULTED -- CONFIRMED by real
+    // simulation (OPEN_ISSUES.md item 98) to be unchanged even now that
+    // every mandatory-mask module (RTL-001/002/004/005/012/013/014/015/016/
+    // 024) is real: the real, root cause is NOT "a remaining stub module
+    // never reports ready" (this comment's own prior claim, now corrected)
+    // -- it is a genuine structural property of RTL-002's own FSM.
+    // `mandatory_ready_now` requires module_ready_i[1] (RTL-002's OWN
+    // self-looped status_o.ready), but RTL-002's status_o.ready is
+    // `host_ready_q && init_complete_q`, and `init_complete_q` is only set
+    // the cycle STARTUP transitions away (which itself requires
+    // `mandatory_ready_now`) -- a genuine self-referential gate that can
+    // never be satisfied by `mandatory_ready_now` alone, regardless of how
+    // many OTHER mandatory modules are real. `init_timeout_expired` is
+    // therefore not a disclosed consequence of incomplete stub topology;
+    // it is the ONLY path STARTUP can ever leave by in the current RTL-002
+    // design. Not fixed here (out of RTL-016's own scope; a real,
+    // disclosed finding about already-shipped RTL-002, not something this
+    // session invents behavior around).
     begin
       // NOTE: Icarus rejects `break` inside a for-loop ("sorry: break
       // statements not supported") -- confirmed via a real compile run,
@@ -1048,8 +1055,70 @@ module rtl024_skeleton_tb;
     check("ILOCK_ACTIVE_RESULT SPI read accepted", |rd_status, 1'b0);
     check("host-readable GUARD_ALLOWED drops guard 0 only (0xFE)", (rd_data[15:8] == 8'hFE), 1'b1);
     check("rtl014 interlock_inhibit_o inhibits guard 0 (white-box)", dut.u_rtl014.interlock_inhibit_o[0], 1'b1);
-    check("rtl014 lane-2 response_req_o.valid asserts (white-box; RTL-016 not built yet)",
+    check("rtl014 lane-2 response_req_o.valid asserts (white-box)",
           dut.u_rtl014.response_req_o[dfc_types_pkg::DFC_SAFETY_RESPONSE_REQ__VALID_HI], 1'b1);
+
+    // ------------------------------------------------------------------
+    // RTL-016 whole-system integration (real, added this session): RTL-014
+    // entry 0's real response_req_o (just proven valid above, response
+    // mask 0x1 = channel 0, configured far earlier at ILOCK_STAGE_RESPONSE)
+    // is a genuine lane-2 source_id-0 request -- C.8 mask bit
+    // 8*2+0 = 16. Configure channel 0 to authorize exactly that position
+    // and confirm the real two-key authorization (item 96) and PERMIT
+    // gating reach RTL-016 for real, not via a hierarchical force.
+    // ------------------------------------------------------------------
+    spi_write32(DFC_ADDR_SAFETY_CHANNEL_SELECT, 32'h0000_0000, wr_status);  // select channel 0
+    check("SAFETY_CHANNEL_SELECT SPI write (channel 0) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SAFETY_CHANNEL_CONTROL) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SAFETY_CHANNEL_CONTROL) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SAFETY_CHANNEL_CONTROL, 32'h0000_0003, wr_status);  // ENABLE=1, ACTIVE_HIGH=1
+    check("SAFETY_CHANNEL_CONTROL SPI write (channel 0 enable/active-high) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SAFETY_INTERLOCK_MASK) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SAFETY_INTERLOCK_MASK) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SAFETY_INTERLOCK_MASK, 32'h0000_0000, wr_status);  // no required interlocks
+    check("SAFETY_INTERLOCK_MASK SPI write (channel 0, none required) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SAFETY_RESPONSE_MASK) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SAFETY_RESPONSE_MASK) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SAFETY_RESPONSE_MASK, 32'h0001_0000, wr_status);  // authorize mask bit 16 (lane 2, source 0)
+    check("SAFETY_RESPONSE_MASK SPI write (channel 0 authorizes RTL-014 entry 0) accepted", |wr_status, 1'b0);
+
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for SAFETY_CONTROL) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for SAFETY_CONTROL) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_SAFETY_CONTROL, 32'h0000_0001, wr_status);  // ENABLE=1, GLOBAL_INHIBIT=0
+    check("SAFETY_CONTROL SPI write (controller enable, global inhibit cleared) accepted", |wr_status, 1'b0);
+    #1;
+
+    spi_read32(DFC_ADDR_SAFETY_CHANNEL_STATUS, rd_data, rd_status);
+    check("SAFETY_CHANNEL_STATUS SPI read accepted", |rd_status, 1'b0);
+    check({"host-readable SAFETY_CHANNEL_STATUS.COMMAND_REQUEST genuinely asserts: the real ",
+           "two-key authorization (RTL-014 entry 0's own response_mask bit 0 AND this ",
+           "module's own channel-0 authorization bit 16) both hold"},
+          rd_data[0], 1'b1);
+    check({"host-readable SAFETY_CHANNEL_STATUS.OPERATIONAL_INHIBIT genuinely asserts: the ",
+           "whole system has not reached NORMAL/DEGRADED yet (OPEN_ISSUES.md item 98 -- ",
+           "RTL-002's own mandatory-init gate), so EFFECTIVE_OPERATIONAL_ENABLE is still low"},
+          rd_data[12], 1'b1);
+    check("host-readable SAFETY_CHANNEL_STATUS.EFFECTIVE_OUTPUT correctly stays low (blocked by OPERATIONAL_INHIBIT)",
+          rd_data[1], 1'b0);
+    check("the real external safety_out_o[0] pad correctly stays inactive (ACTIVE_HIGH, blocked)",
+          safety_out_o[0], 1'b0);
+
+    spi_read32(DFC_ADDR_SAFETY_STATUS, rd_data, rd_status);
+    check("SAFETY_STATUS SPI read accepted", |rd_status, 1'b0);
+    check("host-readable SAFETY_STATUS.COMMANDED[0] genuinely asserts", rd_data[0], 1'b1);
+    check("host-readable SAFETY_STATUS.INHIBITED[0] genuinely asserts", rd_data[8], 1'b1);
+    check("host-readable SAFETY_STATUS.EFFECTIVE[0] correctly stays low", rd_data[4], 1'b0);
 
     spi_read32(DFC_ADDR_FAULT_ACTIVE_SOURCE, rd_data, rd_status);
     check("FAULT_ACTIVE_SOURCE SPI read accepted", |rd_status, 1'b0);

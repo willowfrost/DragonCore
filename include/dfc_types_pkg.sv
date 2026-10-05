@@ -2168,8 +2168,29 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL015_STATUS__EVENT_DROP_COUNT_HI = 74;
   localparam int unsigned DFC_RTL015_STATUS__EVENT_DROP_COUNT_LO = 59;
 
-  // ARCH-002 Appendix B dfc_rtl016_control_t (53 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl016_control_t (226 bits, rich format)
   typedef struct packed {
+    logic rtl016_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
+    logic [7:0] safety_channel_c3__required_interlocks;  //  reset=0 :: control_value
+    logic [31:0] safety_channel_c3__response_source_mask;  //  reset=0 :: control_value
+    logic safety_channel_c3__active_high;  //  reset=1 :: control_value
+    logic safety_channel_c3__latch_response;  //  reset=0 :: control_value
+    logic safety_channel_c3__enable;  //  reset=0 :: control_value
+    logic [7:0] safety_channel_c2__required_interlocks;  //  reset=0 :: control_value
+    logic [31:0] safety_channel_c2__response_source_mask;  //  reset=0 :: control_value
+    logic safety_channel_c2__active_high;  //  reset=1 :: control_value
+    logic safety_channel_c2__latch_response;  //  reset=0 :: control_value
+    logic safety_channel_c2__enable;  //  reset=0 :: control_value
+    logic [7:0] safety_channel_c1__required_interlocks;  //  reset=0 :: control_value
+    logic [31:0] safety_channel_c1__response_source_mask;  //  reset=0 :: control_value
+    logic safety_channel_c1__active_high;  //  reset=1 :: control_value
+    logic safety_channel_c1__latch_response;  //  reset=0 :: control_value
+    logic safety_channel_c1__enable;  //  reset=0 :: control_value
+    logic [7:0] safety_channel_c0__required_interlocks;  //  reset=0 :: control_value
+    logic [31:0] safety_channel_c0__response_source_mask;  //  reset=0 :: control_value
+    logic safety_channel_c0__active_high;  //  reset=1 :: control_value
+    logic safety_channel_c0__latch_response;  //  reset=0 :: control_value
+    logic safety_channel_c0__enable;  //  reset=0 :: control_value
     logic safety_control__global_inhibit;  //  reset=1 :: explicit global inhibit; independent of controller enable
     logic [7:0] safety_interlock_mask__required_interlocks;  //  reset=0 :: control_value
     logic [31:0] safety_response_mask__response_source_mask;  //  reset=0 :: control_value
@@ -2182,9 +2203,9 @@ package dfc_types_pkg;
     logic safety_control__event_enable;  //  reset=0 :: control_value
     logic safety_control__enable;  //  reset=0 :: control_value
   } dfc_rtl016_control_t;
-  // total width: 53 bits
+  // total width: 226 bits
 
-  localparam int unsigned DFC_RTL016_CONTROL_WIDTH = 53;
+  localparam int unsigned DFC_RTL016_CONTROL_WIDTH = 226;
   localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CONTROL__EVENT_ENABLE_HI = 1;
@@ -2207,6 +2228,48 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL016_CONTROL__SAFETY_INTERLOCK_MASK__REQUIRED_INTERLOCKS_LO = 44;
   localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CONTROL__GLOBAL_INHIBIT_HI = 52;
   localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CONTROL__GLOBAL_INHIBIT_LO = 52;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__ENABLE_HI = 53;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__ENABLE_LO = 53;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__LATCH_RESPONSE_HI = 54;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__LATCH_RESPONSE_LO = 54;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__ACTIVE_HIGH_HI = 55;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__ACTIVE_HIGH_LO = 55;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__RESPONSE_SOURCE_MASK_HI = 87;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__RESPONSE_SOURCE_MASK_LO = 56;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__REQUIRED_INTERLOCKS_HI = 95;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C0__REQUIRED_INTERLOCKS_LO = 88;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__ENABLE_HI = 96;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__ENABLE_LO = 96;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__LATCH_RESPONSE_HI = 97;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__LATCH_RESPONSE_LO = 97;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__ACTIVE_HIGH_HI = 98;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__ACTIVE_HIGH_LO = 98;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__RESPONSE_SOURCE_MASK_HI = 130;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__RESPONSE_SOURCE_MASK_LO = 99;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__REQUIRED_INTERLOCKS_HI = 138;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C1__REQUIRED_INTERLOCKS_LO = 131;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__ENABLE_HI = 139;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__ENABLE_LO = 139;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__LATCH_RESPONSE_HI = 140;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__LATCH_RESPONSE_LO = 140;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__ACTIVE_HIGH_HI = 141;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__ACTIVE_HIGH_LO = 141;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__RESPONSE_SOURCE_MASK_HI = 173;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__RESPONSE_SOURCE_MASK_LO = 142;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__REQUIRED_INTERLOCKS_HI = 181;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C2__REQUIRED_INTERLOCKS_LO = 174;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__ENABLE_HI = 182;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__ENABLE_LO = 182;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__LATCH_RESPONSE_HI = 183;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__LATCH_RESPONSE_LO = 183;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__ACTIVE_HIGH_HI = 184;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__ACTIVE_HIGH_LO = 184;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__RESPONSE_SOURCE_MASK_HI = 216;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__RESPONSE_SOURCE_MASK_LO = 185;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__REQUIRED_INTERLOCKS_HI = 224;
+  localparam int unsigned DFC_RTL016_CONTROL__SAFETY_CHANNEL_C3__REQUIRED_INTERLOCKS_LO = 217;
+  localparam int unsigned DFC_RTL016_CONTROL__RTL016_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 225;
+  localparam int unsigned DFC_RTL016_CONTROL__RTL016_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 225;
 
   // ARCH-002 Appendix B dfc_rtl016_status_t (52 bits, rich format)
   typedef struct packed {

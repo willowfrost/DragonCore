@@ -68,10 +68,11 @@ IOBUF PORT "gp27" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 # Section 4/7 for the exhaustion note). gp8/gn8 carry no wifi-sharing
 # comment in the real board file (unlike gp11-gp13), confirmed free; used
 # here as an ordinary single-ended input per ULX3S's own manual ("DIFF
-# pairs can be used also as single-ended pins"). gn8 (SITE A5) is left
-# unassigned -- see ULX3S_CONNECTION_MAP.md's own Section 7 for the note
-# that this makes gn8 implicitly unavailable for a true LVDS pair with gp8
-# if that range is ever needed for real differential signaling later.
+# pairs can be used also as single-ended pins"). gn8 (SITE A5) is now
+# assigned too, as RTL-016's own safety_out_o[0] -- see this file's own
+# Safety Output Controller section below and ULX3S_CONNECTION_MAP.md's
+# Section 10. This makes gn8 unavailable for a true LVDS pair with gp8 if
+# that range is ever needed for real differential signaling later.
 LOCATE COMP "gp8" SITE "A4";
 IOBUF PORT "gp8" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 
@@ -88,10 +89,11 @@ IOBUF PORT "gp8" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 # per ULX3S's own manual ("DIFF pairs can be used also as single-ended
 # pins"), same precedent as gp8 above -- no differential signal involved.
 # pulse_i[0]=gp9 (channel 0), pulse_i[1]=gp10 (channel 1). gn9 (SITE B1)
-# and gn10 (SITE B4) are left unassigned -- see ULX3S_CONNECTION_MAP.md's
-# own Section 8 for the note that this makes gn9/gn10 implicitly
-# unavailable for a true LVDS pair with gp9/gp10 respectively, same
-# disclosed consequence as gp8/gn8 in Section 7.
+# and gn10 (SITE B4) are now assigned too, as RTL-016's own
+# safety_out_o[1]/[2] -- see this file's own Safety Output Controller
+# section below and ULX3S_CONNECTION_MAP.md's Section 10. This makes
+# gn9/gn10 unavailable for a true LVDS pair with gp9/gp10 respectively,
+# same disclosed consequence as gp8/gn8 above.
 LOCATE COMP "gp9" SITE "A2";
 LOCATE COMP "gp10" SITE "C4";
 IOBUF PORT "gp9" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
@@ -130,6 +132,32 @@ IOBUF PORT "gp18" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gp19" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gp20" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gp21" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
+# ---- Safety Output Controller (RTL-016): gn8/gn9/gn10/gn14, 4 real
+# external safety-output pads. Real board file (emard/ulx3s,
+# doc/constraints/ulx3s_v20.lpf) -- confirmed via a direct curl+grep of the
+# raw file content against the exact "gn8"/"gn9"/"gn10"/"gn14" LOCATE
+# lines: none of the four carry a wifi-sharing comment. These are the
+# "orphaned" differential-pair counterparts of gp8 (RTL-008), gp9/gp10
+# (RTL-009), and gp14 (RTL-011) respectively -- each gp<N> partner is
+# already committed to an ordinary single-ended signal of its own, so its
+# gn<N> half was left genuinely unassigned and electrically free (ULX3S's
+# own manual: "differential pairs can be used also as single-ended pins"),
+# per ULX3S_CONNECTION_MAP.md's own Sections 7/8/9 notes. Chosen over the
+# WiFi-shared gp11-gp13/gn11-gn13 range (the only differential-capable
+# positions left after this module) to avoid touching the shared positions
+# before RTL-017/019/020 (which will each need real pins of their own) --
+# see ULX3S_CONNECTION_MAP.md's own new Section 10 for the full
+# accounting. Pure outputs (no PULLMODE, matching this file's own Debug
+# LEDs convention below): safety_out_o[0]=gn8, [1]=gn9, [2]=gn10, [3]=gn14.
+LOCATE COMP "gn8"  SITE "A5";
+LOCATE COMP "gn9"  SITE "B1";
+LOCATE COMP "gn10" SITE "B4";
+LOCATE COMP "gn14" SITE "U17";
+IOBUF PORT "gn8"  PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gn9"  PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gn10" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gn14" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
 
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;

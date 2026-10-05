@@ -2839,8 +2839,107 @@ written in this project going forward, not just a historical note.
     Utilization: TRELLIS_COMB 33811/83640 (40%), TRELLIS_FF 20549/83640
     (24%), MULT18X18D 12/156 (7%), TRELLIS_IO 34/365 (9%), EHXPLLL 1/4
     (25%). Build ID `20261003_145704`.
-- **RTL-016 through RTL-023:** spec-complete but **not yet implemented as
-  real RTL.** RTL-016 (Safety Output Controller) is next — see Section 5.
+- **RTL-016 (Safety Output Controller): real, implemented and integrated
+  into `dfc_rtl024.sv`.** The FIFTH and FINAL Safety-domain module —
+  closes the Safety domain (RTL-012 through RTL-016). Aggregates all four
+  real safety-response lanes (RTL-012/013/014/015) plus RTL-014's real
+  guard-indexed interlock inhibit and RTL-013's real per-channel fault
+  inhibit, into four independently-configured logical safety outputs with
+  a real nine-term PERMIT gate. See `dfc_rtl016.sv`'s own header and
+  `OPEN_ISSUES.md` items 90-98 for every disclosed decision; summary:
+  - **RTL-016_RevA's port list, several SS10.4 equation terms, and the
+    control/status struct widths were all wrong (item 90-94)**, more so
+    than any prior module's Rev A: the real Appendix A port catalog has
+    22 ports, not ~16 (6 ports RevA's own SS2 never named: `irq_req_o`,
+    `fault_req_o`, `interlock_satisfied_i`, `interlock_inhibit_i`,
+    `effective_operational_enable_i`, `test_inhibit_i`); `GLOBAL_INHIBIT`
+    is its own independent RW field (reset 1), not `!ENABLE` (RevA's own
+    equation); `FAULT_INHIBIT` is genuinely per-channel (RTL-013's real
+    `safety_inhibit_o` is 4 bits, even though all four currently carry the
+    same value); `dfc_rtl016_control_t`/`status_t` are 53/52 bits, not
+    RevA's claimed 52/47.
+  - **TEST_DEBUG is a real, separate term this module must OR in itself
+    (item 93)**: `test_inhibit_i`'s own Appendix A producer description is
+    only "physical test authorization OR test-active" — ARCH-002's real
+    TEST_INHIBIT definition adds TEST_DEBUG as a third OR term this module
+    supplies from its own `operating_state_i`.
+  - **PERMIT[c] is a real nine-term AND (item 94)**, including
+    `RESET_HELD[c]` (RevA's own version had eight terms and omitted it).
+  - **INTERLOCK_INHIBIT[c] uses RTL-014's GUARD-indexed `interlock_inhibit_o`,
+    not its ENTRY-indexed `interlock_satisfied_o` (item 95)** — the single
+    most structurally subtle finding this session, confirmed directly from
+    `dfc_rtl014.sv`'s own header comment ("the two ports would be redundant
+    complements if both were per guard"). `interlock_satisfied_i` is a
+    real Appendix A port this module receives with NO functional use and
+    NO REG-002 status field anywhere to expose it — a disclosed, genuinely
+    unused input, not a bug.
+  - **The two-key response-authorization model (item 96)**, resolved from
+    first principles: a request reaches channel `c` only when BOTH the
+    producer's own 4-bit response-mask bit `c` is set AND this module's
+    own 32-bit per-channel `SAFETY_RESPONSE_MASK` authorization bit
+    (`8*lane+source_id`) is set — two independently-configured permission
+    layers, not one.
+  - **`dfc_rtl016_control_t` grew 53->226 bits (items 90, plus a 15th
+    EVENT_OVERFLOW-clear-field gap instance found while writing the field
+    map)**: a complete 4-channel array (`safety_channel_c<0..3>__*`, 43
+    bits each) added via `reggen.py` v5's `indexed_registers` mechanism,
+    reused unchanged a third time; `dfc_rtl016_status_t` needed NO growth
+    (`SAFETY_CHANNEL_STATUS` is intentionally a single selected-channel
+    view, `SAFETY_STATUS` is already a full per-channel aggregate).
+  - **Real, empirically-confirmed finding, NOT caused by RTL-016 (item
+    98)**: `rtl024_skeleton_tb.sv`'s long-standing "RTL-002 reaches FAULTED
+    via the ~499,000-cycle mandatory-init timeout" outcome is UNCHANGED
+    even with RTL-016 real and every mandatory-mask module now ready. The
+    real root cause (confirmed by running the test, not assumed) is a
+    genuine structural self-reference in RTL-002's own FSM:
+    `mandatory_ready_now` requires `module_ready_i[1]` (RTL-002's own
+    self-looped status), but RTL-002's own `status_o.ready` requires
+    `init_complete_q`, which is only set once STARTUP successfully leaves
+    — a gate that can never be satisfied by itself. Not fixed here (out of
+    RTL-016's scope; a real, disclosed finding about already-shipped
+    RTL-002).
+  - **`rtl024_skeleton_tb.sv` extended, 219 checks (was 197)**: a real,
+    whole-system RTL-016 section reusing RTL-014's already-live entry-0
+    interlock violation as the authorized request, proving the two-key
+    authorization and the real OPERATIONAL_INHIBIT block (correctly
+    inactive, since the whole system never reaches NORMAL per item 98).
+  - **New `rtl016_integration_tb.sv`, 71 checks**: real RTL-012 (lane 0)
+    producer forced through a genuine WDOG timeout; lanes 1-3 driven
+    directly as controlled stimulus (lane 2's real cross-module wiring
+    already proven whole-system). Covers every PERMIT term independently,
+    the two-key authorization (positive and negative), ACTIVE_HIGH
+    polarity both ways, LATCH_RESPONSE's full set/hold/clear-after-
+    inactive/re-enable-clears cycle, the disabled-channel-with-stale-mask
+    live FAULTED/fault_req_o cross-field defense (item 9), multiple
+    lanes OR'ing without canceling (ARCH-RTL016-001), and the event/
+    overflow round trip.
+  - **New physical pins**: `safety_out_o[3:0]` = `gn8`/`gn9`/`gn10`/`gn14`
+    (ULX3S_CONNECTION_MAP.md Section 10) — the lowest four of eleven real
+    "orphaned" `gn<N>` pins (differential counterparts of already-committed
+    single-ended `gp<N>` positions), not the WiFi-shared `gp11`-`gp13`
+    range, preserving that range for RTL-017/019/020. `ulx3s_dfc_top.sv`
+    gained its first-ever real connection for `safety_out_o` (previously
+    `()`, unconnected at the top level).
+  - **Verified on the person's machine.** `gate.ps1`: lint PASSED (25
+    files); sim 20/20 testbenches, 1039/1039 checks total (946 RTL-015
+    baseline + 71 new `rtl016_integration_tb.sv` + 22 new whole-system
+    `rtl024_skeleton_tb.sv` checks, independently summed and exact); formal
+    2/2 (bmc+prove) PASS; coverage 186/353 registers (+8, exactly RTL-016's
+    new register count).
+    `build_ecp5.ps1` (LFE5U-85F-6BG381C) real final timing: FAILED on the
+    first run (49.52 MHz vs 50.00 MHz, a real, already-marginal path
+    inside already-shipped `dfc_rtl014.sv` -- RTL-016's own added
+    placement/routing pressure tipped it over), fixed with a real,
+    disclosed change (`interlock_terms_q`, item 99), then re-verified
+    (`gate.ps1` identical 1039/1039) and rebuilt clean: real, final
+    `pnr.log` line (the last one) reads `Max frequency for clock
+    '$glbnet$core_clk': 51.22 MHz (PASS at 50.00 MHz)`. Worst path
+    (posedge→posedge): 3.36 ns logic + 16.17 ns routing = 19.53 ns total.
+    Utilization: TRELLIS_COMB 35176/83640 (42%), TRELLIS_FF 20938/83640
+    (25%), MULT18X18D 12/156 (7%), TRELLIS_IO 38/365 (10%), EHXPLLL 1/4
+    (25%). Build ID `20261004_142815`.
+- **RTL-017 through RTL-023:** spec-complete but **not yet implemented as
+  real RTL.** RTL-017 (ARINC Receiver) is next — see Section 5.
 - **Build script structural fix (2026-08-26): `build_ecp5.ps1`'s
   `$SourceFiles` list is no longer hardcoded.** This exact gap had been
   hit and reactively fixed 4 separate times (RTL-002, RTL-004, RTL-009,
@@ -3146,24 +3245,21 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
-- **RTL-002 through RTL-015 are now all real and implemented — RTL-012
-  (Watchdog Manager), RTL-013 (Fault Manager), RTL-014 (Interlock Engine)
-  and RTL-015 (Lost-Link Supervisor) are the first four of the Safety
-  domain's five modules (RTL-012 through RTL-016); the next real step is
-  RTL-016 (Safety Output Controller)** — read `OPEN_ISSUES.md` items 66-89
-  first: RTL-016 is the first real CONSUMER of RTL-012/013/014/015's own
-  `response_req_o` lanes (0-3) and RTL-014's `interlock_satisfied_o`/
-  `interlock_inhibit_o` (both still genuinely unconsumed), owns the
-  physical `safety_out_o[3:0]` pads, and its own `dfc_rtl016_control_t`
-  (53 bits, per REG-002's real `SAFETY_CHANNEL_SELECT`-indexed per-channel
-  registers) is very likely the next selector-indexed-bank candidate for
-  `reggen.py` v5's `indexed_registers`. It also inherits the open event
-  `source_id` question (item 74). One module at a time, using the
-  exact same real-verification discipline as RTL-001 through RTL-015
-  (compile, simulate, and only then trust — never claim something works
-  without actually running it). Then the rest of Safety, then Databus, in
-  that order (Programmable is now out of scope entirely — see the
-  scope-change entry directly above).
+- **RTL-002 through RTL-016 are now all real and implemented — the Safety
+  domain (RTL-012 through RTL-016: Watchdog Manager, Fault Manager,
+  Interlock Engine, Lost-Link Supervisor, Safety Output Controller) is
+  COMPLETE.** RTL-016 was the first real CONSUMER of RTL-012/013/014/015's
+  own `response_req_o` lanes (0-3) and RTL-014's `interlock_inhibit_o`
+  (`interlock_satisfied_o` turned out to be genuinely unused — item 95),
+  and now owns the physical `safety_out_o[3:0]` pads for real. See
+  `OPEN_ISSUES.md` items 90-98 for its own full disclosed scope, most
+  notably item 98 (a real, pre-existing RTL-002 structural finding, not an
+  RTL-016 defect) and item 95 (the guard-vs-entry interlock-indexing
+  finding). **The next real step is the Databus domain: RTL-017 (ARINC
+  Receiver) is next**, read `OPEN_ISSUES.md` items 66-98 first. One module
+  at a time, using the exact same real-verification discipline as RTL-001
+  through RTL-016 (compile, simulate, and only then trust — never claim
+  something works without actually running it).
   **RTL-013's own session reconfirmed a pattern this document has now
   flagged three separate times (RTL-002/003's own port-catalog gaps in
   RTL-002, then RTL-006's own module_enable_o/effective_operational_

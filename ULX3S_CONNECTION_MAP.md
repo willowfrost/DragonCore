@@ -94,10 +94,10 @@ real-vs-stub status of each is per that file's own header comment.
 **Nothing below has a physical pin constraint in the real `.lpf` file
 yet.** Every one of these logical signals already exists as real,
 verified RTL on `dfc_rtl024.sv` (confirmed via `rtl024_skeleton_tb.sv`'s
-own real checks — e.g. `can_tx_o` recessive-high, `uart_tx_o` idle-high,
-`safety_out_o` inactive — all real, correct stub values), but none of it
-is wired to a physical board pin, because the modules that would actually
-drive or consume each signal (RTL-007 through RTL-021) don't exist yet.
+own real checks — e.g. `can_tx_o` recessive-high, `uart_tx_o` idle-high —
+all real, correct stub values), but none of it is wired to a physical
+board pin, because the modules that would actually drive or consume each
+signal (RTL-017 through RTL-021) don't exist yet.
 
 The established plan (confirmed in `PROJECT_CONTINUITY.md`) is to assign
 real physical pins for each interface **only once the module that owns
@@ -106,26 +106,32 @@ section to this document the same way Section 1 was built: transcribe
 the real `.lpf` addition, confirm the J1/J2 position against the real
 board, and cite the source for each fact rather than assume it.
 
-Positions still open on the GPIO headers for this purpose: **J1-11 through
-J1-13 only** (3 positions, differential-capable, WiFi-shared) — see
+Positions still open on the GPIO headers for this purpose, as of the end
+of Section 10: **`gn15`-`gn21` (7 positions, orphaned differential
+counterparts of RTL-011's own single-ended `gp15`-`gp21`, confirmed free
+the same way `gn8`/`gn9`/`gn10`/`gn14` were before Section 10 used them)
+plus J1-11 through J1-13 (3 true differential pairs, WiFi-shared)** — see
 Section 6 below for where the last single-ended-only position (`gp27`/
 J2-27) went, Section 7 for where the first differential-capable position
 (`gp8`/J1-8) went, Section 8 for where the next two differential-capable
-positions (`gp9`/J1-9, `gp10`/J1-10) went, and **Section 9 for where the
-entire remaining unshared differential-capable range (`gp14`-`gp21`/J2-14
-through J2-21, 8 positions) went** — RTL-011's own 8 health-discrete
-channels consumed all of it in one module. `gn8`/`gn9`/`gn10`/`gn14`-`gn21`
-(the differential counterparts of every position committed so far) are now
-implicitly unavailable for a true LVDS pair, since each `gp<N>` above is
-committed to an ordinary single-ended signal — see Sections 7/8/9's own
-notes. **J1-11 through J1-13 are shared with the onboard WiFi module** in
-the real board file's own comments (`wifi_gpio26`/`wifi_gpio33`/
-`wifi_gpio35`) — confirmed directly, and now the ONLY differential-capable
-positions left at all, not merely the least-preferred choice: any future
-module needing a physical pin (RTL-017/019/020, or whichever module ends up
-needing one next) must use one of these 3 WiFi-shared positions, since
-every unshared differential-capable position is now committed. Flagged
-explicitly here, not discovered silently later.
+positions (`gp9`/J1-9, `gp10`/J1-10) went, Section 9 for where the entire
+remaining unshared differential-capable range (`gp14`-`gp21`/J2-14 through
+J2-21, 8 positions) went, and **Section 10 for where the first four
+orphaned `gn<N>` pins (`gn8`/`gn9`/`gn10`/`gn14`) went** — RTL-016's own 4
+safety-output channels. `gn15`-`gn21` (the differential counterparts of
+RTL-011's own `gp15`-`gp21`) remain implicitly unavailable for a true LVDS
+pair, since each `gp<N>` is committed to an ordinary single-ended signal —
+see Section 9's own note — but, per the same precedent Section 10 just
+used, each remains individually available as its own single-ended pin.
+**J1-11 through J1-13 are shared with the onboard WiFi module** in the
+real board file's own comments (`wifi_gpio26`/`wifi_gpio33`/
+`wifi_gpio35`) — confirmed directly, and the only positions left that are
+both unused AND still capable of a true, unshared differential pair: any
+future module needing a physical pin should prefer the remaining orphaned
+`gn15`-`gn21` pins first (same "prefer unshared" precedent as ever), and
+only reach into the WiFi-shared range once those 7 are also exhausted.
+Flagged explicitly here, not discovered silently later (see Section 10's
+own note on this same tightening budget).
 **Corrected, complete picture of the real electrical distinction (an
 earlier draft of this section was incomplete — verified directly against
 ULX3S's own official manual, not just the schematic excerpt used
@@ -149,12 +155,13 @@ Logical signals awaiting a physical assignment:
 `arinc_tx_ctrl_o`/`arinc_rx_adapter_error_i`/`arinc_tx_adapter_error_i`
 (RTL-017/018), `can_rx_i`/`can_tx_o`/`can_transceiver_error_i` (RTL-019),
 `uart_rx_i`/`uart_tx_o` (RTL-020),
-`safety_out_o[3:0]` (RTL-016), `user_i`/`o`/`oe[3:0]` (out of scope --
+`user_i`/`o`/`oe[3:0]` (out of scope --
 RTL-022/023 dropped from this build per the demo-scope decision, see
 `PROJECT_CONTINUITY.md` Section 5). `gpio_i`/`gpio_o`/`gpio_oe_o`
 (RTL-006), `rotor_i` (RTL-007), `engine_i` (RTL-008), `pulse_i[1:0]`
-(RTL-009), and `health_i[7:0]` (RTL-011) are no longer in this list — see
-Sections 5, 6, 7, 8, and 9, their physical assignments are now real.
+(RTL-009), `health_i[7:0]` (RTL-011), and `safety_out_o[3:0]` (RTL-016)
+are no longer in this list — see Sections 5, 6, 7, 8, 9, and 10, their
+physical assignments are now real.
 
 ---
 
@@ -465,3 +472,76 @@ counterparts, to directly confirm none carry a wifi-sharing comment, unlike
 summarizing pass. The `gp14`-`gp21` → "J2, position 14" through "J2,
 position 21" correspondence follows the same silkscreen-position convention
 already established and confirmed in Section 1.
+
+---
+
+## 10. Safety Output Controller (RTL-016) — J1 gn8/gn9/gn10, J2 gn14, 4 channels
+
+RTL-016 is the fifth and FINAL Safety-domain module with a real, physical
+interface — 4 independent logical safety-output pads (`safety_out_o[3:0]`),
+the sole external output this module owns (`ulx3s_dfc_top.sv`'s own
+`dragon_core_top` instantiation previously left `safety_out_o` entirely
+unconnected, `()`, since no pin existed for it yet).
+
+| `safety_out_o` channel | Pin | J1/J2 position | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|
+| 0 | `gn8`  | J1-8 (`gn` conductor) | A5  | Output |
+| 1 | `gn9`  | J1-9 (`gn` conductor) | B1  | Output |
+| 2 | `gn10` | J1-10 (`gn` conductor) | B4  | Output |
+| 3 | `gn14` | J2-14 (`gn` conductor) | U17 | Output |
+
+**Choice rationale, and an explicit flag, not a silent choice:** per
+Section 4's own running accounting, the only positions open for a NEW
+differential-CAPABLE PAIR were `gp11`-`gp13`/`gn11`-`gn13` (WiFi-shared,
+the sole remainder after Section 9 exhausted the unshared range). RTL-016
+needs 4 real output pins, but **does not need a true differential pair at
+all** — each channel is an ordinary single-ended logic-level output. This
+project's own running record of "orphaned" `gn<N>` pins (the differential
+counterpart of a `gp<N>` already committed to an ordinary single-ended
+signal, hence genuinely free for independent use — Sections 7/8/9's own
+notes on `gn8`/`gn9`/`gn10`/`gn14`-`gn21`) gave **11 such real, physically
+free pins without touching the WiFi-shared range at all.** RTL-016 uses
+the four LOWEST-numbered of these — `gn8`, `gn9`, `gn10`, `gn14` — the
+same "prefer the earliest available option" precedent every earlier
+section in this table has used, leaving `gn15`-`gn21` (7 pins) plus the
+still-untouched WiFi-shared `gp11`-`gp13`/`gn11`-`gn13` (3 true pairs) for
+whichever module needs a pin next.
+
+**This flags a genuine, tightening project-wide constraint, not discovered
+silently later:** RTL-017 (ARINC RX), RTL-018 (ARINC TX), RTL-019 (CAN),
+and RTL-020 (UART) each still need one or more real pins of their own
+(`arinc_rx_i`, `can_rx_i`/`can_tx_o`, `uart_rx_i`/`uart_tx_o`, at minimum —
+`arinc_tx_ctrl_o` is 2 bits). After RTL-016, the only pins left for them
+are: `gn15`-`gn21` (7 single-ended-only-now positions, their own `gp15`-
+`gp21` partners already committed to RTL-011), and the 3 WiFi-shared true
+pairs `gp11`-`gp13`/`gn11`-`gn13` (6 individual conductors, or 3 true
+differential pairs). This is enough for the four remaining Databus-domain
+modules' currently-known needs, but there is no further "free" margin
+beyond this — any later module needing a pin this accounting did not
+already name will have to use one of the WiFi-shared positions. Flagged
+here explicitly, as the task that produced this section required.
+
+Each of the four is a pure output (no tristate, no pull resistor needed —
+`IOBUF PORT ... PULLMODE=NONE`, the same convention this project's own
+Debug LED section already uses for a pure ECP5-driven output, not the
+`PULLMODE=UP` convention every input pin in this table uses).
+`ulx3s_dfc_top.sv` drives the four pads directly from `dragon_core_top`'s
+own real `safety_out_o[3:0]` port — no additional pad-safe gate is layered
+at the top level, since `dfc_rtl016.sv` itself already implements the
+complete `PERMIT[c]` gate (reset/test/inhibit/disable all dominate,
+ARCH-RTL016-001) before the signal ever reaches this boundary, the same
+"module's own real gating is already complete" precedent Section 5's own
+GPIO note established.
+
+**Provenance:** the `gn8`/`gn9`/`gn10`/`gn14` FPGA site mapping
+(A5/B1/B4/U17) is fetched directly from the real board constraint file
+(`emard/ulx3s`, `doc/constraints/ulx3s_v20.lpf` -- the same source every
+earlier section's own mappings were fetched from), confirmed via a direct
+`curl`+`grep` of the raw file content against the exact `LOCATE COMP
+"gn8"`/`"gn9"`/`"gn10"`/`"gn14"` lines, re-verifying they carry no
+wifi-sharing comment (unlike `gn11`-`gn13`'s own `wifi_gpio25`/
+`wifi_gpio32`/`wifi_gpio34` comments), not recalled from memory or
+accepted from a single summarizing pass. The J1/J2 position label for each
+`gn<N>` follows the same convention as every earlier section: the position
+number of its paired `gp<N>` silkscreen position, since `gn<N>` is the
+second conductor at that same physical header position.

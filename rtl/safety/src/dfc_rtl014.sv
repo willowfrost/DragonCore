@@ -63,7 +63,11 @@
 //     clear wins (F.4 "dominates simultaneous result clear").
 //
 //  3. EVALUATION (ARCH-SAFE-006). interlock_terms_i is RTL-024's REGISTERED
-//     internal_source_vector_q (C.1). Each active term ID (validated, so
+//     internal_source_vector_q (C.1); this module registers it AGAIN, into
+//     its own free-running interlock_terms_q, before the 64:1 term-select
+//     mux (OPEN_ISSUES.md item 99 -- a real timing fix, not tied to
+//     commit_accept, so it does not affect ARCH-RTL014-001's own "no grace
+//     period" guarantee below). Each active term ID (validated, so
 //     always 0-31 or 37) indexes that vector, is optionally inverted, and
 //     combines by the entry's operator. violation_now[e] =
 //     ILOCK_CONTROL.ENABLE & entry_enable[e] & !expression[e].
@@ -382,6 +386,40 @@ module dfc_rtl014 (
   end
 
   // ==========================================================================
+  // interlock_terms_q: a free-running (NOT commit-gated) one-cycle
+  // register on the raw 64-bit term source vector, added this session
+  // (OPEN_ISSUES.md item 99) to fix a real timing failure RTL-016's own
+  // added placement/routing pressure tipped over the edge (49.52 MHz vs
+  // 50.00 MHz required). The real critical path ran external-status-
+  // flop -> internal_source_vector_q (RTL-024, already registered) ->
+  // RTL-014's own 64:1 term-select mux (32 of them, 8 entries x 4 terms)
+  // -> expression evaluation -> fault_q, all in one combinational hop --
+  // the mux's own long-haul routing from internal_source_vector_q,
+  // physically distant from RTL-014, was the dominant cost (16.16 of
+  // 20.19 ns). Registering interlock_terms_i HERE, unconditionally every
+  // cycle (NOT tied to commit_accept/active_q's own update), splits that
+  // one hop into two without touching ARCH-RTL014-001's "same-edge guard
+  // rule": the BANK (active_q) and its SAME-EDGE evaluation into
+  // viol_active_q/guard_allowed_q/inhibit_q/entry_true_q/response_q/
+  // fault_q are completely unaffected -- a freshly committed bank still
+  // asserts against whatever interlock_terms_q holds on the very next
+  // edge, no grace period added to COMMIT_ALL's own timing. The only
+  // real, disclosed consequence is one additional CORE_CLK cycle between
+  // a real-world interlock_terms_i change and its reflection in violation
+  // state -- utterly negligible for a safety-monitoring signal operating
+  // on real-world microsecond-to-millisecond timescales, the same
+  // "capture this cycle, commit the next" precedent already used for
+  // rtl013_fault_source_q/internal_source_vector_q themselves (items
+  // 41/57/65), just one stage closer to this specific consumer.
+  // ==========================================================================
+  logic [63:0] interlock_terms_q;
+  always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
+    if (!core_rst_n_i)       interlock_terms_q <= 64'h0;
+    else if (module_reset_i) interlock_terms_q <= 64'h0;
+    else                     interlock_terms_q <= interlock_terms_i;
+  end
+
+  // ==========================================================================
   // Evaluation (ARCH-SAFE-006) -- combinational from active_q and the
   // registered term vector; every consumer below registers on one edge.
   // ==========================================================================
@@ -397,7 +435,7 @@ module dfc_rtl014 (
     for (int e = 0; e < NE; e++) begin
       for (int k = 0; k < 4; k++) begin
         // validated active IDs are 0-31 or 37, so ID[5:0] indexes C.1 exactly
-        tv[e][k] = interlock_terms_i[active_q[e*EW + 8*k +: 6]] ^ active_q[e*EW + F_INV + k];
+        tv[e][k] = interlock_terms_q[active_q[e*EW + 8*k +: 6]] ^ active_q[e*EW + F_INV + k];
       end
       case (active_q[e*EW+F_OP +: 3])
         3'd0:    expr_true[e] = &tv[e];                                // AND

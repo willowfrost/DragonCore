@@ -1,0 +1,408 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md SS28 (0x3400-0x341C) per-field bit tables, cited by contract ID, and RCA-DFC-ARCH-002.md's dfc_rtl016_control_t/status_t Appendix B tables (OPEN_ISSUES.md item 90). SAFETY_CHANNEL_CONTROL/SAFETY_RESPONSE_MASK/SAFETY_INTERLOCK_MASK are each REG-002's own 'selected channel' register, declared in indexed_registers (reggen.py v5, same mechanism RTL-014/015's sessions built and reused, items 68/82) -- four real stores each, written/read at SAFETY_CHANNEL_SELECT.CHANNEL (REG-3408, REG-COH-001). The complete 4-channel bank is forwarded to dfc_rtl016_control_t's new safety_channel_c<0..3>__* fields (struct grown 53->226 bits this session: 172 bits for the 4-channel array, plus 1 bit for rtl016_evt_overflow_status__event_overflow, a real gap found while writing this field map -- Appendix B's first draft omitted RTL-016's own EVENT_OVERFLOW-clear-forwarding control field entirely, the 15th instance of this same gap class, item 6/item-82-precedent) since RTL-016 must evaluate PERMIT[c] for all four channels simultaneously and continuously -- a single selected-view field cannot carry that. Each of the three indexed registers' field list carries BOTH the struct's pre-existing selected-view fields (plain, driven by the indexed-register generator's own {name}_q selected-entry mux -- forwarded but functionally unused by dfc_rtl016.sv, item 73 precedent) AND the 4 new per-channel array entries, since every bit of the control struct must be covered by exactly one field-map entry and reggen.py keys control_registers by register name (one dict entry per register, not two). SAFETY_CONTROL/SAFETY_CHANNEL_SELECT are readback=internal_reg; SAFETY_STATUS/SAFETY_CHANNEL_STATUS/RTL016_EVT_OVERFLOW_STATUS are readback=external, closing the RTL-002/003/004-style host-READ gap (item 21) from the start.",
+  "consumer_module": "RTL-016",
+  "control_struct": "dfc_rtl016_control_t",
+  "status_struct": "dfc_rtl016_status_t",
+  "indexed_registers": [
+    {
+      "register": "SAFETY_CHANNEL_CONTROL",
+      "select_register": "SAFETY_CHANNEL_SELECT",
+      "select_hi": 1,
+      "select_lo": 0,
+      "depth": 4,
+      "contract_id": "REG-340C; REG-3408; REG-COH-001"
+    },
+    {
+      "register": "SAFETY_RESPONSE_MASK",
+      "select_register": "SAFETY_CHANNEL_SELECT",
+      "select_hi": 1,
+      "select_lo": 0,
+      "depth": 4,
+      "contract_id": "REG-3410; REG-3408; REG-COH-001"
+    },
+    {
+      "register": "SAFETY_INTERLOCK_MASK",
+      "select_register": "SAFETY_CHANNEL_SELECT",
+      "select_hi": 1,
+      "select_lo": 0,
+      "depth": 4,
+      "contract_id": "REG-3414; REG-3408; REG-COH-001"
+    }
+  ],
+  "control_registers": [
+    {
+      "register": "SAFETY_CONTROL",
+      "contract_id": "REG-3400",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "safety_control__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "struct_field": "safety_control__event_enable"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "struct_field": "safety_control__irq_enable"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "class": "RW",
+          "struct_field": "safety_control__global_inhibit"
+        }
+      ]
+    },
+    {
+      "register": "SAFETY_STATUS",
+      "contract_id": "REG-3404",
+      "fields": [
+        {
+          "reg_hi": 19,
+          "reg_lo": 16,
+          "class": "W1C",
+          "struct_field": "safety_status__event"
+        }
+      ]
+    },
+    {
+      "register": "SAFETY_CHANNEL_SELECT",
+      "contract_id": "REG-3408",
+      "fields": [
+        {
+          "reg_hi": 1,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "safety_channel_select__channel"
+        }
+      ]
+    },
+    {
+      "register": "SAFETY_CHANNEL_CONTROL",
+      "contract_id": "REG-340C",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "safety_channel_control__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "struct_field": "safety_channel_control__active_high"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "struct_field": "safety_channel_control__latch_response"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "safety_channel_c0__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "safety_channel_c0__active_high"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "safety_channel_c0__latch_response"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "safety_channel_c1__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "safety_channel_c1__active_high"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "safety_channel_c1__latch_response"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "safety_channel_c2__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "safety_channel_c2__active_high"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "safety_channel_c2__latch_response"
+        },
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "safety_channel_c3__enable"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "safety_channel_c3__active_high"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "safety_channel_c3__latch_response"
+        }
+      ]
+    },
+    {
+      "register": "SAFETY_RESPONSE_MASK",
+      "contract_id": "REG-3410",
+      "fields": [
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "safety_response_mask__response_source_mask"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "safety_channel_c0__response_source_mask"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "safety_channel_c1__response_source_mask"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "safety_channel_c2__response_source_mask"
+        },
+        {
+          "reg_hi": 31,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "safety_channel_c3__response_source_mask"
+        }
+      ]
+    },
+    {
+      "register": "SAFETY_INTERLOCK_MASK",
+      "contract_id": "REG-3414",
+      "fields": [
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "struct_field": "safety_interlock_mask__required_interlocks"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 0,
+          "struct_field": "safety_channel_c0__required_interlocks"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 1,
+          "struct_field": "safety_channel_c1__required_interlocks"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 2,
+          "struct_field": "safety_channel_c2__required_interlocks"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 0,
+          "class": "RW",
+          "entry": 3,
+          "struct_field": "safety_channel_c3__required_interlocks"
+        }
+      ]
+    },
+    {
+      "register": "RTL016_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-341C",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "class": "W1C",
+          "struct_field": "rtl016_evt_overflow_status__event_overflow"
+        }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "SAFETY_STATUS",
+      "contract_id": "REG-3404",
+      "fields": [
+        {
+          "reg_hi": 3,
+          "reg_lo": 0,
+          "struct_field": "safety_status__commanded"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 4,
+          "struct_field": "safety_status__effective"
+        },
+        {
+          "reg_hi": 11,
+          "reg_lo": 8,
+          "struct_field": "safety_status__inhibited"
+        },
+        {
+          "reg_hi": 15,
+          "reg_lo": 12,
+          "struct_field": "safety_status__faulted"
+        },
+        {
+          "reg_hi": 19,
+          "reg_lo": 16,
+          "struct_field": "safety_status__event"
+        }
+      ]
+    },
+    {
+      "register": "SAFETY_CHANNEL_STATUS",
+      "contract_id": "REG-3418",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "struct_field": "safety_channel_status__command_request"
+        },
+        {
+          "reg_hi": 1,
+          "reg_lo": 1,
+          "struct_field": "safety_channel_status__effective_output"
+        },
+        {
+          "reg_hi": 2,
+          "reg_lo": 2,
+          "struct_field": "safety_channel_status__disabled"
+        },
+        {
+          "reg_hi": 3,
+          "reg_lo": 3,
+          "struct_field": "safety_channel_status__observational_inhibit"
+        },
+        {
+          "reg_hi": 4,
+          "reg_lo": 4,
+          "struct_field": "safety_channel_status__interlock_inhibit"
+        },
+        {
+          "reg_hi": 5,
+          "reg_lo": 5,
+          "struct_field": "safety_channel_status__fault_inhibit"
+        },
+        {
+          "reg_hi": 6,
+          "reg_lo": 6,
+          "struct_field": "safety_channel_status__reset_active"
+        },
+        {
+          "reg_hi": 7,
+          "reg_lo": 7,
+          "struct_field": "safety_channel_status__test_inhibit"
+        },
+        {
+          "reg_hi": 8,
+          "reg_lo": 8,
+          "struct_field": "safety_channel_status__latched_request"
+        },
+        {
+          "reg_hi": 9,
+          "reg_lo": 9,
+          "struct_field": "safety_channel_status__commanded"
+        },
+        {
+          "reg_hi": 10,
+          "reg_lo": 10,
+          "struct_field": "safety_channel_status__controller_disabled"
+        },
+        {
+          "reg_hi": 11,
+          "reg_lo": 11,
+          "struct_field": "safety_channel_status__global_inhibit"
+        },
+        {
+          "reg_hi": 12,
+          "reg_lo": 12,
+          "struct_field": "safety_channel_status__operational_inhibit"
+        }
+      ]
+    },
+    {
+      "register": "RTL016_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-341C",
+      "fields": [
+        {
+          "reg_hi": 0,
+          "reg_lo": 0,
+          "struct_field": "event_overflow"
+        },
+        {
+          "reg_hi": 23,
+          "reg_lo": 8,
+          "struct_field": "event_drop_count"
+        }
+      ]
+    }
+  ]
+}

@@ -5949,8 +5949,8 @@
     },
     {
       "name": "dfc_rtl016_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl016_control_t (53 bits, rich format)",
-      "width": 53,
+      "trace": "ARCH-002 Appendix B dfc_rtl016_control_t (226 bits, rich format)",
+      "width": 226,
       "fields": [
         {
           "name": "safety_control__enable",
@@ -6050,6 +6050,195 @@
           "signed": false,
           "reset": "1",
           "semantic": "explicit global inhibit; independent of controller enable"
+        },
+        {
+          "name": "safety_channel_c0__enable",
+          "hi": 53,
+          "lo": 53,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c0__latch_response",
+          "hi": 54,
+          "lo": 54,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c0__active_high",
+          "hi": 55,
+          "lo": 55,
+          "width": 1,
+          "signed": false,
+          "reset": "1",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c0__response_source_mask",
+          "hi": 87,
+          "lo": 56,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c0__required_interlocks",
+          "hi": 95,
+          "lo": 88,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c1__enable",
+          "hi": 96,
+          "lo": 96,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c1__latch_response",
+          "hi": 97,
+          "lo": 97,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c1__active_high",
+          "hi": 98,
+          "lo": 98,
+          "width": 1,
+          "signed": false,
+          "reset": "1",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c1__response_source_mask",
+          "hi": 130,
+          "lo": 99,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c1__required_interlocks",
+          "hi": 138,
+          "lo": 131,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c2__enable",
+          "hi": 139,
+          "lo": 139,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c2__latch_response",
+          "hi": 140,
+          "lo": 140,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c2__active_high",
+          "hi": 141,
+          "lo": 141,
+          "width": 1,
+          "signed": false,
+          "reset": "1",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c2__response_source_mask",
+          "hi": 173,
+          "lo": 142,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c2__required_interlocks",
+          "hi": 181,
+          "lo": 174,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c3__enable",
+          "hi": 182,
+          "lo": 182,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c3__latch_response",
+          "hi": 183,
+          "lo": 183,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c3__active_high",
+          "hi": 184,
+          "lo": 184,
+          "width": 1,
+          "signed": false,
+          "reset": "1",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c3__response_source_mask",
+          "hi": 216,
+          "lo": 185,
+          "width": 32,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "safety_channel_c3__required_interlocks",
+          "hi": 224,
+          "lo": 217,
+          "width": 8,
+          "signed": false,
+          "reset": "0",
+          "semantic": "control_value"
+        },
+        {
+          "name": "rtl016_evt_overflow_status__event_overflow",
+          "hi": 225,
+          "lo": 225,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },
