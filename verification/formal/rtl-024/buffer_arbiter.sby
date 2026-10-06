@@ -1,0 +1,39 @@
+[tasks]
+bmc
+prove
+
+[options]
+bmc: mode bmc
+bmc: depth 40
+prove: mode prove
+prove: depth 40
+
+[engines]
+smtbmc boolector
+
+[script]
+# Same read order discipline as verification/formal/rtl-001/
+# dri_one_outstanding.sby: packages before what references their symbols,
+# then the real DUT dependency chain, then the formal harness itself.
+read -formal dfc_constants_pkg.sv
+read -formal dfc_types_pkg.sv
+read -formal dfc_mem_sp_512x36.sv
+read -formal dfc_rtl024_shared_buffer.sv
+read -formal buffer_arbiter_formal.sv
+prep -top formal_top
+
+[files]
+../../../include/dfc_constants_pkg.sv
+../../../include/dfc_types_pkg.sv
+../../../rtl/top/dfc_mem_sp_512x36.sv
+../../../rtl/top/dfc_rtl024_shared_buffer.sv
+buffer_arbiter_formal.sv
+
+# --- HISTORY --------------------------------------------------------
+# First real run of this harness. Uses the generic behavioral memory body
+# (dfc_mem_sp_512x36.sv), not the real PDPW16KD-backed ECP5 body -- the
+# three properties here (P_MUTEX, P_RANGE_CHECK, P_ONE_OUTSTANDING) are all
+# about the ARBITER's own decode/grant/outstanding-tracking logic, which
+# does not depend on which memory realization sits behind it. Report the
+# real pass/fail/non-convergence outcome for each property in
+# OPEN_ISSUES.md once run -- do not assume a clean pass before seeing it.

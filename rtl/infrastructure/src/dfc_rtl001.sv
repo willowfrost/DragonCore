@@ -225,6 +225,25 @@ module dfc_rtl001 (
   output logic [dfc_types_pkg::DFC_RTL016_CONTROL_WIDTH-1:0] rtl016_control_o,
   input  logic [dfc_types_pkg::DFC_RTL016_STATUS_WIDTH-1:0]  rtl016_status_i,
 
+  // REAL shared-buffer service status (RTL-024's Centralized Shared-Buffer
+  // Service, ARCH-002 SS12 / RTLSTD-MEM-001..020) -- replaces the six
+  // individual stub-tied buffer_status/buffer_client_error_count_0_1/2_3/
+  // 4_5/6/buffer_internal_error_count status_i ports. These are REG-002's
+  // "external passthrough" register class (reggen.py: write_illegal_o
+  // hardcoded, no write-forwarding port generated for this class yet) --
+  // the host can read these six registers for real now, but cannot clear
+  // them (REG-002's BUFFER_STATUS W1C / BUFFER_*_ERROR_COUNT COUNTER16-CLR/
+  // COUNTER-CLR host-write-clear behavior has no path to reach
+  // dfc_rtl024_shared_buffer.sv until reggen gains a write-forwarding port
+  // for the "external" class -- a real, disclosed, pre-existing tooling
+  // gap, not something this session left incomplete; see OPEN_ISSUES.md).
+  input  logic [31:0] buffer_status_status_i,
+  input  logic [31:0] buffer_client_error_count_0_1_status_i,
+  input  logic [31:0] buffer_client_error_count_2_3_status_i,
+  input  logic [31:0] buffer_client_error_count_4_5_status_i,
+  input  logic [31:0] buffer_client_error_count_6_status_i,
+  input  logic [31:0] buffer_internal_error_count_status_i,
+
   // RTL-001's OWN real status_o (dfc_rtl001_status_t, 19 bits: ready,
   // fault, event_overflow, event_drop_count[15:0] -- ARCH-002 Appendix
   // B.5). Added this session, closing a real, previously-disclosed gap:
@@ -527,7 +546,7 @@ module dfc_rtl001 (
     .host_completed_count_status_i('0), .host_crc_error_count_status_i('0),
     .host_abort_count_status_i('0), .host_timeout_count_status_i('0),
     .host_access_error_count_status_i('0), .rtl024_evt_overflow_status_status_i('0),
-    .buffer_status_status_i('0), .host_last_sequence_status_i('0), .test_status_status_i('0),
+    .buffer_status_status_i(buffer_status_status_i), .host_last_sequence_status_i('0), .test_status_status_i('0),
     .arx_status_status_i('0), .arx_queue_level_status_i('0), .arx_data_status_i('0),
     .arx_meta_status_i('0), .arx_time_lo_status_i('0), .arx_time_hi_status_i('0),
     .arx_error_count_status_i('0), .arx_overflow_count_status_i('0),
@@ -548,9 +567,9 @@ module dfc_rtl001 (
     .uli_out_data_status_i('0), .uli_io_input_status_i('0), .rtl022_evt_overflow_status_status_i('0),
     .uroute_status_status_i('0), .uroute_active_source_status_i('0), .uroute_active_dest_status_i('0),
     .uroute_entry_status_status_i('0), .rtl023_evt_overflow_status_status_i('0),
-    .arx_rejected_access_count_status_i('0), .atx_rejected_push_count_status_i('0), .buffer_client_error_count_0_1_status_i('0),
-    .buffer_client_error_count_2_3_status_i('0), .buffer_client_error_count_4_5_status_i('0), .buffer_client_error_count_6_status_i('0),
-    .buffer_internal_error_count_status_i('0), .can_rx_overflow_count_status_i('0), .can_tx_rejected_count_status_i('0),
+    .arx_rejected_access_count_status_i('0), .atx_rejected_push_count_status_i('0), .buffer_client_error_count_0_1_status_i(buffer_client_error_count_0_1_status_i),
+    .buffer_client_error_count_2_3_status_i(buffer_client_error_count_2_3_status_i), .buffer_client_error_count_4_5_status_i(buffer_client_error_count_4_5_status_i), .buffer_client_error_count_6_status_i(buffer_client_error_count_6_status_i),
+    .buffer_internal_error_count_status_i(buffer_internal_error_count_status_i), .can_rx_overflow_count_status_i('0), .can_tx_rejected_count_status_i('0),
     .clock_reset_status_status_i('0),
     .route_active_control_status_i('0),
     .route_destination_drop_count_0_1_status_i('0), .route_destination_drop_count_2_3_status_i('0), .route_destination_drop_count_4_status_i('0),

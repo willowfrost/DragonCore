@@ -173,7 +173,20 @@ foreach ($domainDir in $RtlDomainDirs) {
     }
 }
 
+#   - rtl\top\dfc_mem_sp_512x36.sv is the ONE deliberate exception to plain
+#     auto-discovery: it's the generic/behavioral technology-independent body
+#     of the Centralized Shared-Buffer Service's memory child (RTLSTD-MEM-013
+#     "or inferred memory" realization), used by sim/lint/formal. The real
+#     ECP5 build instead needs fpga\ecp5\dfc_mem_sp_512x36_ecp5.sv -- the SAME
+#     module name/port list, backed by the real Lattice PDPW16KD primitive
+#     (RTLSTD-WRAP-002: FPGA-specific memory resources exist only in FPGA
+#     wrappers, so the real primitive cannot live under rtl\top at all).
+#     Excluded here and swapped for its ECP5-specific replacement in the
+#     fixed list below -- same mechanism this list already uses to ADD
+#     FPGA-specific files, just also excluding one auto-discovered file so
+#     the two same-named modules are never fed to yosys together.
 $DiscoveredTopFiles = Get-ChildItem -Path "rtl\top" -Filter "*.sv" -File |
+    Where-Object { $_.Name -ne "dfc_mem_sp_512x36.sv" } |
     Sort-Object Name |
     ForEach-Object { $_.FullName.Substring($RepoRoot.Length + 1) }
 
@@ -187,6 +200,7 @@ $SourceFiles = @(
 ) + $DiscoveredModuleFiles + $DiscoveredTopFiles + @(
     "fpga\ecp5\ulx3s_dfc_top.sv",
     "fpga\ecp5\dfc_ecp5_pll.v",
+    "fpga\ecp5\dfc_mem_sp_512x36_ecp5.sv",
     "fpga\ecp5\ulx3s_dfc.lpf"
 )
 

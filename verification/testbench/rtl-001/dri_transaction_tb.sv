@@ -104,6 +104,16 @@ module dri_transaction_tb;
   logic [dfc_types_pkg::DFC_RTL015_STATUS_WIDTH-1:0]  rtl015_status_i = '0;
   logic [dfc_types_pkg::DFC_RTL016_CONTROL_WIDTH-1:0] rtl016_control_o;
   logic [dfc_types_pkg::DFC_RTL016_STATUS_WIDTH-1:0]  rtl016_status_i = '0;
+  // Same isolation choice for the shared-buffer service, added this
+  // session: this testbench does not model it either -- all six status
+  // inputs are tied to a disclosed stub ('0), same pattern as every other
+  // not-modeled module above.
+  logic [31:0] buffer_status_status_i = '0;
+  logic [31:0] buffer_client_error_count_0_1_status_i = '0;
+  logic [31:0] buffer_client_error_count_2_3_status_i = '0;
+  logic [31:0] buffer_client_error_count_4_5_status_i = '0;
+  logic [31:0] buffer_client_error_count_6_status_i = '0;
+  logic [31:0] buffer_internal_error_count_status_i = '0;
   // RTL-001's own new real status_o -- unused by this testbench (which
   // exercises DRI protocol correctness, not RTL-001's own readiness).
   logic [dfc_types_pkg::DFC_RTL001_STATUS_WIDTH-1:0] status_o;

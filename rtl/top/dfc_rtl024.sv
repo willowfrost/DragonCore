@@ -546,6 +546,17 @@ module dfc_rtl024 (
   logic         rtl016_evt_valid, rtl016_evt_ready;
   logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl016_evt_record;
 
+  // Shared-buffer service status (REAL as of this session) -- declared
+  // here, before u_rtl001's own instantiation below references them,
+  // per this file's own established declaration-before-use discipline.
+  // Driven by u_rtl024_shared_buffer further down this file.
+  logic [31:0] buffer_status;
+  logic [31:0] buffer_client_error_count_0_1;
+  logic [31:0] buffer_client_error_count_2_3;
+  logic [31:0] buffer_client_error_count_4_5;
+  logic [31:0] buffer_client_error_count_6;
+  logic [31:0] buffer_internal_error_count;
+
   dfc_rtl001 u_rtl001 (
     .core_clk_i      (core_clk_i),
     .core_rst_n_i    (core_rst_n),
@@ -624,7 +635,18 @@ module dfc_rtl024 (
     // RTL-001's own real status_o -- closes the previously-disclosed gap
     // where module_ready_i[0]/module_fault_i[0] were tied to a permanent
     // placeholder regardless of RTL-001's real condition.
-    .status_o         (rtl001_status)
+    .status_o         (rtl001_status),
+    // Shared-buffer service status -- REAL as of this session, closes the
+    // previously-disclosed gap where these six REG-002 "external
+    // passthrough" registers were tied to a permanent zero regardless of
+    // the (previously nonexistent) service's real condition. See
+    // u_rtl024_shared_buffer's own instantiation below.
+    .buffer_status_status_i(buffer_status),
+    .buffer_client_error_count_0_1_status_i(buffer_client_error_count_0_1),
+    .buffer_client_error_count_2_3_status_i(buffer_client_error_count_2_3),
+    .buffer_client_error_count_4_5_status_i(buffer_client_error_count_4_5),
+    .buffer_client_error_count_6_status_i(buffer_client_error_count_6),
+    .buffer_internal_error_count_status_i(buffer_internal_error_count)
   );
 
   // ==========================================================================
@@ -1669,6 +1691,77 @@ module dfc_rtl024 (
                           rtl001_status[dfc_types_pkg::DFC_RTL001_STATUS__FAULT_HI]};
 
   // ==========================================================================
+  // RTL-024's Centralized Shared-Buffer Service (ARCH-002 SS12) -- REAL as
+  // of this session (dfc_rtl024_shared_buffer.sv). 7 clients: 0=RTL-017,
+  // 1=RTL-018, 2=RTL-019, 3=RTL-020, 4=RTL-021, 5=RTL-022, 6=RTL-024 SPI.
+  // ALL SEVEN tied to permanent idle below -- RTL-017 through RTL-022 don't
+  // exist yet (same disclosed-gap status as every other not-yet-real
+  // Databus module in this file), and client 6 is a PERMANENT, SETTLED
+  // exception: dfc_rtl024_spi_bridge.sv keeps its own existing, already-
+  // verified local command/response storage and deliberately never issues
+  // a request through this interface (see OPEN_ISSUES.md for the full
+  // disclosed reasoning -- this is a final, settled decision, not an open
+  // action item.
+  // The service itself is real and fully exercised by
+  // verification/testbench/rtl-024/rtl024_buffer_tb.sv's own direct
+  // per-client stimulus; it simply has no real producer connected to any
+  // of its 7 ports in this integration yet.
+  //
+  // module_reset_i[6:0] -- one bit per client, mapped to that CLIENT'S OWN
+  // existing module_reset_o bit (the client IS the module: client 0 =
+  // RTL-017 = module_reset_o[16], etc.) -- not a separate reset concept.
+  // Client 6 (RTL-024 SPI) ties to module_reset[23], which this file's own
+  // RTL-002 integration already documents as having no child local-reset
+  // consumer (system-reset-only) -- harmless here since client 6 is
+  // permanently idle regardless.
+  // ==========================================================================
+  logic [6:0] buf_req_valid, buf_req_ready, buf_rsp_valid, buf_rsp_ready;
+  logic [7*dfc_types_pkg::DFC_BUFFER_REQ_WIDTH-1:0] buf_req;
+  logic [7*dfc_types_pkg::DFC_BUFFER_RSP_WIDTH-1:0] buf_rsp;
+
+  assign buf_req_valid = 7'b0000000;   // no real client producer yet
+  assign buf_req       = '0;           // idle-value convention
+  assign buf_rsp_ready = 7'b1111111;   // harmless -- no response ever valid
+
+  // Whole-chip synthesis reachability note -- see
+  // dfc_rtl024_shared_buffer.sv's own header for the full, real, disclosed
+  // account: with every client below tied to permanent idle, this
+  // subsystem's output is provably constant and a real build_ecp5.ps1 run
+  // confirms Yosys correctly removes it entirely (DP16KD: 0/208) -- not a
+  // bug, and not fixable with a synthesis attribute (two independent
+  // `(* keep *)` placements were tried and confirmed to have no effect).
+  dfc_rtl024_shared_buffer u_rtl024_shared_buffer (
+    .core_clk_i     (core_clk_i),
+    .core_rst_n_i   (core_rst_n),
+    .module_reset_i ({module_reset[23], module_reset[21], module_reset[20],
+                       module_reset[19], module_reset[18], module_reset[17],
+                       module_reset[16]}),
+    .buf_req_valid_i (buf_req_valid),
+    .buf_req_ready_o (buf_req_ready),
+    .buf_req_i       (buf_req),
+    .buf_rsp_valid_o (buf_rsp_valid),
+    .buf_rsp_ready_i (buf_rsp_ready),
+    .buf_rsp_o       (buf_rsp),
+    .buffer_status_o                  (buffer_status),
+    .buffer_client_error_count_0_1_o  (buffer_client_error_count_0_1),
+    .buffer_client_error_count_2_3_o  (buffer_client_error_count_2_3),
+    .buffer_client_error_count_4_5_o  (buffer_client_error_count_4_5),
+    .buffer_client_error_count_6_o    (buffer_client_error_count_6),
+    .buffer_internal_error_count_o    (buffer_internal_error_count),
+    // Formal-verification observability ports -- no consumer needed here,
+    // only in verification/formal/rtl-024/buffer_arbiter_formal.sv.
+    .dbg_grant_onehot_o    (),
+    .dbg_outstanding_o     (),
+    .dbg_grant_valid_o     (),
+    .dbg_gr_range_error_o  (),
+    .dbg_gr_offset_o       (),
+    .dbg_gr_width_o        (),
+    .dbg_mem_we_o          (),
+    .dbg_gr_abs_addr_o     (),
+    .dbg_gr_base_o         ()
+  );
+
+  // ==========================================================================
   // STUB BLOCK -- RTL-017 through RTL-023 do not exist yet in this
   // repository. Each entry below is a labeled placeholder: it consumes no
   // real signal from RTL-001 through RTL-016 (module control/status
@@ -1746,7 +1839,18 @@ module dfc_rtl024 (
                             user_i[0] ^
                             test_enable_i ^ test_clock_i ^ test_data_i ^
                             (^rtl002_operating_state) ^ rtl002_observational_mode ^
-                            (|module_reset[23:15]);
+                            (|{module_reset[23:22], module_reset[15]}) ^
+                            (|buf_req_ready) ^ (|buf_rsp_valid) ^ (^buf_rsp);
+                            // module_reset[16:21] are no longer unused --
+                            // they are now the shared-buffer service's real
+                            // per-client module_reset_i (clients 0-5, RTL-017
+                            // through RTL-022). buf_req_ready/buf_rsp_valid/
+                            // buf_rsp are the shared-buffer service's own
+                            // real outputs with no real client consumer yet
+                            // (same disclosed-gap pattern as
+                            // rtl002_operating_state/observational_mode
+                            // above) -- folded in here rather than left as a
+                            // silently-dangling internal wire.
                             // rtl002_irq_req is no longer unused -- it is
                             // now a real input to RTL-003's irq_source_i[0]
                             // above. module_reset[2]/module_reset[3]/

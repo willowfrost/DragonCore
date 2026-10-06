@@ -2493,3 +2493,268 @@ silently settled fact.
 - `formal.ps1`: 2/2 tasks PASSED (bmc + prove)
 - `check_coverage.py`: 186/353 registers referenced (+8 over the
   RTL-015 baseline, exactly RTL-016's 8 new registers)
+
+## RTL-024 Centralized Shared-Buffer Service (ARCH-002 SS12) integration
+
+Infrastructure session, not a new RTL-0NN module: implements the
+centralized 512-word shared-buffer service RTL-017 through RTL-022 (and
+RTL-024's own SPI path) will depend on, ahead of the Databus domain.
+
+100. **Architecture decision: centralized shared buffer kept over
+     per-module private RAM, after a real, adversarial design review --
+     logged here because the alternative was seriously considered, not
+     because the `-002` documents left this ambiguous.** Mid-session, the
+     centralized design (one arbiter, one `PDPW16KD`-backed store, 7
+     typed clients per ARCH-002 SS12) was challenged in favor of giving
+     each of RTL-017 through RTL-022 its own private block RAM. Both
+     sides were argued out concretely, not abstractly:
+     - *For per-module RAM:* removes the 7-client round-robin arbiter and
+       its associated timing-closure risk class (this project's own
+       `OPEN_ISSUES.md` items 17/48/57/65/99 already document repeated
+       wide-fan-in/arbitration-mux timing failures); removes the
+       RTL-024-SPI-bridge/`ARCH-SPI-005` friction that came up mid-
+       investigation (see item 101); the shared-buffer error class
+       (`RANGE_ERROR`/`PROTOCOL_ERROR`) becomes structurally impossible
+       with private per-module addressing instead of merely rare.
+     - *For the centralized design:* every one of the 7 clients' entry
+       words is 32 bits wide under ARCH-002 SS12.3's own entry layouts
+       (`ARCH-BUF-021` through `-028`) -- confirmed directly against the
+       real `DP16KD`/`PDPW16KD` primitive limits (Yosys's own ECP5
+       techlib: true independent-port access caps at 18 bits/side, a
+       hard pin-count limit of the physical 18Kbit EBR tile, not a Yosys
+       quirk -- cross-checked against Microchip/Intel EBR documentation
+       and found to be a universal block-RAM architecture pattern, not
+       ECP5-specific), so ANY module needing a 32-bit word pays the
+       pseudo-dual-port-combination cost regardless of which design wins
+       -- paid ONCE centrally, or separately for every one of RTL-017
+       through RTL-022 under a per-module design (confirmed concretely:
+       RTL-019's CAN entries need the full 29-bit identifier, RTL-021's
+       192-bit canonical message sliced into 32-bit chunks needs the full
+       width -- neither shrinks under repacking). The technology-wrapper-
+       swap engineering itself (generic behavioral body + real-primitive
+       FPGA body + build-script inclusion/exclusion logic -- see item 104)
+       would also multiply per module instead of being done once. Shared
+       arbitrated aggregation is also this project's own established
+       pattern, not a novel one: RTL-005's 24-producer event store already
+       runs a real round-robin arbiter into one shared store; RTL-003/013/
+       016 all aggregate many independent sources through one shared
+       structure.
+     - *Residual, not numerically resolved either way:* this is this
+       project's first BIDIRECTIONAL arbitrated READ-AND-WRITE access
+       structure across heterogeneous clients -- RTL-005's precedent is
+       write-mostly/append-only from producers with a separate simple
+       host-read path, not the same shape. This genuine novelty is why
+       this session pursued formal proof for the arbiter's core safety
+       properties rather than simulation alone (item 103), instead of
+       treating the cost/benefit numbers alone as dispositive.
+     **Decision: keep the centralized design**, per explicit instruction,
+     with the elevated verification rigor in item 103 as the direct
+     answer to the residual novelty risk.
+
+101. **RTL-024's own SPI bridge (`dfc_rtl024_spi_bridge.sv`) is a
+     PERMANENT, SETTLED exception to the shared-buffer service -- client 6
+     (`RTL-024 SPI`) is real, arbitrated, and fully exercised by
+     `rtl024_buffer_tb.sv`'s own direct stimulus, but has NO real producer
+     connected to it, by final decision, not by omission.** ARCH-BUF-001/
+     002 allocate buffer words `0x000-0x01F` to "RTL-024 SPI command/
+     response," and ARCH-BUF-021 describes per-word DRI-data-word staging
+     there. Investigating whether the bridge's existing command-word
+     capture (`data_words_q`) and response read-data staging
+     (`rdata_shift_q`) should be redirected through client 6 found two
+     independent, real obstacles, not a hypothetical one:
+     - A genuine real-time margin problem for the response side:
+       redirecting `rdata_shift_q` needs a client-6 WRITE (stash the
+       register-read result into the response segment) THEN a client-6
+       READ (fetch it back for framing) per word, each up to ~15 CORE_CLK
+       cycles under `ARCH-BUF-014`'s worst-case 7-cycle acceptance wait +
+       `ARCH-BUF-015`'s 8-cycle completion bound -- for up to 16 words
+       that is ~480 cycles worst case against an ~80-cycle total budget
+       (`DFC-INTF-0024`'s "0-2 wait-fill byte" allowance at the fastest
+       legal 10 MHz SCLK), 6x over.
+     - A DECISIVE, independent reason that makes the margin problem moot:
+       `ARCH-SPI-005` ("the response builder constructs ONE COMPLETE
+       STABLE response payload BEFORE the response mailbox ownership
+       toggle") directly forbids the streaming/overlap restructuring
+       (ship the header while later words are still being fetched) that
+       would otherwise have closed the margin gap -- a genuine
+       requirement-ordering conflict, not something any amount of buffer
+       speed or reduced contention fixes.
+     The write-side redirect (`data_words_q`, during live SPI command
+     reception) was confirmed to have ample real margin (~160 CORE_CLK
+     cycles/word available at the fastest legal 10 MHz SCLK vs. ~15
+     needed) and no `ARCH-SPI-005` conflict (it completes before response
+     construction begins) -- but by final, explicit instruction, client 6
+     stays wholly unconnected and `dfc_rtl024_spi_bridge.sv` is left
+     completely untouched (confirmed zero diff against its last known-good
+     commit). **This is final, not an implied TODO.** If client 6
+     integration is revisited later, it requires a fresh decision that
+     reconsiders `ARCH-SPI-005` itself (a different definition of
+     "response payload," or a different CDC/mailbox handoff model) --
+     not a continuation of this investigation.
+
+102. **Disclosed coverage gaps, all structural, not oversights:**
+     - **Whole-system integration**: `rtl024_skeleton_tb.sv` was
+       deliberately NOT extended with a real buffer round-trip this
+       session (per explicit instruction) -- there is no real client to
+       round-trip through yet (RTL-017 through RTL-022 don't exist;
+       client 6 is permanently excluded per item 101). True whole-system
+       buffer integration can't be proven until the first real Databus
+       client exists -- same precedent as RTL-005's own disclosed gap
+       before real event producers existed.
+     - **Arbitration fairness stimulus**: `rtl024_buffer_tb.sv`'s
+       contention-stress case drives only clients 0-5 directly (client 6
+       excluded per item 101) -- real coverage of the arbiter's fairness
+       logic, just not full 7-client coverage with a real producer behind
+       every port.
+     - **VP-BUF-007 (multiword-entry atomicity), VP-BUF-008 (word-order/
+       layout preservation), VP-BUF-009 (per-client pointer/evidence
+       ownership), VP-BUF-011 (uninitialized-word non-disclosure)**: all
+       four are CLIENT-MODULE responsibilities under RTLSTD-MEM-003
+       ("queue-control state stays in the client modules, not here"), not
+       properties this service can exercise in isolation. `rtl024_
+       buffer_tb.sv` covers this service's own relevant contribution to
+       each (adjacent-word independence for -008, error-evidence ownership
+       for -009) but genuine entry-level coverage needs a real RTL-017..
+       022 client, same structural gap as above.
+     - **VP-BUF-012 (FPGA/ASIC behavioral equivalence)**: only a real
+       `build_ecp5.ps1` synthesis/PnR run (confirming `PDPW16KD` placement,
+       item 104) can speak to this; simulation against the generic
+       behavioral memory body cannot prove primitive-level equivalence on
+       its own.
+
+103. **Formal verification of the arbiter's core safety properties --
+     pursued and PROVEN by k-induction, not simulation alone, per this
+     session's own elevated-rigor instruction for this project's first
+     bidirectional arbitrated heterogeneous-client access structure.**
+     `verification/formal/rtl-024/buffer_arbiter_formal.sv` +
+     `buffer_arbiter.sby`, real `sby` runs (not aspirational):
+     - `P_MUTEX` (at most one client's request ever reaches the memory
+       port in a given cycle, `$onehot0` on the grant vector, ARCH-BUF-014)
+       -- **PASSED**, both `bmc` (depth 40) and `prove` (k-induction
+       basecase + induction, unbounded).
+     - `P_RANGE_CHECK` (a granted request's derived absolute address can
+       never fall outside its own client's assigned segment, for every
+       legal and illegal `word_offset` value -- not sampled cases,
+       ARCH-BUF-016/RTLSTD-MEM-006) -- **PASSED**, both `bmc` and `prove`.
+     - `P_ONE_OUTSTANDING` (a client already outstanding is never granted
+       a second acceptance, ARCH-BUF-013) -- **PASSED**, both `bmc` and
+       `prove`.
+     - `P_FAIRNESS` (every continuously eligible client accepted within 7
+       acceptance opportunities, ARCH-BUF-014) -- **NOT attempted as a
+       formal property, explicitly, not silently dropped.** It is a
+       BOUNDED LIVENESS property ("eventually, within 7 cycles"), which
+       would need either an unrolled multi-cycle BMC assertion over a
+       sliding 7-cycle x 7-client window (expensive, and this project has
+       no existing liveness/cover-based formal flow to build on -- every
+       other formal harness in this project checks safety properties
+       only) or a dedicated flow this session did not have time to stand
+       up from scratch. Covered instead by `rtl024_buffer_tb.sv`'s own
+       direct simulation (VP-BUF-005/ARCH-BUF-014 case: measures the real
+       max inter-grant gap under continuous 6-client contention, confirms
+       <=7 cycles) -- real coverage, simulation-only for this one
+       property, disclosed rather than blended in with the three formally
+       proven ones.
+     **A real, confirmed toolchain finding along the way, not assumed**:
+     an initial version of this formal harness used hierarchical
+     references (`u_dut.grant_onehot` etc.) to observe the DUT's internal
+     arbiter state -- exactly the pattern `dri_one_outstanding_formal.sv`
+     already warned doesn't work on this toolchain, and this session hit
+     the identical failure mode directly: Yosys's native frontend silently
+     turns a hierarchical reference into a free, undriven phantom wire
+     instead of resolving it, producing a bogus "failing" counterexample
+     driven entirely by that phantom wire's own unconstrained value. Fixed
+     the same way `dfc_rtl001.sv`'s `dbg_regbank_write_en_o` already
+     established: real, permanent `dbg_*_o` observability ports added to
+     `dfc_rtl024_shared_buffer.sv` (`RTLSTD-MOD-014`'s exception for formal
+     observability, not a production-interface violation).
+
+104. **Primitive choice: `PDPW16KD` instantiated directly
+     (`fpga/ecp5/dfc_mem_sp_512x36_ecp5.sv`), not a hand-wired `DP16KD`
+     with both physical sides combined.** Confirmed from Yosys's own
+     `techlibs/lattice/cells_bb_ecp5.v` (real blackbox port declaration:
+     clean, separate `ADW[8:0]`/`ADR[13:0]`/`BE[3:0]` buses) and
+     `techlibs/lattice/brams_map_16kd.v` (the alternative route: building
+     a 36-bit word from bare `DP16KD` directly repurposes `ADA0`-`ADA3` as
+     write-enable lanes at width >=36, with the real address starting at
+     `ADA4` -- confirmed directly from the real techmap source, not
+     inferred). `PDPW16KD` avoids that repurposing ambiguity entirely and
+     is also the standard, vendor-recommended configuration for a
+     write-only-port/read-only-port access shape in general, not a
+     workaround. Two minor, unreconciled discrepancies the research
+     surfaced, neither resolved by guessing:
+     - `CSDECODE_W`/`CSDECODE_R`: Yosys's own primitive default is the
+       string `"0b000"` (with a literal `"0b"` prefix); Lattice's own
+       Memory Usage Guide (FPGA-TN-02204) describes legal values as bare
+       `"000"`-`"111"`. This file uses `3'b000` (a sized literal, sidestepping
+       the string-format question entirely) -- matches Yosys's own
+       techmap convention, not independently confirmed against real
+       `nextpnr-ecp5` placement beyond the real `build_ecp5.ps1` run this
+       session's own verification step requires.
+     - `GSR("AUTO")`: Yosys's own working `synth_ecp5` output always
+       chooses `"AUTO"` over the blackbox's simulation default
+       `"ENABLED"`; Lattice's own Appendix A does not document `GSR` at
+       all. This file matches Yosys's own known-working synthesis default
+       rather than the simulation default, disclosed as matching observed
+       tool behavior, not an independently-verified semantic choice.
+     **Real `build_ecp5.ps1` confirmation, done -- with a genuine,
+     disclosed result, not a clean pass assumed in advance.** The
+     whole-chip build's `Device utilisation` line reads `DP16KD: 0/208`.
+     This is NOT a primitive-mapping failure -- confirmed by a SEPARATE,
+     isolated `synth_ecp5` run targeting only `dfc_mem_sp_512x36_ecp5.sv`
+     (so its ports stay genuinely observable, not provably dead), which
+     placed exactly 1 `PDPW16KD`/`DP16KD` cell correctly. The whole-chip
+     0/208 is a real, correct reachability fact instead: every one of the
+     7 clients is tied to permanent idle in today's integration (item
+     101/102), so `buf_req_valid_i` is a compile-time constant 0 and this
+     entire subsystem's output is provably constant -- a correct optimizer
+     removing it entirely is the right behavior, not a bug. Two
+     independent attempts to force preservation anyway (`(* keep *)` on
+     the instantiation line, then on the module declaration) were tried
+     and confirmed to have NO effect -- three full rebuilds produced
+     byte-identical timing (39.72 MHz pre-route estimate / 52.06 MHz
+     final, both PASS at 50.00 MHz) and utilization results regardless.
+     Forcing a misleading nonzero count would have been worse than
+     disclosing the real state. **A real nonzero whole-chip placement
+     count can only be confirmed once a genuine client (RTL-017 or any
+     other) actually drives traffic through this service** -- logged here
+     as a required follow-up check for whoever builds the first real
+     Databus client, not an open item against this session's own work.
+
+105. **`PROTOCOL_ERROR` and `INTERNAL_ERROR` are structurally unreachable
+     in this implementation -- disclosed, not silently invented.**
+     `PROTOCOL_ERROR`'s one plausible RTLSTD-MEM-006 trigger ("excess-
+     outstanding request") is prevented BY CONSTRUCTION (a client with one
+     outstanding request is simply excluded from arbitration, never
+     reaching a response path at all) rather than detected-and-coded.
+     `INTERNAL_ERROR` has no defined trigger anywhere in this synchronous,
+     fixed-2-cycle-latency, single-memory-child design (no ECC, no
+     variable timing, nothing that can fail internally the way
+     `ARCH-BUFERR-001` anticipates). Both codes are fully wired through
+     (`BUFFER_STATUS`/`BUFFER_INTERNAL_ERROR_COUNT` logic exists and is
+     verified correct IF driven -- `rtl024_buffer_tb.sv`'s own checks
+     confirm `RANGE_ERROR` does NOT increment the internal-error count,
+     exercising the discrimination logic even though the `INTERNAL_ERROR`
+     path itself is never taken), but neither code is ever produced by any
+     real stimulus in this build.
+
+106. **Host-write-clear path for `BUFFER_STATUS` (W1C) and the five
+     `BUFFER_*_ERROR_COUNT` registers (`COUNTER16-CLR`/`COUNTER-CLR`) does
+     not exist -- a real, confirmed, PRE-EXISTING `reggen.py` gap, not
+     something this session left incomplete.** `reggen.py`'s "external"
+     register class (used for all six of these, confirmed by direct
+     reading of `reggen.py`'s own `emit_regbank()`) generates a pure
+     read-only mirror in `dfc_config_regbank_regs.sv`
+     (`write_illegal_o = 1'b1` hardcoded, confirmed directly) with NO
+     write-forwarding port to the owning module at all -- unlike the
+     RW-class registers (RTL-002 through RTL-016's own control/status
+     buses), "external" registers have no mechanism for a host write to
+     reach the owner, regardless of what the owning module itself
+     implements. `dfc_rtl024_shared_buffer.sv` maintains real sticky bits/
+     saturating counters internally (set/incremented correctly per
+     `ARCH-BUFERR-001`, confirmed by `rtl024_buffer_tb.sv`), but per
+     `RTLSTD-REG-001` ("RTL-001 is the sole host-visible DRI register
+     endpoint... never decode register addresses locally"), this module
+     cannot invent its own address-decode/write-forwarding path to close
+     the gap itself -- `reggen.py` needs a write-forwarding port for the
+     "external" class first. Until then, these six registers accumulate
+     and are read-only from the host's perspective in every build.
