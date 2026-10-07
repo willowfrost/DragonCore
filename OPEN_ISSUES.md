@@ -2970,3 +2970,49 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      (does the synthesized design actually behave correctly) is answered
      by simulation and the real, completed (if never packaged) PnR
      timing PASS -- only the bitstream-packaging step itself is blocked.
+
+     **Two specific root-cause leads investigated and ruled out in
+     follow-up sessions, so a future session doesn't re-walk either
+     path:**
+     - **Source-side parameter-typing bug** (a `PDPW16KD` parameter
+       landing as a bare unquoted JSON integer instead of a quoted
+       string, which placement/routing/timing wouldn't care about but
+       report/summary serialization would crash on). RULED OUT: the
+       actual JSON netlist `nextpnr-ecp5` consumes was dumped directly
+       and the one real instantiated cell
+       (`u_dragon_core.u_rtl024_shared_buffer.u_mem.u_pdpw16kd`, from
+       `dfc_mem_sp_512x36_ecp5.sv:100.5-131.4`) was inspected parameter
+       by parameter -- `ASYNC_RESET_RELEASE`, `CSDECODE_R`, `CSDECODE_W`,
+       `DATA_WIDTH_R`, `DATA_WIDTH_W`, `GSR`, `REGMODE`, `RESETMODE`, all
+       8 of them -- confirmed as properly quoted JSON strings via both
+       `json.load()` type-checking and direct raw-text inspection. No
+       source-side type mismatch exists.
+     - **Missing `CLKRMUX`/`CLKWMUX` blackbox parameters** (a real
+       upstream Yosys bug, fixed in a real April 2025 commit: prjtrellis
+       documents optional EBR clock-input inverters that Yosys's own
+       `PDPW16KD`/`DP16KD` blackbox declarations didn't carry before that
+       fix, which could plausibly explain a report-generation crash on
+       the very first design to place a real BRAM cell). RULED OUT,
+       checked two independent ways: (1) the installed Yosys's own
+       `/c/tools/oss-cad-suite/share/yosys/lattice/cells_bb_ecp5.v`
+       already declares `parameter CLKRMUX = "CLKR";` and
+       `parameter CLKWMUX = "CLKW";` on `PDPW16KD` (confirmed by direct
+       read, lines 27-28); `cells_sim_ecp5.v`'s own `DP16KD` simulation
+       model likewise already declares `CLKAMUX`/`CLKBMUX` (lines 67/125).
+       (2) the installed OSS CAD Suite's own `VERSION` file reads
+       `20260709` (2026-07-09) -- well over a year after the April 2025
+       fix landed -- confirmed via `yosys -V`
+       (`Yosys 0.66+252, git sha1 b35b6706f`) and `nextpnr-ecp5 --version`
+       (`nextpnr-0.10-82-g2b560ad0`) alongside the VERSION file. This
+       installation already has the fix; the real crash has a different,
+       still-unidentified cause.
+
+     **Status after both investigations: the real root cause remains
+     unknown.** It is confirmed internal to `nextpnr-ecp5` itself (not
+     this project's own RTL, not a source-side parameter type, not the
+     already-fixed missing-clock-mux-parameter class of bug, not the
+     `--report` JSON writer specifically). Resolving it further needs
+     either a newer/different toolchain build to test against, or direct
+     `nextpnr-ecp5` debugging -- both real environment/tooling decisions
+     for the person to make, not something an RTL session should pursue
+     unilaterally.
