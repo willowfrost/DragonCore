@@ -4,29 +4,54 @@ extract_types.py -- extractor for dfc_types_pkg.json, built fresh against RCA-DF
 
 Source: ARCH-002 Appendix B - Shared Packed Types.
 
-Appendix B contains 52 struct headers in two families:
+Appendix B contains 54 struct headers in two families:
   * 5 simple records/requests (B.1-B.4, dfc_safety_response_req_t) using either
     "Absolute bits|Member|Width" or "Bits|Member|W|Contract" tables.
-  * 47 rich control/status structs (B.5.1 dfc_rtl001_status_t, then
-    dfc_rtl002_control_t/status_t .. dfc_rtl024_control_t/status_t = 1 + 23*2)
-    using a uniform "Bits|Member|W|Signedness|Reset|Semantic" table. This is
-    the "~47 structs" scope named in the project brief, and is this
-    extractor's primary target; the 5 simple records are captured too for
-    completeness since they cost nothing extra to parse with the same engine.
+  * 49 rich control/status structs (B.5.1 dfc_rtl001_status_t, then
+    dfc_rtl002_control_t/status_t .. dfc_rtl024_control_t/status_t = 1 + 23*2,
+    PLUS 2 more added for RTL-017's ARINC RX adapter --
+    dfc_rtl024_arinc_rx_adapter_control_t/status_t. This is the first
+    instance of a rich struct pair that ISN'T one of the "one control_t/
+    status_t per RTL-0NN module" set: ARCH-BUS-001's digital receive
+    adapter is a real, hand-authored internal RTL-024 subblock (same
+    "internal subblock, not a separate RTL-0NN module" status as the
+    shared-buffer service), not a module with its own Appendix-A port row,
+    but it still needs its own reggen-consumable control/status struct --
+    reggen.py v5 requires a field-map's control_registers to cover its
+    consumer struct's ENTIRE declared width, which made keeping ARX_CONTROL's
+    5 real fields inside the general-purpose 278-bit dfc_rtl024_control_t
+    impractical (that struct also carries ~270 unrelated host/test/clock-
+    reset/buffer-clear fields no single field-map should need to map in one
+    pass). The formula is no longer purely "1 + 23*2" and EXPECTED_RICH_
+    STRUCTS below is no longer silently assumed to stay at 47 forever --
+    update it deliberately, with a disclosed reason, whenever a genuinely
+    new rich struct is added outside the per-module set, exactly as this
+    one was) using a uniform "Bits|Member|W|Signedness|Reset|Semantic"
+    table. This is this extractor's primary target; the 5 simple records
+    are captured too for completeness since they cost nothing extra to
+    parse with the same engine.
 
 Header format is inconsistent cosmetically (struct name sometimes backtick-
 wrapped, sometimes not; some headers are ### and one is #### for B.5.1) but
 uniform structurally: "#{3,4} [ID ]NAME_t — N bits" or a backtick-wrapped NAME_t.
+Note the trailing word is always literally "bits" (plural), even for a
+1-bit struct -- the header regex requires it literally; "1 bit" (singular)
+will NOT match and silently merges that struct's table rows into whichever
+struct was parsed immediately before it (confirmed via a real extraction
+failure: "dfc_rtl024_arinc_rx_adapter_control_t: bit 0 overlap" was this
+exact bug, from a "1 bit" heading instead of "1 bits").
 
 VERIFICATION (fail-loud; nothing written on any failure):
-  * exactly 47 rich-format (control/status) structs found
+  * exactly 49 rich-format (control/status) structs found
   * every struct's fields tile [0 .. declared_width-1] with no gaps/overlaps
   * declared width in the header matches the max bit + 1 from the field table
   * all member names within a struct are unique
 """
 import re, sys, json
 
-EXPECTED_RICH_STRUCTS = 47
+EXPECTED_RICH_STRUCTS = 49  # 47 (1 + 23*2 per-module) + 2 (RTL-024's ARINC
+                            # RX adapter control_t/status_t -- see this
+                            # file's own header for why the formula grew)
 
 HDR = re.compile(r'^#{3,4}\s+(?:B\.\d+(?:\.\d+)?\s+)?`?([a-z][a-z0-9_]*_t)`?\s+\u2014\s+(\d+)\s+bits\s*$')
 RICH_HEADER = re.compile(r'^\|\s*\*\*Bits\*\*\s*\|\s*\*\*Member\*\*\s*\|\s*\*\*W\*\*\s*\|\s*\*\*Signedness\*\*\s*\|\s*\*\*Reset\*\*\s*\|\s*\*\*Semantic\*\*\s*\|')

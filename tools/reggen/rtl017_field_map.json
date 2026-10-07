@@ -1,0 +1,148 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md SS14 (0x1000-0x1030) per-field bit tables, cited by contract ID, and RCA-DFC-ARCH-002.md's dfc_rtl017_control_t/status_t Appendix B tables. Covers all 13 ARINC RX registers EXCEPT ARX_CONTROL (REG-1000), whose 5 real fields (ENABLE/HIGH_SPEED/EVENT_ENABLE/IRQ_ENABLE/ACCEPT_PARITY_ERROR) belong entirely to dfc_rtl024_control_t, not dfc_rtl017_control_t -- confirmed directly by reading both structs; ARX_CONTROL is covered by rtl024_field_map.json instead (reggen.py v4: every register appears in at most one field-map's control_registers/status_registers -- ARX_CONTROL is deliberately absent here). ARX_CONTROL's own readback class is 'internal_reg' (RW register, regbank stores it directly, no status_registers entry needed regardless of which field-map claims it). ARX_SNAPSHOT/ARX_POP are readback='zero' (pure WO-CMD command registers) -- control_registers entries only, no status_registers entries. Two real gaps found and fixed in dfc_rtl017_control_t while building this field map (both the same class already fixed 15 times for RTL-002 through RTL-016, approved before this session's edit): (1) RTL017_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW had no clear-forwarding control field at all; (2) ARX_STATUS.SNAPSHOT_VALID (W1C per REG-1004) also had no clear-forwarding control field, even though its four sibling W1C bits (PARITY_ERROR/FRAMING_ERROR/OVERRUN/ADAPTER_ERROR) already did -- found while mapping ARX_STATUS's control side, not assumed from the EVT_OVERFLOW precedent alone. Both added as new-highest-bit clear_mask fields (dfc_rtl017_control_t grown 103->105 bits), same placement rule as every prior instance of this gap class. See OPEN_ISSUES.md for the full disclosure.",
+  "consumer_module": "RTL-017",
+  "control_struct": "dfc_rtl017_control_t",
+  "status_struct": "dfc_rtl017_status_t",
+  "control_registers": [
+    {
+      "register": "ARX_STATUS",
+      "contract_id": "REG-1004",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "arx_status__snapshot_valid" },
+        { "reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "arx_status__parity_error" },
+        { "reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "arx_status__framing_error" },
+        { "reg_hi": 6, "reg_lo": 6, "class": "W1C", "struct_field": "arx_status__overrun" },
+        { "reg_hi": 7, "reg_lo": 7, "class": "W1C", "struct_field": "arx_status__adapter_error" },
+        { "reg_hi": 8, "reg_lo": 8, "class": "W1C", "struct_field": "arx_status__pop_rejected" }
+      ]
+    },
+    {
+      "register": "ARX_SNAPSHOT",
+      "contract_id": "REG-100C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "arx_snapshot__capture" }
+      ]
+    },
+    {
+      "register": "ARX_POP",
+      "contract_id": "REG-1020",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "arx_pop__pop" }
+      ]
+    },
+    {
+      "register": "ARX_ERROR_COUNT",
+      "contract_id": "REG-1024",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "arx_error_count__count" }
+      ]
+    },
+    {
+      "register": "ARX_OVERFLOW_COUNT",
+      "contract_id": "REG-1028",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "arx_overflow_count__count" }
+      ]
+    },
+    {
+      "register": "RTL017_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-102C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl017_evt_overflow_status__event_overflow" }
+      ]
+    },
+    {
+      "register": "ARX_REJECTED_ACCESS_COUNT",
+      "contract_id": "REG-1030",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "arx_rejected_access_count__count" }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "ARX_STATUS",
+      "contract_id": "REG-1004",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "arx_status__enabled" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "arx_status__not_empty" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "arx_status__full" },
+        { "reg_hi": 3, "reg_lo": 3, "struct_field": "arx_status__snapshot_valid" },
+        { "reg_hi": 4, "reg_lo": 4, "struct_field": "arx_status__parity_error" },
+        { "reg_hi": 5, "reg_lo": 5, "struct_field": "arx_status__framing_error" },
+        { "reg_hi": 6, "reg_lo": 6, "struct_field": "arx_status__overrun" },
+        { "reg_hi": 7, "reg_lo": 7, "struct_field": "arx_status__adapter_error" },
+        { "reg_hi": 8, "reg_lo": 8, "struct_field": "arx_status__pop_rejected" }
+      ]
+    },
+    {
+      "register": "ARX_QUEUE_LEVEL",
+      "contract_id": "REG-1008",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "struct_field": "arx_queue_level__level" }
+      ]
+    },
+    {
+      "register": "ARX_DATA",
+      "contract_id": "REG-1010",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "arx_data__word" }
+      ]
+    },
+    {
+      "register": "ARX_META",
+      "contract_id": "REG-1014",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "arx_meta__parity_ok" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "arx_meta__framing_ok" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "arx_meta__high_speed" },
+        { "reg_hi": 3, "reg_lo": 3, "struct_field": "arx_meta__error_present" },
+        { "reg_hi": 15, "reg_lo": 4, "struct_field": "arx_meta__error_code" },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "arx_meta__sequence" }
+      ]
+    },
+    {
+      "register": "ARX_TIME_LO",
+      "contract_id": "REG-1018",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "arx_time_lo__timestamp_lo" }
+      ]
+    },
+    {
+      "register": "ARX_TIME_HI",
+      "contract_id": "REG-101C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "arx_time_hi__timestamp_hi" }
+      ]
+    },
+    {
+      "register": "ARX_ERROR_COUNT",
+      "contract_id": "REG-1024",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "arx_error_count__count" }
+      ]
+    },
+    {
+      "register": "ARX_OVERFLOW_COUNT",
+      "contract_id": "REG-1028",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "arx_overflow_count__count" }
+      ]
+    },
+    {
+      "register": "RTL017_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-102C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow" },
+        { "reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count" }
+      ]
+    },
+    {
+      "register": "ARX_REJECTED_ACCESS_COUNT",
+      "contract_id": "REG-1030",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "arx_rejected_access_count__count" }
+      ]
+    }
+  ]
+}

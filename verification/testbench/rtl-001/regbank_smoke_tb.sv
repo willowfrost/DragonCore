@@ -161,15 +161,17 @@ module regbank_smoke_tb;
   logic [31:0] buffer_status_status_i;
   logic [31:0] host_last_sequence_status_i;
   logic [31:0] test_status_status_i;
-  logic [31:0] arx_status_status_i;
-  logic [31:0] arx_queue_level_status_i;
-  logic [31:0] arx_data_status_i;
-  logic [31:0] arx_meta_status_i;
-  logic [31:0] arx_time_lo_status_i;
-  logic [31:0] arx_time_hi_status_i;
-  logic [31:0] arx_error_count_status_i;
-  logic [31:0] arx_overflow_count_status_i;
-  logic [31:0] rtl017_evt_overflow_status_status_i;
+  // Real cross-module register bus to RTL-017 and the ARCH-BUS-001
+  // adapter -- replaces the prior individual per-register arx_*_status_i
+  // stub ports (RTL-017's own 13 registers are now reconstructed inside
+  // dfc_config_regbank_regs.sv from this ONE aggregated rtl017_status_i
+  // input, same treatment as every other real module's control/status
+  // bus -- see dfc_config_regbank_regs.sv's own ARX_STATUS/ARX_QUEUE_LEVEL/
+  // etc. comments).
+  logic [dfc_types_pkg::DFC_RTL017_STATUS_WIDTH-1:0]  rtl017_status_i;
+  logic [dfc_types_pkg::DFC_RTL017_CONTROL_WIDTH-1:0] rtl017_control_o;
+  logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_STATUS_WIDTH-1:0]  rtl024arxadapter_status_i;
+  logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_CONTROL_WIDTH-1:0] rtl024arxadapter_control_o;
   logic [31:0] atx_status_status_i;
   logic [31:0] atx_queue_level_status_i;
   logic [31:0] atx_error_count_status_i;
@@ -270,15 +272,10 @@ module regbank_smoke_tb;
     .buffer_status_status_i(buffer_status_status_i),
     .host_last_sequence_status_i(host_last_sequence_status_i),
     .test_status_status_i(test_status_status_i),
-    .arx_status_status_i(arx_status_status_i),
-    .arx_queue_level_status_i(arx_queue_level_status_i),
-    .arx_data_status_i(arx_data_status_i),
-    .arx_meta_status_i(arx_meta_status_i),
-    .arx_time_lo_status_i(arx_time_lo_status_i),
-    .arx_time_hi_status_i(arx_time_hi_status_i),
-    .arx_error_count_status_i(arx_error_count_status_i),
-    .arx_overflow_count_status_i(arx_overflow_count_status_i),
-    .rtl017_evt_overflow_status_status_i(rtl017_evt_overflow_status_status_i),
+    .rtl017_status_i(rtl017_status_i),
+    .rtl017_control_o(rtl017_control_o),
+    .rtl024arxadapter_status_i(rtl024arxadapter_status_i),
+    .rtl024arxadapter_control_o(rtl024arxadapter_control_o),
     .atx_status_status_i(atx_status_status_i),
     .atx_queue_level_status_i(atx_queue_level_status_i),
     .atx_error_count_status_i(atx_error_count_status_i),
@@ -365,15 +362,8 @@ module regbank_smoke_tb;
     buffer_status_status_i = 32'h0;
     host_last_sequence_status_i = 32'h0;
     test_status_status_i = 32'h0;
-    arx_status_status_i = 32'h0;
-    arx_queue_level_status_i = 32'h0;
-    arx_data_status_i = 32'h0;
-    arx_meta_status_i = 32'h0;
-    arx_time_lo_status_i = 32'h0;
-    arx_time_hi_status_i = 32'h0;
-    arx_error_count_status_i = 32'h0;
-    arx_overflow_count_status_i = 32'h0;
-    rtl017_evt_overflow_status_status_i = 32'h0;
+    rtl017_status_i = '0;
+    rtl024arxadapter_status_i = '0;
     atx_status_status_i = 32'h0;
     atx_queue_level_status_i = 32'h0;
     atx_error_count_status_i = 32'h0;

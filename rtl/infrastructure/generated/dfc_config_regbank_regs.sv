@@ -15,6 +15,8 @@
 // Cross-module forwarding: RTL-014 (see tools/reggen/rtl014_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-015 (see tools/reggen/rtl015_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-016 (see tools/reggen/rtl016_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-017 (see tools/reggen/rtl017_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL024-ARX-ADAPTER (see tools/reggen/rtl024arxadapter_field_map.json's own _source note for exact scope/citations)
 
 
   // Aggregated real RTL-002 status, replacing individual ports for: RESET_DIAGNOSTIC, RESET_STATUS, SUBSYS_FAULT, SUBSYS_READY, SYS_STATUS
@@ -47,6 +49,10 @@
   // Aggregated real RTL-015 control, replacing the prior disconnected placeholder for: LLINK_ACTIVITY_INJECT, LLINK_CONTROL, LLINK_MONITOR_CONTROL, LLINK_MONITOR_SELECT, LLINK_QUALIFY_US, LLINK_RECOVERY_US, LLINK_STATUS, LLINK_TIMEOUT_US, RTL015_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-016 status, replacing individual ports for: RTL016_EVT_OVERFLOW_STATUS, SAFETY_CHANNEL_STATUS, SAFETY_STATUS
   // Aggregated real RTL-016 control, replacing the prior disconnected placeholder for: RTL016_EVT_OVERFLOW_STATUS, SAFETY_CHANNEL_CONTROL, SAFETY_CHANNEL_SELECT, SAFETY_CONTROL, SAFETY_INTERLOCK_MASK, SAFETY_RESPONSE_MASK, SAFETY_STATUS
+  // Aggregated real RTL-017 status, replacing individual ports for: ARX_DATA, ARX_ERROR_COUNT, ARX_META, ARX_OVERFLOW_COUNT, ARX_QUEUE_LEVEL, ARX_REJECTED_ACCESS_COUNT, ARX_STATUS, ARX_TIME_HI, ARX_TIME_LO, RTL017_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-017 control, replacing the prior disconnected placeholder for: ARX_ERROR_COUNT, ARX_OVERFLOW_COUNT, ARX_POP, ARX_REJECTED_ACCESS_COUNT, ARX_SNAPSHOT, ARX_STATUS, RTL017_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL024-ARX-ADAPTER status, replacing individual ports for: 
+  // Aggregated real RTL024-ARX-ADAPTER control, replacing the prior disconnected placeholder for: ARX_CONTROL
 module dfc_config_regbank_regs (
   input  logic         clk_i,
   input  logic         rst_ni,
@@ -78,16 +84,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  buffer_internal_error_count_status_i,
   input  logic [31:0]  test_status_status_i,
   input  logic [31:0]  test_rejection_abort_count_status_i,
-  input  logic [31:0]  arx_status_status_i,
-  input  logic [31:0]  arx_queue_level_status_i,
-  input  logic [31:0]  arx_data_status_i,
-  input  logic [31:0]  arx_meta_status_i,
-  input  logic [31:0]  arx_time_lo_status_i,
-  input  logic [31:0]  arx_time_hi_status_i,
-  input  logic [31:0]  arx_error_count_status_i,
-  input  logic [31:0]  arx_overflow_count_status_i,
-  input  logic [31:0]  rtl017_evt_overflow_status_status_i,
-  input  logic [31:0]  arx_rejected_access_count_status_i,
   input  logic [31:0]  atx_status_status_i,
   input  logic [31:0]  atx_queue_level_status_i,
   input  logic [31:0]  atx_error_count_status_i,
@@ -176,7 +172,11 @@ module dfc_config_regbank_regs (
   input  logic [74:0]  rtl015_status_i,
   output logic [960:0] rtl015_control_o,
   input  logic [51:0]  rtl016_status_i,
-  output logic [225:0] rtl016_control_o
+  output logic [225:0] rtl016_control_o,
+  input  logic [255:0]  rtl017_status_i,
+  output logic [104:0] rtl017_control_o,
+  input  logic [0:0]  rtl024arxadapter_status_i,
+  output logic [4:0] rtl024arxadapter_control_o
 );
 
   // DFC_DEVICE_ID (0x0000) -- CONST, fixed at reset value
@@ -753,41 +753,73 @@ module dfc_config_regbank_regs (
     if (!rst_ni) arx_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ARX_CONTROL)) arx_control_q <= wdata_i;
 
-  // ARX_STATUS (0x1004) -- external passthrough, owner RTL-017
-  wire [31:0] arx_status_q = arx_status_status_i;
+  // ARX_STATUS (0x1004) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-017, real
+  //   generation per contract REG-1004, not a permanent tie.
+  logic [31:0] arx_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) arx_status_pulse_q <= 32'h0;
+    else arx_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ARX_STATUS)) ? wdata_i : 32'h0;
 
-  // ARX_QUEUE_LEVEL (0x1008) -- external passthrough, owner RTL-017
-  wire [31:0] arx_queue_level_q = arx_queue_level_status_i;
+  // ARX_STATUS (0x1004) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-1004), not an individual per-register port.
+  wire [31:0] arx_status_q = {23'h0, rtl017_status_i[223:223], rtl017_status_i[10:10], rtl017_status_i[9:9], rtl017_status_i[8:8], rtl017_status_i[7:7], rtl017_status_i[6:6], rtl017_status_i[5:5], rtl017_status_i[4:4], rtl017_status_i[3:3]};
 
-  // ARX_SNAPSHOT (0x100C) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ARX_SNAPSHOT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // ARX_QUEUE_LEVEL (0x1008) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-1008), not an individual per-register port.
+  wire [31:0] arx_queue_level_q = {28'h0, rtl017_status_i[14:11]};
+
+  // ARX_SNAPSHOT (0x100C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-017, real
+  //   generation per contract REG-100C, not a permanent tie.
+  logic [31:0] arx_snapshot_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) arx_snapshot_pulse_q <= 32'h0;
+    else arx_snapshot_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ARX_SNAPSHOT)) ? wdata_i : 32'h0;
+
+  // ARX_SNAPSHOT (0x100C) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-017 via arx_snapshot_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] arx_snapshot_q = 32'h00000000;
 
-  // ARX_DATA (0x1010) -- external passthrough, owner RTL-017
-  wire [31:0] arx_data_q = arx_data_status_i;
+  // ARX_DATA (0x1010) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-1010), not an individual per-register port.
+  wire [31:0] arx_data_q = {rtl017_status_i[46:15]};
 
-  // ARX_META (0x1014) -- external passthrough, owner RTL-017
-  wire [31:0] arx_meta_q = arx_meta_status_i;
+  // ARX_META (0x1014) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-1014), not an individual per-register port.
+  wire [31:0] arx_meta_q = {rtl017_status_i[78:63], rtl017_status_i[62:51], rtl017_status_i[50:50], rtl017_status_i[49:49], rtl017_status_i[48:48], rtl017_status_i[47:47]};
 
-  // ARX_TIME_LO (0x1018) -- external passthrough, owner RTL-017
-  wire [31:0] arx_time_lo_q = arx_time_lo_status_i;
+  // ARX_TIME_LO (0x1018) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-1018), not an individual per-register port.
+  wire [31:0] arx_time_lo_q = {rtl017_status_i[110:79]};
 
-  // ARX_TIME_HI (0x101C) -- external passthrough, owner RTL-017
-  wire [31:0] arx_time_hi_q = arx_time_hi_status_i;
+  // ARX_TIME_HI (0x101C) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-101C), not an individual per-register port.
+  wire [31:0] arx_time_hi_q = {rtl017_status_i[142:111]};
 
-  // ARX_POP (0x1020) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ARX_POP)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // ARX_POP (0x1020) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-017, real
+  //   generation per contract REG-1020, not a permanent tie.
+  logic [31:0] arx_pop_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) arx_pop_pulse_q <= 32'h0;
+    else arx_pop_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ARX_POP)) ? wdata_i : 32'h0;
+
+  // ARX_POP (0x1020) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-017 via arx_pop_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] arx_pop_q = 32'h00000000;
 
-  // ARX_ERROR_COUNT (0x1024) -- external passthrough, owner RTL-017
-  wire [31:0] arx_error_count_q = arx_error_count_status_i;
+  // ARX_ERROR_COUNT (0x1024) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-1024), not an individual per-register port.
+  wire [31:0] arx_error_count_q = {rtl017_status_i[174:143]};
 
-  // ARX_OVERFLOW_COUNT (0x1028) -- external passthrough, owner RTL-017
-  wire [31:0] arx_overflow_count_q = arx_overflow_count_status_i;
+  // ARX_OVERFLOW_COUNT (0x1028) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-1028), not an individual per-register port.
+  wire [31:0] arx_overflow_count_q = {rtl017_status_i[206:175]};
 
-  // RTL017_EVT_OVERFLOW_STATUS (0x102C) -- external passthrough, owner RTL-017
-  wire [31:0] rtl017_evt_overflow_status_q = rtl017_evt_overflow_status_status_i;
+  // RTL017_EVT_OVERFLOW_STATUS (0x102C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-017, real
+  //   generation per contract REG-102C, not a permanent tie.
+  logic [31:0] rtl017_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl017_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl017_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL017_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // ARX_REJECTED_ACCESS_COUNT (0x1030) -- external passthrough, owner RTL-017
-  wire [31:0] arx_rejected_access_count_q = arx_rejected_access_count_status_i;
+  // RTL017_EVT_OVERFLOW_STATUS (0x102C) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-102C), not an individual per-register port.
+  wire [31:0] rtl017_evt_overflow_status_q = {8'h0, rtl017_status_i[222:207], 7'h0, rtl017_status_i[2:2]};
+
+  // ARX_REJECTED_ACCESS_COUNT (0x1030) -- external passthrough, owner RTL-017. Reconstructed from the aggregated rtl017_status_i input (contract REG-1030), not an individual per-register port.
+  wire [31:0] arx_rejected_access_count_q = {rtl017_status_i[255:224]};
 
   // ATX_CONTROL (0x1100) -- Mixed: RW, RSV0, owner RTL-018
   logic [31:0] atx_control_q;
@@ -3072,6 +3104,39 @@ module dfc_config_regbank_regs (
   assign rtl016_control_o[1] = safety_control_q[1:1];  // SAFETY_CONTROL.safety_control__event_enable
   assign rtl016_control_o[0] = safety_control_q[0:0];  // SAFETY_CONTROL.safety_control__enable
 
+  // ==========================================================================
+  // Aggregated rtl017_control_o -- real forwarding to RTL-017, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl017_control_t defines --
+  // cross-checked at generation time (105/105 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl017_control_o[104] = arx_status_pulse_q[3:3];  // ARX_STATUS.arx_status__snapshot_valid
+  assign rtl017_control_o[103] = rtl017_evt_overflow_status_pulse_q[0:0];  // RTL017_EVT_OVERFLOW_STATUS.rtl017_evt_overflow_status__event_overflow
+  assign rtl017_control_o[102:71] = arx_rejected_access_count_q[31:0];  // ARX_REJECTED_ACCESS_COUNT.arx_rejected_access_count__count
+  assign rtl017_control_o[70] = arx_status_pulse_q[8:8];  // ARX_STATUS.arx_status__pop_rejected
+  assign rtl017_control_o[69:38] = arx_overflow_count_q[31:0];  // ARX_OVERFLOW_COUNT.arx_overflow_count__count
+  assign rtl017_control_o[37:6] = arx_error_count_q[31:0];  // ARX_ERROR_COUNT.arx_error_count__count
+  assign rtl017_control_o[5] = arx_pop_pulse_q[0:0];  // ARX_POP.arx_pop__pop
+  assign rtl017_control_o[4] = arx_snapshot_pulse_q[0:0];  // ARX_SNAPSHOT.arx_snapshot__capture
+  assign rtl017_control_o[3] = arx_status_pulse_q[7:7];  // ARX_STATUS.arx_status__adapter_error
+  assign rtl017_control_o[2] = arx_status_pulse_q[6:6];  // ARX_STATUS.arx_status__overrun
+  assign rtl017_control_o[1] = arx_status_pulse_q[5:5];  // ARX_STATUS.arx_status__framing_error
+  assign rtl017_control_o[0] = arx_status_pulse_q[4:4];  // ARX_STATUS.arx_status__parity_error
+
+  // ==========================================================================
+  // Aggregated rtl024arxadapter_control_o -- real forwarding to RTL024-ARX-ADAPTER, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl024_arinc_rx_adapter_control_t defines --
+  // cross-checked at generation time (5/5 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl024arxadapter_control_o[4] = arx_control_q[4:4];  // ARX_CONTROL.arx_control__accept_parity_error
+  assign rtl024arxadapter_control_o[3] = arx_control_q[3:3];  // ARX_CONTROL.arx_control__irq_enable
+  assign rtl024arxadapter_control_o[2] = arx_control_q[2:2];  // ARX_CONTROL.arx_control__event_enable
+  assign rtl024arxadapter_control_o[1] = arx_control_q[1:1];  // ARX_CONTROL.arx_control__high_speed
+  assign rtl024arxadapter_control_o[0] = arx_control_q[0:0];  // ARX_CONTROL.arx_control__enable
+
   // Combinational address decode: read mux, decode-hit, write-
   // illegality (whole-register access class only), and protection-
   // requirement flag. All mechanically derived from REG-002 via
@@ -3183,7 +3248,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_TEST_FAULT_INJECT: begin rdata_o = test_fault_inject_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_TEST_REJECTION_ABORT_COUNT: begin rdata_o = test_rejection_abort_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ARX_CONTROL: begin rdata_o = arx_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_ARX_STATUS: begin rdata_o = arx_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ARX_STATUS: begin rdata_o = arx_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ARX_QUEUE_LEVEL: begin rdata_o = arx_queue_level_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ARX_SNAPSHOT: begin rdata_o = arx_snapshot_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ARX_DATA: begin rdata_o = arx_data_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
@@ -3191,10 +3256,10 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ARX_TIME_LO: begin rdata_o = arx_time_lo_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ARX_TIME_HI: begin rdata_o = arx_time_hi_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ARX_POP: begin rdata_o = arx_pop_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ARX_ERROR_COUNT: begin rdata_o = arx_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ARX_OVERFLOW_COUNT: begin rdata_o = arx_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL017_EVT_OVERFLOW_STATUS: begin rdata_o = rtl017_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ARX_REJECTED_ACCESS_COUNT: begin rdata_o = arx_rejected_access_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ARX_ERROR_COUNT: begin rdata_o = arx_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ARX_OVERFLOW_COUNT: begin rdata_o = arx_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL017_EVT_OVERFLOW_STATUS: begin rdata_o = rtl017_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ARX_REJECTED_ACCESS_COUNT: begin rdata_o = arx_rejected_access_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ATX_CONTROL: begin rdata_o = atx_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_ATX_STATUS: begin rdata_o = atx_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ATX_QUEUE_LEVEL: begin rdata_o = atx_queue_level_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end

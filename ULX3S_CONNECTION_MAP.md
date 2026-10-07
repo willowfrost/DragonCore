@@ -545,3 +545,51 @@ accepted from a single summarizing pass. The J1/J2 position label for each
 `gn<N>` follows the same convention as every earlier section: the position
 number of its paired `gp<N>` silkscreen position, since `gn<N>` is the
 second conductor at that same physical header position.
+
+## 11. ARINC 429 Receive Interface (RTL-017) — J2 gn15/gn16, 2 channels
+
+RTL-017 is the first Databus-domain module with a real, physical
+interface — the first of Section 10's own flagged "RTL-017 ... each still
+need one or more real pins of their own" consequences materializing for
+real. Two real external inputs: `arinc_rx_i` (the ARINC 429 receive line,
+already digital NRZ per `ARCH-BUS-001`'s own scope note that an external
+line-transceiver IC has already converted BPRZ to NRZ before this pad) and
+`arinc_rx_adapter_error_i` (that same transceiver's own fault/error
+output). Both confirmed as genuine, real Appendix A external pins by
+direct inspection of `dfc_rtl024.sv`'s own pre-existing port list (written
+in an earlier session, before RTL-017 was in scope) — neither is internal
+or stale.
+
+| Port | Pin | J1/J2 position | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|
+| `arinc_rx_i` | `gn15` | J2-15 (`gn` conductor) | P16 | Input |
+| `arinc_rx_adapter_error_i` | `gn16` | J2-16 (`gn` conductor) | M17 | Input |
+
+**Choice rationale:** both are ordinary single-ended digital inputs —
+neither needs a true differential pair. Following this project's own
+established "exhaust unshared, lowest-numbered first" rule exactly,
+these are the two LOWEST-numbered positions left in Section 10's own
+`gn15`-`gn21` accounting (`gn14` was the last one Section 10 consumed).
+Pulled up (`PULLMODE=UP`, the same convention every other input pin in
+this table uses) so an unconnected/not-yet-wired transceiver reads
+idle-high rather than floating.
+
+**This tightens the same project-wide constraint Section 10 already
+flagged, exactly as predicted there, not a new surprise.** Of the 7
+remaining unshared `gn15`-`gn21` positions, 2 are now consumed by RTL-017,
+leaving 5 (`gn17`-`gn21`) plus the still-untouched WiFi-shared
+`gp11`-`gp13`/`gn11`-`gn13` (3 true pairs, 6 conductors) for RTL-018
+(ARINC TX, needs `arinc_tx_ctrl_o[1:0]` + `arinc_tx_adapter_error_i` = 3),
+RTL-019 (CAN, needs `can_rx_i`/`can_tx_o`/`can_transceiver_error_i` = 3),
+and RTL-020 (UART, needs `uart_rx_i`/`uart_tx_o` = 2) — a real total of 8
+against 11 remaining conductors (5 unshared + 6 WiFi-shared), still
+fitting but with less spare margin than before RTL-017. Flagged here
+explicitly, the same discipline Section 10's own note followed.
+
+**Provenance:** the `gn14-gn21` SITE ordering (U17/P16/M17/L17/H17/G18/
+E17/D17) was already recorded in Section 10's own text (`gn14`=U17,
+already consumed by RTL-016) — `gn15`=P16 and `gn16`=M17 are simply the
+next two in that SAME already-confirmed ordering, not a fresh board-file
+lookup. The J1/J2 position label follows the same convention as every
+earlier section: the position number of each `gn<N>`'s paired `gp<N>`
+silkscreen position.

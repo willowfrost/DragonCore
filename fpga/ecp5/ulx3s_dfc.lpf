@@ -159,6 +159,23 @@ IOBUF PORT "gn9"  PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gn10" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gn14" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
 
+# ---- ARINC 429 Receive (RTL-017/RTL-024 adapter): gn15/gn16, 2 real
+# external input pads -- arinc_rx_i (line data, already digital per
+# ARCH-BUS-001's own "assumes an external line-transceiver IC already
+# converts BPRZ to NRZ" scope note) and arinc_rx_adapter_error_i (the
+# transceiver's own fault output). Real board file SITEs per this file's
+# own "gn14-gn21 (SITEs U17/P16/M17/L17/H17/G18/E17/D17)" accounting
+# (ULX3S_CONNECTION_MAP.md Section 10) -- gn14=U17 already used above by
+# RTL-016, so gn15=P16, gn16=M17 are the next two in that same fixed
+# site ordering, "exhaust unshared, lowest-numbered first" per this
+# project's established pin-choice rule. Pure inputs, pulled up so an
+# unconnected/not-yet-wired transceiver reads idle-high rather than a
+# floating value (same PULLMODE=UP convention as gp27/gp14-21 above).
+LOCATE COMP "gn15" SITE "P16";
+LOCATE COMP "gn16" SITE "M17";
+IOBUF PORT "gn15" PULLMODE=UP IO_TYPE=LVCMOS33;
+IOBUF PORT "gn16" PULLMODE=UP IO_TYPE=LVCMOS33;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

@@ -2938,8 +2938,108 @@ written in this project going forward, not just a historical note.
     Utilization: TRELLIS_COMB 35176/83640 (42%), TRELLIS_FF 20938/83640
     (25%), MULT18X18D 12/156 (7%), TRELLIS_IO 38/365 (10%), EHXPLLL 1/4
     (25%). Build ID `20261004_142815`.
-- **RTL-017 through RTL-023:** spec-complete but **not yet implemented as
-  real RTL.** RTL-017 (ARINC Receiver) is next — see Section 5.
+- **RTL-017 (ARINC 429 Receive Interface) is REAL — the first Databus-domain
+  module and the first real client of the shared-buffer service.**
+  RTL-018 through RTL-023 remain spec-complete but not yet implemented.
+  - **Two new files**: `rtl/databus/src/dfc_rtl017.sv` (the queue engine
+    — 8-entry queue over the 32-word client-0 segment, internal WRITE >
+    SNAPSHOT > ROUTE arbiter serializing all buffer access through one
+    `buf_req`/`buf_rsp` port, host-POP-vs-route-transfer same-head
+    arbitration per ARCH-RTL017-001) and
+    `rtl/top/dfc_rtl024_arinc_rx_adapter.sv` (the real ARCH-BUS-001 bit-
+    timing-recovery adapter — transition-based oversampling, odd-parity
+    check, gap-based framing, built from first principles since ARCH-002
+    specifies behavior, not a cycle-accurate state machine, with every
+    interpretation choice disclosed in the file's own header).
+  - **Real architecture fork, not assumed in advance**: `ARX_CONTROL`
+    (0x1000)'s 5 fields could not be mapped by `reggen.py` against the
+    original 278-bit `dfc_rtl024_control_t` (v5 requires whole-struct
+    coverage) — split into a new, dedicated
+    `dfc_rtl024_arinc_rx_adapter_control_t`/`_status_t` struct pair after
+    explicit user approval, confirming first that no renumbering was
+    needed and that the SPI bridge doesn't depend on the old struct's bit
+    positions (see `OPEN_ISSUES.md` item 107 for the full account).
+  - **Two real, genuine bugs found and fixed via real failed testbench
+    runs, not by inspection** (`OPEN_ISSUES.md` item 110): (1) the
+    internal arbiter could get permanently stuck presenting an unaccepted
+    route message, starving WRITE/SNAPSHOT of service — fixed by
+    decoupling the held route message (`route_pending_q`) from the
+    arbiter's own `op_q`/`phase_q`; (2) a host CAPTURE command pulse
+    arriving while the arbiter was mid-WRITE/mid-ROUTE was silently
+    dropped — fixed with a `capture_pending_q` latch, the same pattern
+    `write_pending_q` already used for adapter words. Both were masked in
+    this integration only because `msg_ready_i` is tied to a permanent 1
+    (RTL-021 doesn't exist yet) — a real future consumer applying
+    backpressure would have hit bug (1) for real.
+  - **New `rtl017_integration_tb.sv`, 19 checks**: queue push/pop/
+    overflow, error-code classification (parity/overrun/adapter, REG-
+    ENC-008), one-outstanding-discipline runtime monitor (a real,
+    dedicated check of RTL-017's OWN FSM, not inherited from the shared-
+    buffer arbiter's own formal proof), and the host-POP-vs-route-
+    transfer simultaneous-contention case (`RTL-017_RevA.md` SS6's own
+    named test).
+  - **`rtl024_skeleton_tb.sv` extended for real, 232 checks (was 219 after
+    RTL-016)**: a genuine end-to-end case — a real bit-level NRZ ARINC
+    word (correct `BIT_PERIOD_HIGH` timing, qualifying idle gap, odd
+    parity) driven on the real `arinc_rx_i` pad, through the real
+    adapter, into RTL-017's real queue, through the real arbiter, into
+    the real `PDPW16KD`-backed shared-buffer memory, and back out via the
+    real route-drain — closing `OPEN_ISSUES.md` item 102 for real, not a
+    narrower substitute. Host enable/configuration driven over the real
+    external SPI pins (`PROTECT_KEY`-gated `SUBSYS_ENABLE`/`ARX_CONTROL`
+    writes — a real finding here too: `ARX_CONTROL` needs the PROTECT_KEY
+    arm sequence for EVERY write, not just when changing `HIGH_SPEED`
+    while already enabled, since `reggen.py` has no way to implement that
+    narrower condition and instead marks the whole register protected).
+  - **Incidental breakage found and fixed**: `dri_transaction_tb.sv` and
+    `regbank_smoke_tb.sv` both still referenced RTL-017's OLD individual
+    per-register stub ports (`arx_status_status_i` etc.), removed when
+    the aggregated `rtl017_control_o`/`status_i` ports were added — both
+    fixed to the new aggregated port names and re-verified passing.
+  - **New physical pins**: `arinc_rx_i` = `gn15` (SITE P16),
+    `arinc_rx_adapter_error_i` = `gn16` (SITE M17) — the next two in
+    Section 10's own already-confirmed `gn14-gn21` SITE ordering
+    (ULX3S_CONNECTION_MAP.md Section 11). Confirmed as 2 real pins, not
+    1 — `arinc_rx_adapter_error_i` (the transceiver's own fault output)
+    is a genuine external Appendix A port, not internal/stale, tightening
+    the remaining Databus pin budget to 8 more needed (RTL-018/019/020)
+    against 11 remaining conductors (`OPEN_ISSUES.md` item 109).
+  - **Verified on the person's machine.** `gate.ps1`: lint PASSED; sim
+    22/22 testbenches, 0 failures (includes the new 19-check
+    `rtl017_integration_tb.sv` and the extended 232-check
+    `rtl024_skeleton_tb.sv`); formal 2/2 (RTL-001 one-outstanding +
+    RTL-024 buffer arbiter, both bmc+prove) PASS — no new formal
+    properties added for RTL-017 itself, the task only asked to confirm
+    the existing ones still hold against a real client; coverage 189/353
+    registers (53.5%, +3 over RTL-016's 186/353).
+    `build_ecp5.ps1` (LFE5U-85F-6BG381C): **`DP16KD` placement is
+    genuinely nonzero for the first time ever in this project — `1/208`,
+    confirmed directly in `nextpnr-ecp5`'s own log output** (`OPEN_ISSUES.md`
+    item 104's own required follow-up, resolved). Placement, routing, and
+    timing analysis all genuinely completed and PASSED (`Max frequency
+    for clock '$glbnet$core_clk': 50.02 MHz (PASS at 50.00 MHz)`, real
+    `pnr.log`, Build ID `20261006_112421`). **But `nextpnr-ecp5` then
+    crashes every time, immediately after printing its own slack
+    histogram, with `ERROR: Expecting string value but got integer 0.` —
+    before writing either the textcfg or the report JSON, so no bitstream
+    is produced.** Isolated via a real, independent repro (same exact
+    invocation with `--report` removed entirely — identical crash,
+    identical point, preserved at
+    `output/logs/ecp5_pnr_20261006_112421_noreport_isolation.log`),
+    ruling out the `--report` JSON writer as the specific cause. This is
+    a genuine, confirmed `nextpnr-0.10-82-g2b560ad0` toolchain bug,
+    triggered specifically by a nonzero BRAM-class cell placement — this
+    project has simply never exercised that code path before now, since
+    `DP16KD` was provably `0/208` (optimized away) in every prior build.
+    **Not yet fixed** — needs either a toolchain upgrade/patch (a decision
+    beyond what an RTL session should make unilaterally) or a confirmed
+    workaround, neither attempted here beyond the one isolation test
+    above. See `OPEN_ISSUES.md` item 112 for the full account. This
+    blocks bitstream generation for RTL-017 (and will block every future
+    module's build too, until resolved) — it does NOT call RTL-017's own
+    correctness into question: lint/sim/formal all genuinely pass, and
+    the real PnR timing result itself, as far as it got, was a clean
+    PASS.
 - **Build script structural fix (2026-08-26): `build_ecp5.ps1`'s
   `$SourceFiles` list is no longer hardcoded.** This exact gap had been
   hit and reactively fixed 4 separate times (RTL-002, RTL-004, RTL-009,
@@ -3255,11 +3355,17 @@ written in this project going forward, not just a historical note.
   `OPEN_ISSUES.md` items 90-98 for its own full disclosed scope, most
   notably item 98 (a real, pre-existing RTL-002 structural finding, not an
   RTL-016 defect) and item 95 (the guard-vs-entry interlock-indexing
-  finding). **The next real step is the Databus domain: RTL-017 (ARINC
-  Receiver) is next**, read `OPEN_ISSUES.md` items 66-98 first. One module
-  at a time, using the exact same real-verification discipline as RTL-001
-  through RTL-016 (compile, simulate, and only then trust — never claim
-  something works without actually running it).
+  finding). **RTL-017 (ARINC 429 Receive Interface) is now REAL too** —
+  see Section 4's own RTL-017 entry and `OPEN_ISSUES.md` items 107-111
+  for the full account (the struct-split architecture fork, two real
+  design bugs found and fixed via real testbench failures, the pin-budget
+  tightening, and the three "first real exercise" risk confirmations).
+  **The next real step is RTL-018 (ARINC 429 Transmit Interface)**, read
+  `OPEN_ISSUES.md` items 100-111 first (the shared-buffer service and
+  RTL-017's own real client precedent). One module at a time, using the
+  exact same real-verification discipline as RTL-001 through RTL-017
+  (compile, simulate, and only then trust — never claim something works
+  without actually running it).
   **RTL-013's own session reconfirmed a pattern this document has now
   flagged three separate times (RTL-002/003's own port-catalog gaps in
   RTL-002, then RTL-006's own module_enable_o/effective_operational_

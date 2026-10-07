@@ -622,7 +622,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl015_status_i | input | dfc_rtl015_status_t / 75 | RTL-015.status_o | RTL-001.rtl015_status_i; RTL-002.module_ready_i[14]; RTL-002.module_fault_i[14] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl016_control_o | output | dfc_rtl016_control_t / 226 | RTL-001.rtl016_control_o | RTL-016.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl016_status_i | input | dfc_rtl016_status_t / 52 | RTL-016.status_o | RTL-001.rtl016_status_i; RTL-002.module_ready_i[15]; RTL-002.module_fault_i[15] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl017_control_o | output | dfc_rtl017_control_t / 103 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl017_control_o | output | dfc_rtl017_control_t / 105 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl017_status_i | input | dfc_rtl017_status_t / 256 | RTL-017.status_o | RTL-001.rtl017_status_i; RTL-002.module_ready_i[16]; RTL-002.module_fault_i[16] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl018_control_o | output | dfc_rtl018_control_t / 162 | RTL-001.rtl018_control_o | RTL-018.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl018_status_i | input | dfc_rtl018_status_t / 127 | RTL-018.status_o | RTL-001.rtl018_status_i; RTL-002.module_ready_i[17]; RTL-002.module_fault_i[17] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
@@ -1008,7 +1008,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-017.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-017.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[16] | RTL-017.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl017_control_t / 103 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| control_i | input | dfc_rtl017_control_t / 105 | RTL-001.rtl017_control_o | RTL-017.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
 | status_o | output | dfc_rtl017_status_t / 256 | RTL-017.status_o | RTL-001.rtl017_status_i; RTL-002.module_ready_i[16]; RTL-002.module_fault_i[16] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-017.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-017.evt_valid_o | RTL-005.evt_valid_i[16] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
@@ -2178,7 +2178,7 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 50 | safety_channel_status__global_inhibit | 1 | unsigned | 1 | current explicit global-inhibit cause |
 | 51 | safety_channel_status__operational_inhibit | 1 | unsigned | 1 | current effective-operational-enable inhibit cause |
 
-### dfc_rtl017_control_t — 103 bits
+### dfc_rtl017_control_t — 105 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2192,6 +2192,8 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 69:38 | arx_overflow_count__count | 32 | unsigned | 0 | clear_mask |
 | 70 | arx_status__pop_rejected | 1 | unsigned | 0 | W1C rejected empty-POP evidence |
 | 102:71 | arx_rejected_access_count__count | 32 | unsigned | 0 | whole-counter clear for rejected queue access |
+| 103 | rtl017_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
+| 104 | arx_status__snapshot_valid | 1 | unsigned | 0 | clear_mask |
 
 ### dfc_rtl017_status_t — 256 bits
 
@@ -2567,11 +2569,7 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 186:179 | test_command__command | 8 | unsigned | 0 | command_pulse |
 | 210:187 | test_command__argument | 24 | unsigned | 0 | command_pulse |
 | 218:211 | test_loopback__loopback_select | 8 | unsigned | 0 | control_value |
-| 219 | arx_control__enable | 1 | unsigned | 0 | control_value |
-| 220 | arx_control__high_speed | 1 | unsigned | 0 | control_value |
-| 221 | arx_control__event_enable | 1 | unsigned | 0 | control_value |
-| 222 | arx_control__irq_enable | 1 | unsigned | 0 | control_value |
-| 223 | arx_control__accept_parity_error | 1 | unsigned | 0 | control_value |
+| 223:219 | reserved_arx_control_migrated | 5 | unsigned | 0 | reserved -- real ARX_CONTROL fields moved to the dedicated dfc_rtl024_arinc_rx_adapter_control_t struct (see SS12's own adapter struct definitions) once reggen.py's whole-struct-coverage requirement made keeping them inside this general-purpose struct impractical for an incremental, module-by-module rollout |
 | 227:224 | test_status__extended_evidence_clear | 4 | unsigned | 0 | W1C unsafe rejection, deauthorization abort, natural-fault, injected-fault evidence |
 | 259:228 | test_rejection_abort_count__count | 32 | unsigned | 0 | whole-counter clear |
 | 261:260 | clock_reset_status__evidence_clear | 2 | unsigned | 0 | W1C clock-fault and illegal-release evidence |
@@ -2634,6 +2632,41 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 322 | clock_reset_status__illegal_release | 1 | unsigned | 0 | retained illegal reset-release evidence |
 | 434:323 | buffer_client_error_count__count | 112 | unsigned | 0 | seven packed 16-bit saturating client-error counts, clients 0 through 6 in ascending slices |
 | 466:435 | buffer_internal_error_count__count | 32 | unsigned | 0 | saturating shared-buffer internal-error count |
+
+### dfc_rtl024_arinc_rx_adapter_control_t — 5 bits
+
+Dedicated struct for `ARCH-BUS-001`'s real digital receive adapter (an
+internal RTL-024 subblock, not a separate RTL-0NN module -- same
+"internal subblock" status as the shared-buffer service, SS12). Carries
+exactly `ARX_CONTROL`'s (REG-002 0x1000) five real fields, migrated out
+of the general-purpose `dfc_rtl024_control_t` (see that struct's own
+`reserved_arx_control_migrated` placeholder) once `reggen.py`'s
+whole-struct-coverage requirement made keeping them inside a 278-bit
+catch-all struct impractical for an incremental, module-by-module
+rollout -- every other module's own control/status struct is already
+scoped to exactly its own subsystem; this gives the adapter the same
+treatment.
+
+| **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
+| --- | --- | --- | --- | --- | --- |
+| 0 | arx_control__enable | 1 | unsigned | 0 | control_value |
+| 1 | arx_control__high_speed | 1 | unsigned | 0 | control_value |
+| 2 | arx_control__event_enable | 1 | unsigned | 0 | control_value |
+| 3 | arx_control__irq_enable | 1 | unsigned | 0 | control_value |
+| 4 | arx_control__accept_parity_error | 1 | unsigned | 0 | control_value |
+
+### dfc_rtl024_arinc_rx_adapter_status_t — 1 bits
+
+`reggen.py`'s cross-module forwarding mechanism requires a named status
+struct for every consumer regardless of whether that consumer has any
+real status content to report -- `ARX_CONTROL`'s own readback class is
+`internal_reg` (REG-002: the regbank stores and returns its written value
+directly), so the adapter has no real external status field to expose
+yet. One honestly-labeled reserved bit, not an invented signal.
+
+| **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
+| --- | --- | --- | --- | --- | --- |
+| 0 | reserved_no_status_yet | 1 | unsigned | 0 | reserved -- no real adapter status field exists yet; placeholder only to satisfy reggen.py's named-status-struct requirement |
 
 ### dfc_safety_response_req_t — 8 bits
 

@@ -104,6 +104,10 @@ module dri_transaction_tb;
   logic [dfc_types_pkg::DFC_RTL015_STATUS_WIDTH-1:0]  rtl015_status_i = '0;
   logic [dfc_types_pkg::DFC_RTL016_CONTROL_WIDTH-1:0] rtl016_control_o;
   logic [dfc_types_pkg::DFC_RTL016_STATUS_WIDTH-1:0]  rtl016_status_i = '0;
+  logic [dfc_types_pkg::DFC_RTL017_CONTROL_WIDTH-1:0] rtl017_control_o;
+  logic [dfc_types_pkg::DFC_RTL017_STATUS_WIDTH-1:0]  rtl017_status_i = '0;
+  logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_CONTROL_WIDTH-1:0] rtl024arxadapter_control_o;
+  logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_STATUS_WIDTH-1:0]  rtl024arxadapter_status_i = '0;
   // Same isolation choice for the shared-buffer service, added this
   // session: this testbench does not model it either -- all six status
   // inputs are tied to a disclosed stub ('0), same pattern as every other

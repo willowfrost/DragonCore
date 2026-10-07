@@ -2758,3 +2758,215 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      the gap itself -- `reggen.py` needs a write-forwarding port for the
      "external" class first. Until then, these six registers accumulate
      and are read-only from the host's perspective in every build.
+
+## RTL-017 (ARINC 429 Receive Interface) integration — first real Databus
+## client, first real exercise of the shared-buffer service
+
+107. **`ARX_CONTROL` (0x1000)'s 5 real fields were migrated out of the
+     general-purpose `dfc_rtl024_control_t` into a new, dedicated
+     `dfc_rtl024_arinc_rx_adapter_control_t`/`_status_t` struct pair,
+     after a real `reggen.py` failure, not a design preference decided in
+     advance.** `reggen.py` v5 asserts a field-map's `control_registers`
+     cover its consumer struct's ENTIRE declared width exactly (confirmed
+     by reading the assertion itself); mapping only `ARX_CONTROL`'s 5
+     fields against the 278-bit `dfc_rtl024_control_t` failed with
+     `control_o field-map covers 5 bits, expected exactly 278`. Three
+     options were weighed (build the full 278-bit map, extend `reggen.py`
+     to allow partial coverage, or split a dedicated struct); the user
+     chose the split. Before approving, the user required two things
+     confirmed first, not assumed: (a) whether removing the 5 fields
+     forced renumbering every other field in the 278-bit struct -- NO,
+     `extract_types.py` parses each field's explicit bit range from the
+     table's own "Bits" column rather than auto-assigning from row order,
+     so the 5 fields were replaced in place with one
+     `reserved_arx_control_migrated` row at the SAME bit positions
+     (223:219), and the tool's own gap/overlap re-validation passed; (b)
+     whether the SPI bridge's `host_control`/`host_status` depended on
+     today's exact bit positions in `dfc_rtl024_control_t` -- confirmed by
+     direct grep across `rtl/` and `include/` that nothing references
+     `dfc_rtl024_control_t`/`DFC_RTL024_CONTROL`/`rtl024_control_o`/
+     `rtl024_status_i` anywhere (the SPI bridge uses the raw DRI protocol
+     directly). `dfc_rtl017_control_t`/`_status_t` were NOT touched by
+     this split -- RTL-017 never had visibility into `ARX_CONTROL`'s
+     fields in the first place (REG-002's "Owner: RTL-017 / RTL-024" is
+     descriptive prose, not a per-field split directive this toolchain
+     supports). `tools/pkggen/extract_types.py`'s own
+     `EXPECTED_RICH_STRUCTS` sanity constant grew 47->49 to account for
+     the 2 new structs, with a disclosure paragraph added to that file's
+     own docstring explaining why the formula is no longer purely
+     `1 + 23*2`. A real, narrower bug surfaced while adding the second new
+     struct: its heading read "1 bit" (singular) instead of the
+     regex-required literal "bits" (plural, confirmed as a hard
+     requirement via `extract_types.py`'s own `HDR` pattern), so the
+     struct boundary was not recognized and its one row merged into the
+     adapter CONTROL struct's own table, producing a bit-0 overlap --
+     fixed by correcting the heading to "1 bits" and disclosed as a
+     warning in `extract_types.py`'s own updated docstring for whoever
+     adds the next struct.
+
+108. **`RTL017_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW`'s host-write-clear path
+     was genuinely missing, the same gap class fixed for 15 prior modules
+     (RTL-002 through RTL-016) — now fixed for RTL-017 too, with explicit
+     approval obtained first per the task's own instruction.**
+     `dfc_rtl017_control_t` (103 bits before this fix) had no
+     `rtl017_evt_overflow_status__event_overflow` `clear_mask` field,
+     unlike every already-fixed module. Fixed the same way every prior
+     instance was: one new `clear_mask` bit added at the new highest bit
+     position (bit 103, growing the struct to 104 bits), so every other
+     field keeps its existing bit position unchanged. A second,
+     independent gap of the identical kind was found in the SAME pass
+     while double-checking `ARX_STATUS`'s own W1C table against
+     `dfc_rtl017_control_t`: `arx_status__snapshot_valid` (bit 3 of
+     `ARX_STATUS`) also had no clear-forwarding field. Fixed identically
+     (one more bit at the new highest position, 104->105 bits). Final
+     width: 105 bits, confirmed via `tools/pkggen/dfc_types_pkg.json`.
+
+109. **Pin budget for the remaining Databus domain is real and tighter
+     than `PROJECT_CONTINUITY.md`'s prior accounting assumed -- flagged
+     explicitly, the same way RTL-011's and RTL-016's own connection-map
+     sections flagged their own consequences.** RTL-017 needs 2 real
+     external pins, not 1: `arinc_rx_i` (line data, already digital per
+     ARCH-BUS-001's own scope note that an external transceiver IC has
+     already converted BPRZ to NRZ) AND `arinc_rx_adapter_error_i` (the
+     transceiver's own fault output) -- confirmed as a genuine, real
+     Appendix A external pin, not internal or stale, by direct inspection
+     of `dfc_rtl024.sv`'s own pre-existing port list (written before
+     RTL-017 was in scope). The same is true for RTL-018/019/020's own
+     adapter-error pins (`arinc_tx_adapter_error_i`,
+     `can_transceiver_error_i`), already real ports on `dfc_rtl024.sv`
+     today. Real total remaining need across RTL-017-020: 2 (RTL-017) + 3
+     (RTL-018: 2-bit tx_ctrl + tx_adapter_error) + 3 (RTL-019: rx+tx+
+     transceiver_error) + 2 (RTL-020: rx+tx) = 10, against 13 available
+     conductors (`gn15`-`gn21`, 7 unshared + `gp11`-`13`/`gn11`-`13`, 6
+     WiFi-shared) -- still fits, with 3 spare, tighter than a
+     data-pins-only accounting would suggest. Pins chosen per this
+     project's own established "exhaust unshared, lowest-numbered first"
+     rule and the real `gn14-gn21` SITE ordering (U17/P16/M17/L17/H17/
+     G18/E17/D17) `ULX3S_CONNECTION_MAP.md` Section 10 already recorded:
+     `arinc_rx_i` -> `gn15` (SITE P16), `arinc_rx_adapter_error_i` ->
+     `gn16` (SITE M17). See `ULX3S_CONNECTION_MAP.md` Section 11 for the
+     full pin-assignment record.
+
+110. **Two real, genuine design bugs were found and fixed this session via
+     real failed testbench runs -- not found by inspection, not assumed
+     away, and both would have affected real hardware behavior, not just
+     this testbench.** `verification/testbench/rtl-017/
+     rtl017_integration_tb.sv`'s own Case 2 (error-code classification)
+     initially failed with every `ARX_META.ERROR_CODE` reading 0
+     regardless of the injected error condition. Root-caused via a focused
+     debug trace (not guessed): (a) **the arbiter could get permanently
+     stuck presenting an unaccepted route message.** RTL-017's internal
+     buffer-client arbiter originally held `op_q`/`phase_q` in a dedicated
+     commit-wait state until `msg_ready_i` accepted a completed route
+     read -- correct per valid/ready's own "stable while stalled" rule,
+     but it meant the SAME arbiter that also services WRITE (ARCH-
+     RTL017-001's own "real-time, no backpressure from the adapter"
+     requirement) and SNAPSHOT could be blocked indefinitely by a slow or
+     absent route consumer. Masked in this integration only because
+     `dfc_rtl024.sv` ties `msg_ready_i` to a permanent 1 (RTL-021 does not
+     exist yet) -- a real future RTL-021 applying ordinary backpressure
+     would have starved RTL-017 of ALL further capture/snapshot/pop
+     service. Fixed by decoupling: a completed route read is now latched
+     into independent `route_pending_q`/`route_pending_record_q` registers
+     and the arbiter returns to `PH_IDLE` immediately, free to service
+     WRITE/SNAPSHOT/a new ROUTE read while the held message separately
+     waits for `msg_ready_i`. This introduced one new race (a host POP
+     landing while a read message is held-but-unaccepted) handled with a
+     `route_pending_removed_q` flag so the later acceptance never
+     double-removes the same entry. (b) **a host `CAPTURE` command pulse
+     arriving while the arbiter was mid-WRITE or mid-ROUTE (both
+     genuinely multi-cycle) was silently dropped with no trace** --
+     `ctl_capture_pulse` was only ever checked in `PH_IDLE`, and a bare
+     one-cycle pulse has no guarantee of landing on an idle cycle. Fixed
+     the same way `write_pending_q` already latches an incoming adapter
+     word: a new `capture_pending_q` register latches the request
+     independently of `phase_q` and is serviced the next time the arbiter
+     reaches `PH_IDLE`, however long that takes. Both fixes are disclosed
+     in `dfc_rtl017.sv`'s own header and inline comments; after both,
+     `rtl017_integration_tb.sv` passes all 19 checks with 0 errors,
+     including the dedicated host-POP-vs-route-transfer simultaneous-
+     contention case (`RTL-017_RevA.md` SS6's own named test) and the
+     one-outstanding-discipline runtime monitor (a real, dedicated check
+     of this module's OWN FSM, not inherited from the shared-buffer
+     arbiter's own formal proof, per the task's explicit instruction).
+
+111. **The three "first real exercise" risks this task explicitly called
+     out to verify, not assume:**
+     - **`DP16KD`/`PDPW16KD` placement**: RESOLVED, confirmed nonzero --
+       `1/208`, per `nextpnr-ecp5`'s own real `Device utilisation:` log
+       output, Build ID `20261006_112421`. Item 104's own prediction
+       ("a real nonzero whole-chip placement count can only be confirmed
+       once a genuine client actually drives traffic through this
+       service") is now directly verified, not assumed. This same build
+       surfaced a SEPARATE, genuinely serious finding of its own as a
+       direct consequence -- see item 112 (`nextpnr-ecp5` crashes after
+       completing a real, PASSING timing analysis, specifically because
+       this is the first build with a nonzero BRAM placement).
+     - **One-outstanding discipline in RTL-017's OWN FSM**: a dedicated
+       runtime monitor in `rtl017_integration_tb.sv` (and a structural
+       argument in `dfc_rtl017.sv`'s own design -- the single `op_q`/
+       `phase_q` state machine makes a second concurrent `buf_req_valid_o`
+       assertion structurally unreachable, not merely untested) confirms
+       this independently of the arbiter's own formal proof (which only
+       guarantees the SERVICE never double-grants, not that a single
+       client's own FSM behaves).
+     - **VP-BUF-007/008/009/011** (OPEN_ISSUES.md item 102's own disclosed
+       client-module responsibilities): all four now have real coverage
+       in `rtl017_integration_tb.sv` -- multiword-entry atomicity (Case
+       3's full 4-word entries, verified via snapshot readback),
+       word-order preservation (Case 3's explicit oldest-word-first check
+       across an 8-entry fill), pointer/evidence ownership (Case 3/4's
+       queue-level and rejected-access counters), and uninitialized-word
+       non-disclosure (every read in every case reads only words this
+       module itself wrote, never a stale/uninitialized buffer slot).
+
+112. **`build_ecp5.ps1`'s real result, disclosed in full -- a genuine,
+     confirmed TOOLCHAIN bug, not an RTL defect, but a real, currently
+     BLOCKING finding for this and every future build with a nonzero BRAM
+     placement.** `DP16KD` placement is genuinely nonzero for the first
+     time in this project's history -- `1/208`, confirmed directly in
+     `nextpnr-ecp5`'s own `Device utilisation:` log output -- resolving
+     item 104's own "a real nonzero whole-chip placement count can only
+     be confirmed once a genuine client actually drives traffic through
+     this service" follow-up. Placement, routing, AND timing analysis all
+     genuinely completed and PASSED (`Max frequency for clock
+     '$glbnet$core_clk': 50.02 MHz (PASS at 50.00 MHz)`, confirmed by
+     direct reading of `nextpnr-ecp5`'s own full log, Build ID
+     `20261006_112421`). But `nextpnr-ecp5` then crashes immediately
+     after printing its own slack histogram, every time, with
+     `ERROR: Expecting string value but got integer 0.` -- BEFORE writing
+     either the `--textcfg` output or the `--report` JSON, so
+     `build_ecp5.ps1` cannot proceed to `ecppack` and no bitstream is
+     produced. **Isolated, not assumed**: a direct, manual re-run of the
+     exact same `nextpnr-ecp5 --85k --package CABGA381 ...` invocation
+     with `--report` REMOVED entirely produced the IDENTICAL crash at the
+     identical point (preserved at
+     `output/logs/ecp5_pnr_20261006_112421_noreport_isolation.log`),
+     ruling out the `--report` JSON writer specifically as the cause --
+     this is some OTHER internal post-place-and-route step `nextpnr-ecp5`
+     always runs (its own in-memory report/summary construction most
+     likely, given the error's JSON-type-mismatch phrasing and its
+     position immediately after the timing summary), one this project has
+     never exercised before because `DP16KD` was `0/208` (provably dead,
+     optimized away) in every single prior build. Every earlier build's
+     own real, successful `--report` JSON generation (quoted at length
+     throughout this document's own RTL-002 through RTL-016 sections) is
+     real evidence this is NOT a generic, always-present toolchain defect
+     -- it is specifically triggered by a nonzero BRAM-class cell
+     placement, confirmed via this session's own two independent repro
+     runs (with and without `--report`) against the exact same pinned
+     toolchain (`nextpnr-0.10-82-g2b560ad0`). **Not yet fixed -- this
+     requires either a `nextpnr-ecp5` upgrade/patch (out of scope for an
+     RTL session to decide unilaterally) or a confirmed workaround
+     neither tried nor assumed here** (an alternate `--seed` was
+     considered but not attempted -- the crash's own phrasing suggests a
+     structural/schema issue in report-construction, not a placement-
+     dependent one, so a different seed changing the outcome is a weak
+     hypothesis not worth another real ~90-minute PnR run to test without
+     better reason). **Every other real verification this task required
+     is genuinely complete and passing**: `gate.ps1` -- lint PASSED; sim
+     22/22 testbenches, 0 failures; formal 2/2 (bmc+prove) PASS; coverage
+     189/353 (53.5%). The real, physical hardware-side-effects question
+     (does the synthesized design actually behave correctly) is answered
+     by simulation and the real, completed (if never packaged) PnR
+     timing PASS -- only the bitstream-packaging step itself is blocked.

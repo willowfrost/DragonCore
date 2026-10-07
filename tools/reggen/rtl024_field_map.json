@@ -1,0 +1,20 @@
+{
+  "_source": "First real field-map for RTL-024's ARINC RX adapter (ARCH-BUS-001) as a reggen consumer. Covers ONLY ARX_CONTROL (REG-1000), whose 5 real fields are confirmed, by direct read of RCA-DFC-ARCH-002.md's dedicated dfc_rtl024_arinc_rx_adapter_control_t Appendix B table, to occupy that struct's entire 5-bit width exactly (reggen.py v5 requires a field-map's control_registers to cover its consumer struct's FULL declared width -- confirmed directly via a real failed run against the original plan of reusing the general-purpose 278-bit dfc_rtl024_control_t, which carries ~270 unrelated host/test/clock-reset/buffer-clear fields no single field-map for this narrow scope should need to map). Those 5 fields were migrated out of dfc_rtl024_control_t into this dedicated struct for exactly that reason (see dfc_rtl024_control_t's own reserved_arx_control_migrated placeholder and dfc_rtl024_arinc_rx_adapter_control_t's own header note). ARX_CONTROL's readback class is 'internal_reg' (confirmed via tools/pkggen/dfc_registers_pkg.json) -- the regbank already stores/returns its own written value generically, so no status_registers entry is needed; dfc_rtl024_arinc_rx_adapter_status_t is a 1-bit reserved placeholder purely to satisfy reggen.py's named-status-struct requirement (no real adapter status field exists yet), consistent with that struct's own disclosed header note -- deliberately not claimed by any status_registers entry here.",
+  "consumer_module": "RTL024-ARX-ADAPTER",
+  "control_struct": "dfc_rtl024_arinc_rx_adapter_control_t",
+  "status_struct": "dfc_rtl024_arinc_rx_adapter_status_t",
+  "control_registers": [
+    {
+      "register": "ARX_CONTROL",
+      "contract_id": "REG-1000",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "arx_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "arx_control__high_speed" },
+        { "reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "arx_control__event_enable" },
+        { "reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "arx_control__irq_enable" },
+        { "reg_hi": 4, "reg_lo": 4, "class": "RW", "struct_field": "arx_control__accept_parity_error" }
+      ]
+    }
+  ],
+  "status_registers": []
+}
