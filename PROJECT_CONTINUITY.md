@@ -3360,8 +3360,33 @@ written in this project going forward, not just a historical note.
   for the full account (the struct-split architecture fork, two real
   design bugs found and fixed via real testbench failures, the pin-budget
   tightening, and the three "first real exercise" risk confirmations).
-  **The next real step is RTL-018 (ARINC 429 Transmit Interface)**, read
-  `OPEN_ISSUES.md` items 100-111 first (the shared-buffer service and
+  **PROJECT IS ON HOLD AT THE RTL-016 FPGA BASELINE as of 2026-10-06 —
+  do not resume RTL-017 work, start RTL-018, or attempt another FPGA
+  build of RTL-017+ without the user's explicit go-ahead.** RTL-017 is
+  fully correct in simulation/formal (`gate.ps1`: lint PASS, sim 22/22,
+  formal 2/2) and its own `PDPW16KD`-backed shared-buffer memory placed
+  and timed clean in `nextpnr-ecp5` (50.02 MHz) — but `nextpnr-ecp5` then
+  crashes every time right after, before writing a bitstream
+  (`OPEN_ISSUES.md` item 112), confirmed specifically tied to a real BRAM
+  cell being placed (every build without one, RTL-001 through RTL-016,
+  has always succeeded). The user was warned in advance this was a real
+  risk of using RAM with OSS CAD Suite on this project, and it
+  materialized. Two root causes were investigated and ruled out (item
+  112's own notes); an OSS CAD Suite upgrade (`20261006`) was tried and
+  made things worse (a different, confirmed-unrelated-to-RAM Yosys
+  crash) and was removed, back on the original `20260709` toolchain;
+  further toolchain-version bisection and a register/flip-flop-based
+  buffer rework (a real option, likely to avoid this specific crash,
+  since no other module uses BRAM) were both raised and the user chose
+  to hold rather than pursue either. **The known-good fallback**:
+  `output/bitstreams/ulx3s_dfc_20261004_142815.bit` (SHA-256
+  `49a96af0242ec3ed2f1d010457c1292ed9a99ac72c69bb767dffe9b04cd4807c`,
+  verified intact against disk) — the last real, timing-closed build
+  (51.22 MHz PASS) before the shared-buffer/RAM module existed in the
+  design at all. Check whether item 112 is marked resolved before doing
+  anything further here. Once it is (or the user says otherwise), the
+  next real step is RTL-018 (ARINC 429 Transmit Interface) — read
+  `OPEN_ISSUES.md` items 100-112 first (the shared-buffer service and
   RTL-017's own real client precedent). One module at a time, using the
   exact same real-verification discipline as RTL-001 through RTL-017
   (compile, simulate, and only then trust — never claim something works

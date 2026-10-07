@@ -3016,3 +3016,44 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      `nextpnr-ecp5` debugging -- both real environment/tooling decisions
      for the person to make, not something an RTL session should pursue
      unilaterally.
+
+     **A third attempt (newer OSS CAD Suite release, `20261006` vs. the
+     installed `20260709`) was tried and made things worse, not better --
+     disclosed for completeness.** `nextpnr-ecp5` itself was upgraded
+     (`0.10-82-g2b560ad0` -> `0.11.1-50-gaa8c83b8`) alongside Yosys
+     (`0.66+252` -> `0.69+190`). This never even reached the original
+     `nextpnr-ecp5` crash: the newer Yosys's own `synth_ecp5` crashes
+     earlier, during synthesis itself, in a new experimental `AIGMAP`/
+     `XAIGER2` ABC9 integration path (`ERROR: Assert 'data_start ==
+     f->tellp()' failed in .../aiger2/aiger.cc:1078`), confirmed via a
+     real, isolated test (an isolated `git worktree` checkout of the
+     pre-RTL-017 commit `a00f54e`, synthesized with the new toolchain) to
+     be completely UNRELATED to BRAM -- it crashes even when zero real
+     `DP16KD`/`PDPW16KD` cells reach the mapper, so it is a general
+     regression in this newer Yosys version, not a different flavor of
+     the same underlying problem. The `-NoAbc9` diagnostic flag already
+     built into `build_ecp5.ps1` does not route around it either (the new
+     `AIGMAP`/`XAIGER2` path runs unconditionally in this Yosys version
+     regardless of that flag). The `20261006` install was removed after
+     this finding; the project is back on the original `20260709`
+     toolchain, which was never actually switched system-wide in the
+     first place (the test used a scoped `PATH` override only).
+
+     **Decision (2026-10-06): the project is holding at the RTL-016 FPGA
+     baseline rather than continuing to chase this.** The user was
+     warned in advance that using RAM with OSS CAD Suite on this project
+     carried exactly this risk, and declined to pursue either remaining
+     path raised (further toolchain-version bisection, or reworking the
+     shared buffer to a register/flip-flop-based implementation instead
+     of `PDPW16KD` -- the latter a real option likely to avoid this
+     specific crash, since no other module in this project uses BRAM,
+     but with its own real tradeoff: a 512-deep read mux is exactly the
+     shape of combinational structure this project's own item 48 "wide
+     fan-in hub" congestion finding already warns about). The known-good
+     fallback is `output/bitstreams/ulx3s_dfc_20261004_142815.bit`
+     (SHA-256 `49a96af0242ec3ed2f1d010457c1292ed9a99ac72c69bb767dffe9b04cd4807c`,
+     verified intact against disk this session) -- RTL-001 through
+     RTL-016 only, real final timing 51.22 MHz PASS, predating the
+     shared-buffer/RAM module's existence in the design entirely. Do not
+     resume RTL-017 work, start RTL-018, or attempt another FPGA build of
+     RTL-017+ without the user's explicit go-ahead.
