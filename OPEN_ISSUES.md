@@ -2682,14 +2682,14 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      write-only-port/read-only-port access shape in general, not a
      workaround. Two minor, unreconciled discrepancies the research
      surfaced, neither resolved by guessing:
-     - `CSDECODE_W`/`CSDECODE_R`: Yosys's own primitive default is the
-       string `"0b000"` (with a literal `"0b"` prefix); Lattice's own
-       Memory Usage Guide (FPGA-TN-02204) describes legal values as bare
-       `"000"`-`"111"`. This file uses `3'b000` (a sized literal, sidestepping
-       the string-format question entirely) -- matches Yosys's own
-       techmap convention, not independently confirmed against real
-       `nextpnr-ecp5` placement beyond the real `build_ecp5.ps1` run this
-       session's own verification step requires.
+     - `CSDECODE_W`/`CSDECODE_R`: **this exact discrepancy was the real
+       root cause of item 112's `nextpnr-ecp5` crash, confirmed and fixed
+       -- see item 112's own full account.** The `3'b000` sized literal
+       used here turned out not to be a harmless convention match; it is
+       what caused the crash, once a real `PDPW16KD` cell finally reached
+       `nextpnr-ecp5`'s own report-generation code path for the first
+       time. Fixed to `"0b000"` (a genuine string literal, matching
+       Yosys's own primitive default format exactly).
      - `GSR("AUTO")`: Yosys's own working `synth_ecp5` output always
        chooses `"AUTO"` over the blackbox's simulation default
        `"ENABLED"`; Lattice's own Appendix A does not document `GSR` at
@@ -3057,3 +3057,271 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      shared-buffer/RAM module's existence in the design entirely. Do not
      resume RTL-017 work, start RTL-018, or attempt another FPGA build of
      RTL-017+ without the user's explicit go-ahead.
+
+     **ROOT CAUSE CONFIRMED, FIX IDENTIFIED -- build verification
+     pending (real `build_ecp5.ps1` run on the full design in progress
+     at the time of this writing; update this entry with the real final
+     build result once it completes, per this file's own "don't leave
+     it stale" discipline).**
+
+     **Method**: `gdb` is not installed anywhere on this system (checked
+     directly -- not in OSS CAD Suite, not in MinGW, no `windbg`/`cdb`
+     either). Built a minimal, isolated repro instead: a tiny top module
+     instantiating only the real `dfc_mem_sp_512x36_ecp5.sv` (the
+     `PDPW16KD` wrapper) with a free-running counter driving it and one
+     real, already-validated pin pair (`clk_25mhz`/`led0`, reused from
+     this project's own `.lpf`). Full synthesis->place->route->timing
+     on this takes under 2 seconds and reproduces the exact same crash,
+     same message, same point (right after the slack histogram) as the
+     full ~90-minute real build -- proving the crash depends on nothing
+     but a real `PDPW16KD` cell reaching this stage, independent of the
+     rest of the design's size. `nextpnr-ecp5`'s own `--on-failure`
+     (the real flag name in this installed version; `--exe-on-crash`
+     does not exist here) never fired for this error, and `--debug`
+     added no instrumentation at this step -- both results are
+     consistent with a plain internal `log_error()` abort in native
+     C++ code. Cloned the real `YosysHQ/nextpnr` source at the exact
+     installed commit (`2b560ad0`, dated 2026-06-19 upstream) and ran
+     an exhaustive local `grep -rn` across the entire tree (not a
+     filtered guess, not `WebFetch` summarization) for the literal
+     crash text.
+
+     **The exact mechanism, fully confirmed, not a hypothesis:**
+
+     1. `fpga/ecp5/dfc_mem_sp_512x36_ecp5.sv` lines 95-96 (before this
+        fix) passed `CSDECODE_W`/`CSDECODE_R` as Verilog BIT-VECTOR
+        literals -- `.CSDECODE_W (3'b000), .CSDECODE_R (3'b000)` --
+        the ONLY two parameters on this cell written this way; every
+        other parameter (`REGMODE`, `RESETMODE`,
+        `ASYNC_RESET_RELEASE`, `GSR`) already used a proper quoted
+        string literal. Confirmed by direct inspection this is the
+        ONLY instance of this pattern anywhere in the codebase (the
+        only other real ECP5 hard-primitive instantiation,
+        `fpga/ecp5/dfc_ecp5_pll.v`'s `EHXPLLL`, has every string-typed
+        parameter already using letter-containing string literals that
+        could never be ambiguous this way).
+     2. Yosys faithfully serializes this bit-vector literal into the
+        JSON netlist `nextpnr-ecp5` consumes as a bare quoted string of
+        `0`/`1` characters -- `"CSDECODE_R": "000", "CSDECODE_W":
+        "000"` -- a perfectly valid JSON string, and not a Yosys bug:
+        Yosys's own RTLIL representation has no way to know this
+        parameter is semantically supposed to be a string, since our
+        own source gave it a plain bit-vector literal, not a Verilog
+        string literal.
+     3. `nextpnr`'s own JSON importer
+        (`common/kernel/property.cc`, `Property::from_string()`,
+        confirmed by reading the real source at the real installed
+        commit):
+        ```cpp
+        Property Property::from_string(const std::string &s)
+        {
+            Property p;
+            size_t cursor = s.find_first_not_of("01xz");
+            if (cursor == std::string::npos) {
+                // every character is '0'/'1'/'x'/'z' -> NUMERIC, not string
+                p.str = std::string(s.rbegin(), s.rend());
+                p.is_string = false;
+                p.update_intval();
+            } else if (s.find_first_not_of(' ', cursor) == std::string::npos) {
+                // all [01xz] chars followed only by trailing spaces ->
+                // the documented escape: strip one trailing space, treat
+                // the rest as a literal string
+                p = Property(s.substr(0, s.size() - 1));
+            } else {
+                // any other character present -> unambiguously a string
+                p = Property(s);
+            }
+            return p;
+        }
+        ```
+        Any string composed ENTIRELY of `0`/`1`/`x`/`z` characters is
+        classified as NUMERIC (`is_string = false`), not as a string --
+        a documented, deliberate disambiguation convention. A genuine
+        string value is supposed to opt out of this via a trailing
+        space (added by whichever JSON writer knows the parameter is
+        semantically a string); Yosys never adds that escape here,
+        because from Yosys's own point of view this genuinely is a
+        plain bit-vector constant. `"000"` (three zero characters) is
+        exactly this case: silently imported as a NUMERIC `Property`
+        with `intval = 0`.
+     4. `ecp5/pack.cc`'s `pack_ebr()` (the function that converts a
+        `PDPW16KD`-typed cell into nextpnr's internal `DP16KD`
+        representation, since there is only one physical EBR primitive
+        on the chip) renames `CSDECODE_W`/`CSDECODE_R` to
+        `CSDECODE_A`/`CSDECODE_B` via a plain key rename
+        (`rename_param`), carrying the already-mistyped numeric
+        `Property` through unchanged.
+     5. `ecp5/bitstream.cc:1012` reads it back:
+        `str_to_bitvector(str_or_default(ci->params, id_CSDECODE_A,
+        "0b000"), 3)`. `str_or_default()` (`common/kernel/util.h:65`)
+        hard-requires a string-typed `Property` and calls
+        `log_error("Expecting string value but got integer %d.\n",
+        int(found->second.intval));` when it finds a numeric one
+        instead -- the exact crash text, with the exact printed
+        integer being the bit pattern's decimal value. (By contrast,
+        `DATA_WIDTH_A`/`DATA_WIDTH_B` -- also 32-bit all-`[01xz]`
+        strings, also misclassified as numeric by the same import rule
+        -- never crash, because they're read via the TOLERANT
+        `intstr_or_default()`, confirmed to accept either
+        representation, not the strict `str_or_default()`.)
+     6. This was never reachable before RTL-017 because no real
+        `PDPW16KD`/`DP16KD` cell had ever survived synthesis to reach
+        this code path in any prior build -- every one had it
+        optimized away at `0/208`.
+
+     **Empirical confirmation table** (fast repro, each row a full
+     real synthesis->place->route->textcfg-write cycle, seconds each):
+
+     | `CSDECODE_W`/`CSDECODE_R` value | Result |
+     |---|---|
+     | `3'b000` (bit-vector literal, original) | FAILED -- `Expecting string value but got integer 0.` |
+     | `3'b101` (bit-vector literal, non-zero) | FAILED -- `Expecting string value but got integer 5.` (exactly the decimal value of `101`) |
+     | `"0b000"` (string literal, fix) | SUCCESS -- real `.bit`-equivalent textcfg written |
+     | `"0b000"` + `REGMODE` changed to `"NOREG"` (isolating `REGMODE` as a non-factor) | SUCCESS |
+     | `REGMODE` alone changed to `"NOREG"` (`CSDECODE` still `3'b000`) | FAILED -- identical crash, confirming `REGMODE` was never the cause |
+
+     The `3'b101` row is the decisive confirmation: the crash's own
+     printed integer changes to exactly match the new bit pattern's
+     decimal value (5), with zero remaining ambiguity about the
+     mechanism.
+
+     **The confirmed fix** (matching the blackbox's own declared
+     default format exactly, and required by Yosys's own `CSDECODE`
+     parser -- a bare `"000"` string without the `0b` prefix fails
+     synthesis with `error parsing value '000', expected 0b prefix`):
+     ```systemverilog
+     .CSDECODE_W          ("0b000"),
+     .CSDECODE_R          ("0b000"),
+     ```
+     The `b` character falls outside `{0,1,x,z}`, so `Property::
+     from_string()` unambiguously classifies it as a genuine string,
+     and the crash never occurs. Applied to
+     `fpga/ecp5/dfc_mem_sp_512x36_ecp5.sv` lines 95-96 (now expanded
+     with an inline disclosure comment at that location). Confirmed
+     via direct codebase search that this is the only instance of this
+     pattern anywhere in the project -- no second occurrence to fix.
+
+     **Verification status**: `gate.ps1` re-run after the fix -- lint
+     PASSED, sim 22/22 testbenches with IDENTICAL check counts to
+     before the fix (19/232/etc., unchanged, confirming zero simulation
+     impact, exactly as expected since this file is the ECP5-only real-
+     hardware body, never used in sim/formal), formal 2/2 PASS, `GATE
+     PASSED`. A real, full-design `build_ecp5.ps1` run is in progress
+     at the time of this writing to confirm the crash is actually gone
+     end-to-end (not just on the isolated repro) and that a real `.bit`
+     file is produced for the first time, with `DP16KD`/`PDPW16KD`
+     placement still nonzero and timing still passing. This entry will
+     be updated with that real result once the build completes.
+
+     **Note on one specific build attempt (Build ID `20261006_210922`,
+     stopped 2026-10-07, not a finding about the fix itself):** this
+     attempt's router was still actively converging (overused nodes
+     dropping steadily, from 162,028 at iteration 1,000 down to 92,505
+     by iteration 689,000, ~320 real minutes elapsed) when it was
+     stopped to hold overnight, rather than left running indefinitely.
+     The convergence rate was clearly decelerating over that window
+     (roughly 2.7 overused-nodes/sec between iterations 600k-650k,
+     dropping to roughly 0.38/sec between 650k-689k) -- consistent with
+     real placement-seed variance in how long a full route takes to
+     converge, not a new crash, not a regression, and not evidence
+     against the fix above (synthesis and the early placement/routing
+     phases were already running cleanly, exactly as the fix predicts;
+     this run simply had not reached the timing-analysis/report stage
+     yet when it was stopped). A fresh attempt (same fix, possibly a
+     different `-Seed`) is the next real step whenever building is
+     resumed.
+
+     **Real, final result of the follow-up `-Seed 42` attempt (Build ID
+     `20261007_135035`, 2026-10-07) -- the CSDECODE fix above is now
+     CONFIRMED end-to-end as far as that specific crash goes, but a
+     SEPARATE, different nextpnr-ecp5 crash newly surfaced and still
+     blocks bitstream production.** This run used an explicit, fixed
+     `-Seed 42` (chosen and documented in advance, matching the seed
+     already used successfully once elsewhere in this project's history
+     -- see the `nextpnr-ecp5` internal router assertion finding earlier
+     in this item's own document) specifically to get a reproducible,
+     non-default placement/routing draw. `gate.ps1` was re-run
+     immediately beforehand as a sanity check and passed identically to
+     every prior report in this item (lint PASSED; sim 22/22
+     testbenches, 0 failures, identical check counts to every prior
+     gate run; formal 2/2 `.sby` files, 4/4 tasks, all PASS; coverage
+     189/353).
+     - **The original crash (`Expecting string value but got integer N`)
+       did NOT recur** -- confirmed by a direct, exhaustive grep of the
+       full, real `output\logs\ecp5_pnr_20261007_135035.log` for that
+       exact text: zero matches. Synthesis, placement, and the
+       post-placement slack-histogram step (the exact point the
+       original crash always occurred, every time, before this fix) all
+       completed cleanly. `DP16KD` placement is confirmed nonzero again
+       (`1/208`, directly from this run's own `Device utilisation:`
+       block), so the fix's target code path was genuinely exercised
+       again, not skipped.
+     - **Routing then ran far longer and far further than either
+       previous attempt before anything went wrong**: 31,401 real
+       seconds (~8.7 hours) of routing, reaching iteration 1,322,000 of
+       the ripup-reroute loop, with remaining (overused) arcs down to
+       **26,953 of the original 162,672 (83.4% resolved)** -- well past
+       the `20261006_210922` attempt's own best point (92,505 remaining
+       after ~320 minutes) and still actively converging when it ended
+       (remaining arcs were still trending down over the final tracked
+       iterations, e.g. 27,061 -> 26,953 from iteration 1,321,000 to
+       1,322,000), not plateaued.
+     - **A genuinely NEW, different internal `nextpnr-ecp5` crash then
+       occurred**, confirmed by direct reading of the real log's exact
+       final lines:
+       ```
+       terminate called after throwing an instance of 'nextpnr_ecp5::assertion_failure'
+         what():  Assertion failure: cond (/work/_builds/windows-x64/nextpnr-ecp5/nextpnr/common/kernel/hashlib.h:233)
+       ```
+       This is an internal C++ assertion inside nextpnr's own generic
+       hash-table implementation (`hashlib.h`), thrown from somewhere in
+       the ripup-reroute router after ~1.3 million routing iterations --
+       structurally a different code path, different file, and
+       different failure mode than the original `CSDECODE`/
+       `property.cc`/`bitstream.cc` crash this item's fix targets. No
+       crash dump or core file was produced (checked directly; none
+       exists under `output\_scratch\ecp5`). This is **not yet
+       investigated** -- unlike the original crash, no isolated repro,
+       no source-level root cause, and no confirmed fix exist for this
+       one yet.
+     - **No new `.bit` file was produced** -- `output\bitstreams\`'s
+       newest file still predates this run (from the RTL-016-only
+       baseline, `20261005_230516`). The bitstream-packaging question
+       this item exists to answer remains open, now blocked by a
+       different cause than when this item was opened.
+     - **The `40.52 MHz (FAIL at 50.00 MHz)` line appearing earlier in
+       this run's own log is NOT a final, meaningful timing result and
+       must not be read as a real timing failure.** Confirmed by its
+       exact position in the log: it is printed by the placer's own
+       pre-route timing ESTIMATE, immediately after simulated-annealing
+       placement and before `Routing globals...`/`Routing..` even
+       begin -- i.e. before any real net delays exist. Every prior
+       successful build in this project's history (e.g. the 50.02 MHz
+       PASS this item itself opened with, Build ID `20261006_112421`)
+       reaches its real, authoritative `Max frequency ... PASS` number
+       only from the POST-route timing analysis, which this run never
+       reached because routing crashed first. This run furnishes no
+       evidence either way about whether the design meets timing.
+     - **Per this task's own explicit instruction not to silently try a
+       third seed or workaround on a differently-crashing build:
+       stopped here and reported back rather than continuing.** No
+       further build attempt was made this session. The real, open
+       questions for whoever picks this up next: (1) is the
+       `hashlib.h:233` assertion itself seed-dependent (i.e. does a
+       third `-Seed` value avoid it, the same way `-Seed 42` avoided
+       the router-assertion crash logged earlier in this item), or is
+       it a function of routing duration/iteration count regardless of
+       seed; (2) is this a known upstream `nextpnr-ecp5` bug at the
+       pinned `nextpnr-0.10-82-g2b560ad0` commit (not yet checked -- the
+       upstream source clone used to root-cause the original CSDECODE
+       crash earlier in this item has not yet been searched for this
+       new assertion text); (3) given routing now reliably gets much
+       further (83.4% resolved, still converging) before failing, is a
+       longer timeout alone (running past the ~8.7-hour mark this
+       attempt reached) a viable next step, or does the crash recur at
+       a similar iteration/arc count regardless of how far routing has
+       progressed. **Decision (2026-10-07): holding at the RTL-016 FPGA
+       baseline continues to apply** (unchanged from the decision
+       earlier in this item) -- do not resume RTL-017+ FPGA build
+       attempts without the user's explicit go-ahead on which of the
+       three questions above to pursue first.

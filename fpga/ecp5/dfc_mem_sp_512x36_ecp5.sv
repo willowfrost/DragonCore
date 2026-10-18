@@ -92,8 +92,27 @@ module dfc_mem_sp_512x36 (
     .REGMODE             ("OUTREG"),
     .RESETMODE           ("SYNC"),
     .ASYNC_RESET_RELEASE ("SYNC"),
-    .CSDECODE_W          (3'b000),
-    .CSDECODE_R          (3'b000),
+    // String literals, NOT bit-vector literals (3'b000) -- a real, confirmed
+    // nextpnr-ecp5 crash root cause, not a style choice. A bit-vector literal
+    // here gets serialized by Yosys into the JSON netlist as a bare numeric-
+    // looking string ("000"), which nextpnr's own JSON importer
+    // (common/kernel/property.cc's Property::from_string()) misclassifies as
+    // a NUMERIC property (any string composed only of [01xz] characters is
+    // treated as a bitvector, not a string) -- then ecp5/bitstream.cc's own
+    // CSDECODE read (str_or_default, which hard-requires a string) crashes
+    // with "Expecting string value but got integer N" (N = the bit pattern's
+    // decimal value) once a real PDPW16KD cell reaches that code path (never
+    // triggered before RTL-017, since DP16KD/PDPW16KD placement was always
+    // 0/208 -- see OPEN_ISSUES.md item 112's full account and the isolated
+    // repro that proved this, including the empirical confirmation that
+    // changing the bit pattern changes the crash's own printed integer to
+    // match exactly). The "0b" prefix (matching the blackbox's own declared
+    // default format exactly) is required by Yosys's own CSDECODE parser --
+    // a bare "000" string fails synthesis ("error parsing value '000',
+    // expected 0b prefix"); the 'b' character is what makes this
+    // unambiguously a string to nextpnr's own importer too.
+    .CSDECODE_W          ("0b000"),
+    .CSDECODE_R          ("0b000"),
     .GSR                 ("AUTO")   // matches Yosys's own working synth_ecp5
                                      // default, not the blackbox's "ENABLED"
                                      // simulation default -- see OPEN_ISSUES.md
