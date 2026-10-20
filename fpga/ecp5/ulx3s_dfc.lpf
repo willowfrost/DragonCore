@@ -176,6 +176,26 @@ LOCATE COMP "gn16" SITE "M17";
 IOBUF PORT "gn15" PULLMODE=UP IO_TYPE=LVCMOS33;
 IOBUF PORT "gn16" PULLMODE=UP IO_TYPE=LVCMOS33;
 
+# ---- ARINC 429 Transmit (RTL-018): gn17/gn18/gn19, 3 real pads -- 2
+# outputs (arinc_tx_ctrl_o[1:0]) and 1 input (arinc_tx_adapter_error_i, the
+# transmit transceiver's own fault output). Real board file SITEs per this
+# file's own established "gn14-gn21 (SITEs U17/P16/M17/L17/H17/G18/E17/D17)"
+# accounting (ULX3S_CONNECTION_MAP.md Section 10) -- gn15/gn16=P16/M17
+# already used above by RTL-017, so gn17=L17, gn18=H17, gn19=G18 are the
+# next three in that same fixed site ordering, "exhaust unshared,
+# lowest-numbered first" per this project's established pin-choice rule.
+# arinc_tx_ctrl_o is a pure output (no PULLMODE, matching this file's own
+# Debug LEDs/Safety Output convention); arinc_tx_adapter_error_i is a pure
+# input, pulled up so an unconnected/not-yet-wired transceiver reads
+# idle-high rather than floating (same PULLMODE=UP convention as gn15/gn16
+# above).
+LOCATE COMP "gn17" SITE "L17";
+LOCATE COMP "gn18" SITE "H17";
+LOCATE COMP "gn19" SITE "G18";
+IOBUF PORT "gn17" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gn18" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gn19" PULLMODE=UP IO_TYPE=LVCMOS33;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

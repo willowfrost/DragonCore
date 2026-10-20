@@ -170,13 +170,13 @@ module regbank_smoke_tb;
   // etc. comments).
   logic [dfc_types_pkg::DFC_RTL017_STATUS_WIDTH-1:0]  rtl017_status_i;
   logic [dfc_types_pkg::DFC_RTL017_CONTROL_WIDTH-1:0] rtl017_control_o;
+  // Real cross-module register bus to RTL-018, same treatment as RTL-017
+  // above -- replaces the prior individual per-register atx_*_status_i /
+  // rtl018_evt_overflow_status_status_i stub ports.
+  logic [dfc_types_pkg::DFC_RTL018_STATUS_WIDTH-1:0]  rtl018_status_i;
+  logic [dfc_types_pkg::DFC_RTL018_CONTROL_WIDTH-1:0] rtl018_control_o;
   logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_STATUS_WIDTH-1:0]  rtl024arxadapter_status_i;
   logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_CONTROL_WIDTH-1:0] rtl024arxadapter_control_o;
-  logic [31:0] atx_status_status_i;
-  logic [31:0] atx_queue_level_status_i;
-  logic [31:0] atx_error_count_status_i;
-  logic [31:0] atx_underrun_count_status_i;
-  logic [31:0] rtl018_evt_overflow_status_status_i;
   logic [31:0] can_status_status_i;
   logic [31:0] can_error_count_status_i;
   logic [31:0] can_rx_level_status_i;
@@ -274,13 +274,10 @@ module regbank_smoke_tb;
     .test_status_status_i(test_status_status_i),
     .rtl017_status_i(rtl017_status_i),
     .rtl017_control_o(rtl017_control_o),
+    .rtl018_status_i(rtl018_status_i),
+    .rtl018_control_o(rtl018_control_o),
     .rtl024arxadapter_status_i(rtl024arxadapter_status_i),
     .rtl024arxadapter_control_o(rtl024arxadapter_control_o),
-    .atx_status_status_i(atx_status_status_i),
-    .atx_queue_level_status_i(atx_queue_level_status_i),
-    .atx_error_count_status_i(atx_error_count_status_i),
-    .atx_underrun_count_status_i(atx_underrun_count_status_i),
-    .rtl018_evt_overflow_status_status_i(rtl018_evt_overflow_status_status_i),
     .can_status_status_i(can_status_status_i),
     .can_error_count_status_i(can_error_count_status_i),
     .can_rx_level_status_i(can_rx_level_status_i),
@@ -363,12 +360,8 @@ module regbank_smoke_tb;
     host_last_sequence_status_i = 32'h0;
     test_status_status_i = 32'h0;
     rtl017_status_i = '0;
+    rtl018_status_i = '0;
     rtl024arxadapter_status_i = '0;
-    atx_status_status_i = 32'h0;
-    atx_queue_level_status_i = 32'h0;
-    atx_error_count_status_i = 32'h0;
-    atx_underrun_count_status_i = 32'h0;
-    rtl018_evt_overflow_status_status_i = 32'h0;
     can_status_status_i = 32'h0;
     can_error_count_status_i = 32'h0;
     can_rx_level_status_i = 32'h0;

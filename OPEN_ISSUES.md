@@ -3325,3 +3325,152 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
        earlier in this item) -- do not resume RTL-017+ FPGA build
        attempts without the user's explicit go-ahead on which of the
        three questions above to pursue first.
+
+## RTL-018 (ARINC 429 Transmit Interface) integration — compile/synthesize/verify scope only
+
+113. **Resolved in favor of REG-002's own Section 6 Address-Map Summary,
+     same reasoning as items 1/10/11/13/19 (a genuine REG-002-INTERNAL
+     discrepancy, not something this module invented or silently picked
+     one side of without checking).** REG-002 Section 15's own block-header
+     table says "Register count: 12" for the ARINC 429 Transmit block
+     (0x1100-0x11FF); REG-002's own Section 6 top-level Address-Map Summary
+     says "11" for the identical block; only 11 registers are ever actually
+     defined, named, and field-specified anywhere in REG-002 (confirmed via
+     an exhaustive search for `ATX_`/`RTL018`/`0x1100` across the whole
+     document -- no twelfth register exists under any name). Resolved in
+     favor of 11, the only number with real content behind it.
+     `tools/reggen/rtl018_field_map.json` implements all 11 real,
+     enumerated registers.
+
+114. **RESOLVED (2026-10-20), the 10th real instance of the exact gap class
+     already fixed for RTL-002 through RTL-017 (items 2/7/8/12/20/24/28/32/
+     36/etc.), approved before implementation.** `dfc_rtl018_control_t` had
+     no clear-forwarding field for `RTL018_EVT_OVERFLOW_STATUS.
+     EVENT_OVERFLOW` (REG-1120 bit 0, a real W1C field). Fixed: ARCH-002
+     grew the struct 162->163 bits, adding
+     `rtl018_evt_overflow_status__event_overflow` at the new highest bit
+     (162) -- every pre-existing field's bit position confirmed unchanged
+     via a real `regenerate.ps1` run (diffed directly against the
+     already-generated `include/dfc_types_pkg.sv` before this edit, not
+     assumed). `tools/reggen/rtl018_field_map.json` carries the
+     corresponding `control_registers` entry from the start, and its
+     `status_registers` section closes the RTL-002/003/004-style readback
+     gap (item 21) for RTL-018 too, same discipline already established for
+     RTL-006 through RTL-017.
+
+115. **Real, disclosed ARCH-002-internal apparent off-by-one, logged, not
+     silently resolved either way (CLAUDE.md rule 8).** ARCH-002's own
+     Appendix F event-source-matrix row for RTL-018 lists index **17**
+     alongside a second "hex" column reading **0x12** (18 decimal, not
+     0x11=17) -- RTL-017's own row immediately above shows the identical
+     pattern (index 16, hex column 0x11=17, also one higher than the index
+     column). This looks systematic across at least these two adjacent
+     rows, not a one-off typo. **Resolved operationally in favor of the
+     plain decimal INDEX column** (17 for RTL-018), matching the real,
+     already-working precedent: `dfc_rtl017.sv`'s own real, shipped,
+     passing-gate wiring uses `RTL-005.evt_valid_i[16]` (the index column's
+     value, not the hex column's), and this session's own
+     `dfc_rtl024.sv` wiring for RTL-018 follows the identical pattern
+     (`evt_valid_i[17]`). The distinct event-ID code embedded in event
+     records (0x0020 for RTL-017, 0x0021 for RTL-018) comes from a THIRD,
+     separate column and is unaffected by this question. Whoever edits
+     ARCH-002's Appendix F table next should check whether the "hex" column
+     is simply redundant/miscomputed throughout this region before trusting
+     it for anything.
+
+116. **Real, disclosed ARCH-002-internal naming inconsistency, not fixed
+     (ARCH-002 is the owning document for both names and uses both
+     inconsistently -- not something a single RTL session should
+     reconcile unilaterally, same category as item 1's own resolution
+     style).** ARCH-002's own RTL-018 port-catalog table (Appendix A) names
+     the adapter-error input port at the RTL-018 module boundary
+     `atx_adapter_error_i` (already-synchronized, same-domain, fed by
+     RTL-024's own internal `atx_adapter_error_o`). ARCH-002's own RTL-024
+     top-level external-pad table and its Appendix E CDC inventory
+     (`CDC-ATXERR`) instead name the chip-level pad `arinc_tx_adapter_error_i`
+     (asynchronous, active-high, routed through a real two-stage
+     synchronizer owned by RTL-024). Both names refer to the SAME logical
+     signal at two different hierarchy levels; `dfc_rtl018.sv` uses the
+     RTL-018-level name (`atx_adapter_error_i`) per its own real port-table
+     row, and `dfc_rtl024.sv`'s own new synchronizer this session is named
+     `atx_adapter_error_sync`/`atx_adapter_error_sync_q` to match. If
+     RTL-STD-002 SS8 naming rules are ever applied retroactively to
+     ARCH-002 itself, this pair should be reconciled to one prefix.
+
+117. **Real, disclosed stale port-count claim in `RTL-018_RevA.md`, resolved
+     in favor of ARCH-002, same resolution style as items 1/10/11/13/19 (the
+     module spec is a derived artifact, never the owning document, per
+     CHTR-DOC-003).** `RTL-018_RevA.md` SS2 claims "18 total" ports.
+     ARCH-002's own Appendix A header reads "RTL-018 - ARINC 429 Transmit
+     Interface (28 ports)", and the real table beneath it lists exactly 28
+     rows, counted directly, not assumed -- the identical class of stale
+     module-spec port count RTL-017_RevA.md already had (that item's own
+     resolution, RTL-017 using ARCH-002's real 33 rather than RevA's stale
+     20, is the direct precedent here). `dfc_rtl018.sv` implements all 28
+     real ports.
+
+118. **Real, disclosed interpretation choice -- no distinct REG-002 trigger
+     exists to cite, same reasoning precedent as RTL-017's own finding 7
+     (ARX_ERROR_COUNT).** REG-002's own text for `ATX_ERROR_COUNT`
+     ("Saturating transmit error/rejection count") names no trigger
+     distinct from `ATX_UNDERRUN_COUNT`/`ATX_REJECTED_PUSH_COUNT`, each of
+     which already has its own dedicated, clearly-scoped counter.
+     `dfc_rtl018.sv` increments `ATX_ERROR_COUNT` specifically on a
+     non-OK shared-buffer response during either the PUSH-write or the
+     DEQUEUE-read path (the in-progress operation is aborted, no
+     partial/corrupt entry ever becomes visible) -- this module's own
+     chosen classification for "a real transmit-path error that isn't an
+     underrun or a rejected push," disclosed in the file's own header
+     (finding 5), not assumed without comment.
+
+119. **Real, disclosed interpretation choice for RTL-018's own 8-bit
+     event-condition allocation (Appendix F.3).** Per the real table (0
+     transmit complete; 1 rejected; 2 queue overflow; 3 underrun; 4 adapter
+     error; 5 recovery; 6 shared-buffer error; 7 event-slot overflow):
+     bits 1 ("rejected") and 2 ("queue overflow") both map to this module's
+     single real rejection trigger (a PUSH failing because the queue is
+     full or the module is disabled) -- REG-002 gives RTL-018 no second,
+     independently-distinguishable "invalid push" condition to separate
+     them. Bit 5 ("recovery") has no real internal condition anywhere in
+     this module to drive it at all -- structurally unreachable, same
+     disclosed-unreachable treatment as RTL-017's own codes 6/7 (item 5's
+     RX-side encoding table). See `dfc_rtl018.sv`'s own header (finding 7)
+     for the full disclosure.
+
+120. **Real, disclosed gap -- nothing to fix (no rejection code or evidence
+     bit exists anywhere in REG-002's ARINC TX block for this specific
+     case).** ARCH-VAL-018 states parity override is only legal when
+     `AUTO_PARITY=0` AND the staged override-valid bit is 1; REG-1114's own
+     write-validation text for `ATX_PUSH` only names "queue-full or
+     disabled" as grounds for rejection, nothing about an illegal
+     parity-override combination. `dfc_rtl018.sv`'s own disclosed choice
+     (finding 6): a PUSH with `AUTO_PARITY=0` and override-valid=0 is
+     accepted anyway and falls back to the real auto-computed parity value,
+     rather than inventing a rejection this module has no register field to
+     report through.
+
+121. **Compile/synthesize/verify scope, explicitly NOT full P&R-level
+     completeness -- disclosed here so this entry isn't mistaken for a
+     RTL-017-style full close-out.** Per this session's own explicit task
+     scope (HIL-testing phase at the RTL-016 hardware baseline; RTL-018
+     through RTL-023 integrate at compile/synthesize/verify only, given the
+     two unresolved toolchain crashes already on record in item 112): a
+     real `gate.ps1` run passed clean (lint/sim/formal), including a new
+     dedicated `rtl018_integration_tb.sv` (32/32 checks) covering queue
+     push/pop/overflow, the host-vs-route last-free-slot tiebreaker (both
+     the genuine-conflict and no-real-conflict cases, synchronized to the
+     exact same CORE_CLK edge to actually exercise the race rather than
+     approximate it), parity-override legality, interword-gap timing
+     (measured against the real internal `ser_state_q`, not just the
+     external pin, to avoid conflating the real gap with the separate
+     buffer-read latency for the next entry), the `arinc_tx_ctrl_o != 2'b11`
+     invariant (checked every cycle for the whole run), and underrun/
+     rejection classification. A real Yosys `synth_ecp5` run (via
+     `build_ecp5.ps1 -SynthOnly`, a new flag added this session specifically
+     because no existing stop-point after synthesis existed -- see that
+     script's own header) completed cleanly with real cell-count statistics
+     recorded in `output/logs/`. **`nextpnr-ecp5` was never invoked this
+     session** -- no place-and-route, no timing closure, no bitstream.
+     RTL-018's status is "compiled, synthesized, verified," not "built" or
+     "complete" -- the project continues holding at the RTL-016 FPGA
+     baseline (item 112) for any real hardware target.

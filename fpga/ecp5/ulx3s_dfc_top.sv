@@ -109,6 +109,9 @@ module ulx3s_dfc_top (
   output logic gn14,  // Safety output channel 3 (RTL-016)
   input  logic gn15,  // ARINC 429 receive line data (RTL-017/RTL-024 adapter)
   input  logic gn16,  // ARINC 429 receive transceiver fault (RTL-017/RTL-024 adapter)
+  output logic gn17,  // ARINC 429 transmit control bit 0 (RTL-018)
+  output logic gn18,  // ARINC 429 transmit control bit 1 (RTL-018)
+  input  logic gn19,  // ARINC 429 transmit adapter error (RTL-018)
   output logic [7:0] led
 );
 
@@ -189,10 +192,10 @@ module ulx3s_dfc_top (
     .gpio_o        (gpio_o),
     .gpio_oe_o     (gpio_oe_o),
 
-    .arinc_rx_i                 (gn15),  // real pin, RTL-017 this session
-    .arinc_tx_ctrl_o            (),
-    .arinc_rx_adapter_error_i   (gn16),  // real pin, RTL-017 this session
-    .arinc_tx_adapter_error_i   (1'b0),
+    .arinc_rx_i                 (gn15),  // real pin, RTL-017
+    .arinc_tx_ctrl_o            ({gn18, gn17}),  // real pins, RTL-018 this session
+    .arinc_rx_adapter_error_i   (gn16),  // real pin, RTL-017
+    .arinc_tx_adapter_error_i   (gn19),  // real pin, RTL-018 this session
 
     .can_rx_i                (1'b1),  // recessive idle
     .can_tx_o                (),

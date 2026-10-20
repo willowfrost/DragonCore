@@ -6805,8 +6805,8 @@
     },
     {
       "name": "dfc_rtl018_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl018_control_t (162 bits, rich format)",
-      "width": 162,
+      "trace": "ARCH-002 Appendix B dfc_rtl018_control_t (163 bits, rich format)",
+      "width": 163,
       "fields": [
         {
           "name": "atx_control__enable",
@@ -6969,6 +6969,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "whole-counter clear for full or invalid PUSH rejection"
+        },
+        {
+          "name": "rtl018_evt_overflow_status__event_overflow",
+          "hi": 162,
+          "lo": 162,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },

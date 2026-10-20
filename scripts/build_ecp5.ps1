@@ -23,7 +23,7 @@
 # reliably capture on their own (confirmed directly: a prior pnr.log
 # began mid-stream with no nextpnr-ecp5 version banner at all).
 #
-# Usage: powershell -ExecutionPolicy Bypass -File scripts\build_ecp5.ps1 [-Seed <int>] [-NoAbc9]
+# Usage: powershell -ExecutionPolicy Bypass -File scripts\build_ecp5.ps1 [-Seed <int>] [-NoAbc9] [-SynthOnly]
 # Run from the repository root.
 #
 # -Seed: passed through to nextpnr-ecp5's own --seed flag. Added after a
@@ -53,7 +53,21 @@
 
 param(
     [int]$Seed = 0,
-    [switch]$NoAbc9
+    [switch]$NoAbc9,
+    # -SynthOnly: stop cleanly right after Yosys synthesis succeeds, never
+    # invoking nextpnr-ecp5 at all. Added for modules whose integration
+    # scope is deliberately compile/synthesize/verify only (no real
+    # place-and-route/bitstream yet) -- RTL-018 is the first real use.
+    # Before this flag existed, synthesis success fell straight through
+    # into place-and-route unconditionally (no existing stop point): the
+    # only way to get a synthesis-only result was to let a full run start
+    # and kill it mid-route, which this project's own task discipline
+    # explicitly rejects (wastes a real multi-hour nextpnr-ecp5 run and
+    # leaves no clean, reusable "stop here" semantics for the next module
+    # needing the same narrower scope). $Seed/$NoAbc9 are accepted but
+    # meaningless with -SynthOnly (both only affect place-and-route);
+    # $NoAbc9 still changes synthesis itself and is honored normally.
+    [switch]$SynthOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -289,6 +303,15 @@ try {
     }
     Write-Host "  netlist  -> $NetlistDir\$NetlistFile"
     Write-Host "  log      -> $LogDir\$SynthLogFile"
+
+    if ($SynthOnly) {
+        Write-Host ""
+        Write-Host "== build_ecp5.ps1: -SynthOnly requested -- stopping here, nextpnr-ecp5 was never invoked =="
+        Write-Host "  real cell-count/utilization stats are in $LogDir\$SynthLogFile's own"
+        Write-Host "  'Printing statistics.' section (Yosys's synth_ecp5 always emits this at"
+        Write-Host "  the end of its own run -- no separate 'yosys stat' invocation needed)."
+        return
+    }
 
     # ---- 2. Place and route -> output\netlists\ulx3s_dfc_<BuildId>_out.config,
     #         output\reports\ecp5_pnr_report_<BuildId>.json ----

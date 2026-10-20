@@ -3040,6 +3040,101 @@ written in this project going forward, not just a historical note.
     correctness into question: lint/sim/formal all genuinely pass, and
     the real PnR timing result itself, as far as it got, was a clean
     PASS.
+- **RTL-018 (ARINC 429 Transmit Interface) is REAL — second real
+  Databus-domain module and second real shared-buffer client (client 1).
+  Integrated at a DELIBERATELY NARROWER scope than every prior module:
+  compile/synthesize/verify only, no place-and-route, no bitstream (the
+  project's current phase is HIL testing at the RTL-016 hardware baseline;
+  OPEN_ISSUES.md item 112's two unresolved nextpnr-ecp5 crashes are the
+  reason). RTL-019 through RTL-023 remain spec-complete but not yet
+  implemented.**
+  - **One new file**: `rtl/databus/src/dfc_rtl018.sv` — 8-entry queue over
+    the 16-word client-1 segment (2 words/entry per ARCH-BUF-023, unlike
+    RTL-017's 4-word RX entries), a 3-way HOST-PUSH > ROUTE-PUSH >
+    DEQUEUE-READ internal arbiter (same ARCH-BUF-013 one-outstanding
+    architecture RTL-017 established), and — unlike RX, where RTL-024 does
+    the line-level work — a REAL bit-level serializer implemented in THIS
+    module (32 data bits LSB-first + 1 real odd-parity bit + a configurable
+    interword gap, all driven onto `arinc_tx_ctrl_o[1:0]` with `2'b11`
+    structurally never assigned anywhere in the file). Bit-time constants
+    (`CYCLES_PER_BIT_LOW`/`_HIGH`) are real ARINC 429 Mark 33 DITS nominal
+    rates at this project's real 50 MHz CORE_CLK, exposed as module
+    parameters so the testbench overrides them to a small simulation-only
+    value — a disclosed, standard technique, not a functional difference
+    (`OPEN_ISSUES.md` item 121).
+  - **ARCH-002 itself grown by one bit, the 10th real instance of an
+    already-9x-repeated gap class**: `dfc_rtl018_control_t` had no
+    clear-forwarding field for `RTL018_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW`
+    — grown 162->163 bits, every pre-existing field's position confirmed
+    unchanged via a real `regenerate.ps1` run (`OPEN_ISSUES.md` item 114).
+  - **Three real, genuine bugs found and fixed via this module's own
+    testbench, not by inspection** (`OPEN_ISSUES.md` item 121 /
+    `dfc_rtl018.sv`'s own header): (1) a host `ATX_PUSH` pulse arriving
+    while the arbiter was mid-dequeue-read was silently lost — fixed with
+    a `push_pending_q` latch, the same pattern RTL-017's own
+    `capture_pending_q` established; (2) that same latch then made the host
+    LOSE the last-free-slot tiebreaker against a route request asserted on
+    the literal same CORE_CLK edge, since the route side reads a plain
+    combinational level while the host's latch only became visible to the
+    arbiter one cycle later — fixed by OR-ing the live pulse directly into
+    `host_push_want`; (3) `ser_auto_parity_q`/`ser_override_valid_q`/
+    `ser_override_bit_q` were latched from `rd_w1_q` the EXACT SAME cycle
+    `rd_w1_q` itself was being updated via nonblocking assignment, reading
+    the PREVIOUS dequeue's W1 instead of the current one — fixed by reading
+    the live, un-registered `rsp_data` directly. Bug (3) is a genuine
+    "registered copy read same-cycle it updates" class already flagged as a
+    recurring risk by this document's own Section 2 lessons; it was caught
+    only because the testbench decodes the REAL transmitted bit pattern
+    end-to-end rather than trusting internal state by inspection — one
+    adjacent test (`Case4`) would have "passed" on the stale value by pure
+    coincidence had the bug gone unnoticed.
+  - **New `rtl018_integration_tb.sv`, 32 checks, real `dfc_rtl024_shared_buffer`
+    client (not a mock)**: queue push/pop/overflow (fill to exactly 8,
+    confirm the 9th push is rejected with real evidence, not dropped or
+    silently accepted); the host-vs-route last-free-slot tiebreaker, BOTH
+    the genuine-conflict case (host and route asserted on the identical
+    CORE_CLK edge via a dedicated same-cycle stimulus helper, not a
+    sequential approximation) and the no-real-conflict case (room for
+    both — neither rejected nor lost); parity-override legality (override
+    wins only when legally staged, auto always wins otherwise); interword-
+    gap timing measured against the real internal `ser_state_q` (not the
+    external pin alone, which conflates the real gap with separate
+    buffer-read latency for the next entry); the `arinc_tx_ctrl_o != 2'b11`
+    hard invariant, monitored every CORE_CLK cycle for the whole run; and
+    underrun/rejection error-code classification (an idle-while-empty
+    pulse counts exactly once per occurrence, not once per cycle).
+  - **Incidental breakage found and fixed**: `dri_transaction_tb.sv` (a
+    wildcard `.*` DUT connection needed a matching `rtl018_control_o`/
+    `_status_i` pair declared) and `regbank_smoke_tb.sv` (explicit
+    port connections still referenced the OLD individual per-register
+    `atx_*_status_i`/`rtl018_evt_overflow_status_status_i` stub ports,
+    removed when the aggregated pair was generated) — both fixed and
+    re-verified passing, same class of fix RTL-017's own session already
+    hit for its own aggregated ports.
+  - **New physical pins**: `arinc_tx_ctrl_o[1:0]` = `gn17`/`gn18` (SITEs
+    L17/H17), `arinc_tx_adapter_error_i` = `gn19` (SITE G18) — the next
+    three in Section 10's own already-confirmed `gn14-gn21` SITE ordering
+    (`ULX3S_CONNECTION_MAP.md` Section 12), tightening the remaining
+    Databus pin budget to 5 more needed (RTL-019/020) against 8 remaining
+    conductors (`OPEN_ISSUES.md` item 117-adjacent accounting).
+  - **Build script gained a real `-SynthOnly` flag** (`build_ecp5.ps1`):
+    no existing stop point after Yosys synthesis succeeded — it fell
+    straight into place-and-route unconditionally. Added specifically so a
+    compile/synthesize/verify-scoped module never needs to let a full
+    multi-hour `nextpnr-ecp5` run start just to be killed mid-route; every
+    module after RTL-018 needing this same narrower scope can reuse it
+    directly.
+  - **Verified on the person's machine.** `gate.ps1`: lint PASSED; sim
+    23/23 testbenches, 0 failures (22 pre-existing + the new 32-check
+    `rtl018_integration_tb.sv`); formal 2/2 (RTL-001 one-outstanding +
+    RTL-024 buffer arbiter, both bmc+prove) PASS — no new formal properties
+    for RTL-018 itself. `build_ecp5.ps1 -SynthOnly`: real Yosys `synth_ecp5`
+    completed clean, real cell-count statistics recorded in
+    `output/logs/`. **`nextpnr-ecp5` was never invoked** — no
+    place-and-route, no bitstream, per this session's own explicit scope.
+    Status is "compiled, synthesized, verified," not "built" or "complete"
+    — holding at the RTL-016 FPGA baseline (`OPEN_ISSUES.md` item 112) for
+    any real hardware target continues to apply.
 - **Build script structural fix (2026-08-26): `build_ecp5.ps1`'s
   `$SourceFiles` list is no longer hardcoded.** This exact gap had been
   hit and reactively fixed 4 separate times (RTL-002, RTL-004, RTL-009,
@@ -3383,14 +3478,30 @@ written in this project going forward, not just a historical note.
   `49a96af0242ec3ed2f1d010457c1292ed9a99ac72c69bb767dffe9b04cd4807c`,
   verified intact against disk) — the last real, timing-closed build
   (51.22 MHz PASS) before the shared-buffer/RAM module existed in the
-  design at all. Check whether item 112 is marked resolved before doing
-  anything further here. Once it is (or the user says otherwise), the
-  next real step is RTL-018 (ARINC 429 Transmit Interface) — read
-  `OPEN_ISSUES.md` items 100-112 first (the shared-buffer service and
-  RTL-017's own real client precedent). One module at a time, using the
-  exact same real-verification discipline as RTL-001 through RTL-017
-  (compile, simulate, and only then trust — never claim something works
-  without actually running it).
+  design at all. **UPDATE (2026-10-20): the CSDECODE root cause behind
+  item 112's original crash was found and fixed in a follow-up session
+  (grow `CSDECODE_W`/`CSDECODE_R` from bit-vector to string literals),
+  confirmed via a real `build_ecp5.ps1` run that it no longer recurs —
+  but a SECOND, different, still-unresolved `nextpnr-ecp5` crash
+  (`hashlib.h:233` internal assertion, deep into routing) now blocks the
+  same bitstream-production goal. The RTL-016 FPGA-baseline hold
+  continues to apply for any real hardware/bitstream target — see item
+  112's own full, updated account before touching `nextpnr-ecp5` again.**
+  Given that standing hold, the decision for RTL-018 onward (made
+  explicitly, not assumed) was to integrate each module at a
+  **deliberately narrower compile/synthesize/verify scope** — real
+  `gate.ps1` (lint/sim/formal) plus a real `build_ecp5.ps1 -SynthOnly`
+  run (Yosys synthesis only, confirming real cell-count stats), but
+  **no `nextpnr-ecp5` invocation, no place-and-route, no bitstream** —
+  rather than waiting on item 112 to block all further RTL work. RTL-018
+  (ARINC 429 Transmit Interface) is now REAL at exactly that scope — see
+  Section 4's own RTL-018 entry and `OPEN_ISSUES.md` items 113-121 for
+  the full account. The next real step is RTL-019, at the SAME
+  compile/synthesize/verify scope, unless the user says otherwise — one
+  module at a time, using the exact same real-verification discipline as
+  every prior module (compile, simulate, and only then trust — never
+  claim something works without actually running it), just without the
+  place-and-route step until item 112 is resolved.
   **RTL-013's own session reconfirmed a pattern this document has now
   flagged three separate times (RTL-002/003's own port-catalog gaps in
   RTL-002, then RTL-006's own module_enable_o/effective_operational_

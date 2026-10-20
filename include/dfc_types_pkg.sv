@@ -2472,8 +2472,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL017_STATUS__ARX_REJECTED_ACCESS_COUNT__COUNT_HI = 255;
   localparam int unsigned DFC_RTL017_STATUS__ARX_REJECTED_ACCESS_COUNT__COUNT_LO = 224;
 
-  // ARCH-002 Appendix B dfc_rtl018_control_t (162 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl018_control_t (163 bits, rich format)
   typedef struct packed {
+    logic rtl018_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic [31:0] atx_rejected_push_count__count;  //  reset=0 :: whole-counter clear for full or invalid PUSH rejection
     logic [7:0] atx_interword_gap_bits__gap_bits;  //  reset=4 :: control_value
     logic [31:0] atx_underrun_count__count;  //  reset=0 :: clear_mask
@@ -2493,9 +2494,9 @@ package dfc_types_pkg;
     logic atx_control__high_speed;  //  reset=0 :: control_value
     logic atx_control__enable;  //  reset=0 :: control_value
   } dfc_rtl018_control_t;
-  // total width: 162 bits
+  // total width: 163 bits
 
-  localparam int unsigned DFC_RTL018_CONTROL_WIDTH = 162;
+  localparam int unsigned DFC_RTL018_CONTROL_WIDTH = 163;
   localparam int unsigned DFC_RTL018_CONTROL__ATX_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL018_CONTROL__ATX_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL018_CONTROL__ATX_CONTROL__HIGH_SPEED_HI = 1;
@@ -2532,6 +2533,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL018_CONTROL__ATX_INTERWORD_GAP_BITS__GAP_BITS_LO = 122;
   localparam int unsigned DFC_RTL018_CONTROL__ATX_REJECTED_PUSH_COUNT__COUNT_HI = 161;
   localparam int unsigned DFC_RTL018_CONTROL__ATX_REJECTED_PUSH_COUNT__COUNT_LO = 130;
+  localparam int unsigned DFC_RTL018_CONTROL__RTL018_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 162;
+  localparam int unsigned DFC_RTL018_CONTROL__RTL018_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 162;
 
   // ARCH-002 Appendix B dfc_rtl018_status_t (127 bits, rich format)
   typedef struct packed {

@@ -16,6 +16,7 @@
 // Cross-module forwarding: RTL-015 (see tools/reggen/rtl015_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-016 (see tools/reggen/rtl016_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-017 (see tools/reggen/rtl017_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-018 (see tools/reggen/rtl018_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL024-ARX-ADAPTER (see tools/reggen/rtl024arxadapter_field_map.json's own _source note for exact scope/citations)
 
 
@@ -51,6 +52,8 @@
   // Aggregated real RTL-016 control, replacing the prior disconnected placeholder for: RTL016_EVT_OVERFLOW_STATUS, SAFETY_CHANNEL_CONTROL, SAFETY_CHANNEL_SELECT, SAFETY_CONTROL, SAFETY_INTERLOCK_MASK, SAFETY_RESPONSE_MASK, SAFETY_STATUS
   // Aggregated real RTL-017 status, replacing individual ports for: ARX_DATA, ARX_ERROR_COUNT, ARX_META, ARX_OVERFLOW_COUNT, ARX_QUEUE_LEVEL, ARX_REJECTED_ACCESS_COUNT, ARX_STATUS, ARX_TIME_HI, ARX_TIME_LO, RTL017_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-017 control, replacing the prior disconnected placeholder for: ARX_ERROR_COUNT, ARX_OVERFLOW_COUNT, ARX_POP, ARX_REJECTED_ACCESS_COUNT, ARX_SNAPSHOT, ARX_STATUS, RTL017_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-018 status, replacing individual ports for: ATX_ERROR_COUNT, ATX_QUEUE_LEVEL, ATX_REJECTED_PUSH_COUNT, ATX_STATUS, ATX_UNDERRUN_COUNT, RTL018_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-018 control, replacing the prior disconnected placeholder for: ATX_CONTROL, ATX_DATA_STAGE, ATX_ERROR_COUNT, ATX_INTERWORD_GAP_BITS, ATX_META_STAGE, ATX_PUSH, ATX_REJECTED_PUSH_COUNT, ATX_STATUS, ATX_UNDERRUN_COUNT, RTL018_EVT_OVERFLOW_STATUS
   // Aggregated real RTL024-ARX-ADAPTER status, replacing individual ports for: 
   // Aggregated real RTL024-ARX-ADAPTER control, replacing the prior disconnected placeholder for: ARX_CONTROL
 module dfc_config_regbank_regs (
@@ -84,12 +87,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  buffer_internal_error_count_status_i,
   input  logic [31:0]  test_status_status_i,
   input  logic [31:0]  test_rejection_abort_count_status_i,
-  input  logic [31:0]  atx_status_status_i,
-  input  logic [31:0]  atx_queue_level_status_i,
-  input  logic [31:0]  atx_error_count_status_i,
-  input  logic [31:0]  atx_underrun_count_status_i,
-  input  logic [31:0]  rtl018_evt_overflow_status_status_i,
-  input  logic [31:0]  atx_rejected_push_count_status_i,
   input  logic [31:0]  can_status_status_i,
   input  logic [31:0]  can_error_count_status_i,
   input  logic [31:0]  can_rx_level_status_i,
@@ -175,6 +172,8 @@ module dfc_config_regbank_regs (
   output logic [225:0] rtl016_control_o,
   input  logic [255:0]  rtl017_status_i,
   output logic [104:0] rtl017_control_o,
+  input  logic [126:0]  rtl018_status_i,
+  output logic [162:0] rtl018_control_o,
   input  logic [0:0]  rtl024arxadapter_status_i,
   output logic [4:0] rtl024arxadapter_control_o
 );
@@ -827,11 +826,19 @@ module dfc_config_regbank_regs (
     if (!rst_ni) atx_control_q <= 32'h00000010;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ATX_CONTROL)) atx_control_q <= wdata_i;
 
-  // ATX_STATUS (0x1104) -- external passthrough, owner RTL-018
-  wire [31:0] atx_status_q = atx_status_status_i;
+  // ATX_STATUS (0x1104) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-018, real
+  //   generation per contract REG-1104, not a permanent tie.
+  logic [31:0] atx_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) atx_status_pulse_q <= 32'h0;
+    else atx_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ATX_STATUS)) ? wdata_i : 32'h0;
 
-  // ATX_QUEUE_LEVEL (0x1108) -- external passthrough, owner RTL-018
-  wire [31:0] atx_queue_level_q = atx_queue_level_status_i;
+  // ATX_STATUS (0x1104) -- external passthrough, owner RTL-018. Reconstructed from the aggregated rtl018_status_i input (contract REG-1104), not an individual per-register port.
+  wire [31:0] atx_status_q = {24'h0, rtl018_status_i[10:10], rtl018_status_i[9:9], rtl018_status_i[8:8], rtl018_status_i[7:7], rtl018_status_i[6:6], rtl018_status_i[5:5], rtl018_status_i[4:4], rtl018_status_i[3:3]};
+
+  // ATX_QUEUE_LEVEL (0x1108) -- external passthrough, owner RTL-018. Reconstructed from the aggregated rtl018_status_i input (contract REG-1108), not an individual per-register port.
+  wire [31:0] atx_queue_level_q = {28'h0, rtl018_status_i[14:11]};
 
   // ATX_DATA_STAGE (0x110C) -- RW, owner RTL-001 / RTL-018
   logic [31:0] atx_data_stage_q;
@@ -845,17 +852,33 @@ module dfc_config_regbank_regs (
     if (!rst_ni) atx_meta_stage_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ATX_META_STAGE)) atx_meta_stage_q <= wdata_i;
 
-  // ATX_PUSH (0x1114) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ATX_PUSH)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // ATX_PUSH (0x1114) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-018, real
+  //   generation per contract REG-1114, not a permanent tie.
+  logic [31:0] atx_push_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) atx_push_pulse_q <= 32'h0;
+    else atx_push_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ATX_PUSH)) ? wdata_i : 32'h0;
+
+  // ATX_PUSH (0x1114) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-018 via atx_push_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] atx_push_q = 32'h00000000;
 
-  // ATX_ERROR_COUNT (0x1118) -- external passthrough, owner RTL-018
-  wire [31:0] atx_error_count_q = atx_error_count_status_i;
+  // ATX_ERROR_COUNT (0x1118) -- external passthrough, owner RTL-018. Reconstructed from the aggregated rtl018_status_i input (contract REG-1118), not an individual per-register port.
+  wire [31:0] atx_error_count_q = {rtl018_status_i[46:15]};
 
-  // ATX_UNDERRUN_COUNT (0x111C) -- external passthrough, owner RTL-018
-  wire [31:0] atx_underrun_count_q = atx_underrun_count_status_i;
+  // ATX_UNDERRUN_COUNT (0x111C) -- external passthrough, owner RTL-018. Reconstructed from the aggregated rtl018_status_i input (contract REG-111C), not an individual per-register port.
+  wire [31:0] atx_underrun_count_q = {rtl018_status_i[78:47]};
 
-  // RTL018_EVT_OVERFLOW_STATUS (0x1120) -- external passthrough, owner RTL-018
-  wire [31:0] rtl018_evt_overflow_status_q = rtl018_evt_overflow_status_status_i;
+  // RTL018_EVT_OVERFLOW_STATUS (0x1120) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-018, real
+  //   generation per contract REG-1120, not a permanent tie.
+  logic [31:0] rtl018_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl018_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl018_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL018_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
+  // RTL018_EVT_OVERFLOW_STATUS (0x1120) -- external passthrough, owner RTL-018. Reconstructed from the aggregated rtl018_status_i input (contract REG-1120), not an individual per-register port.
+  wire [31:0] rtl018_evt_overflow_status_q = {8'h0, rtl018_status_i[94:79], 7'h0, rtl018_status_i[2:2]};
 
   // ATX_INTERWORD_GAP_BITS (0x1124) -- Mixed: RW, RSV0, owner RTL-018
   logic [31:0] atx_interword_gap_bits_q;
@@ -863,8 +886,8 @@ module dfc_config_regbank_regs (
     if (!rst_ni) atx_interword_gap_bits_q <= 32'h00000004;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ATX_INTERWORD_GAP_BITS)) atx_interword_gap_bits_q <= wdata_i;
 
-  // ATX_REJECTED_PUSH_COUNT (0x1128) -- external passthrough, owner RTL-018
-  wire [31:0] atx_rejected_push_count_q = atx_rejected_push_count_status_i;
+  // ATX_REJECTED_PUSH_COUNT (0x1128) -- external passthrough, owner RTL-018. Reconstructed from the aggregated rtl018_status_i input (contract REG-1128), not an individual per-register port.
+  wire [31:0] atx_rejected_push_count_q = {rtl018_status_i[126:95]};
 
   // CAN_CONTROL (0x1200) -- Mixed: RW, RSV0, owner RTL-019
   logic [31:0] can_control_q;
@@ -3125,6 +3148,33 @@ module dfc_config_regbank_regs (
   assign rtl017_control_o[0] = arx_status_pulse_q[4:4];  // ARX_STATUS.arx_status__parity_error
 
   // ==========================================================================
+  // Aggregated rtl018_control_o -- real forwarding to RTL-018, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl018_control_t defines --
+  // cross-checked at generation time (163/163 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl018_control_o[162] = rtl018_evt_overflow_status_pulse_q[0:0];  // RTL018_EVT_OVERFLOW_STATUS.rtl018_evt_overflow_status__event_overflow
+  assign rtl018_control_o[161:130] = atx_rejected_push_count_q[31:0];  // ATX_REJECTED_PUSH_COUNT.atx_rejected_push_count__count
+  assign rtl018_control_o[129:122] = atx_interword_gap_bits_q[7:0];  // ATX_INTERWORD_GAP_BITS.atx_interword_gap_bits__gap_bits
+  assign rtl018_control_o[121:90] = atx_underrun_count_q[31:0];  // ATX_UNDERRUN_COUNT.atx_underrun_count__count
+  assign rtl018_control_o[89:58] = atx_error_count_q[31:0];  // ATX_ERROR_COUNT.atx_error_count__count
+  assign rtl018_control_o[57] = atx_push_pulse_q[0:0];  // ATX_PUSH.atx_push__push
+  assign rtl018_control_o[56:43] = atx_meta_stage_q[15:2];  // ATX_META_STAGE.atx_meta_stage__tag
+  assign rtl018_control_o[42] = atx_meta_stage_q[1:1];  // ATX_META_STAGE.atx_meta_stage__parity_bit
+  assign rtl018_control_o[41] = atx_meta_stage_q[0:0];  // ATX_META_STAGE.atx_meta_stage__parity_override_valid
+  assign rtl018_control_o[40:9] = atx_data_stage_q[31:0];  // ATX_DATA_STAGE.atx_data_stage__word
+  assign rtl018_control_o[8] = atx_status_pulse_q[7:7];  // ATX_STATUS.atx_status__adapter_error
+  assign rtl018_control_o[7] = atx_status_pulse_q[6:6];  // ATX_STATUS.atx_status__rejected
+  assign rtl018_control_o[6] = atx_status_pulse_q[5:5];  // ATX_STATUS.atx_status__underrun
+  assign rtl018_control_o[5] = atx_status_pulse_q[4:4];  // ATX_STATUS.atx_status__complete
+  assign rtl018_control_o[4] = atx_control_q[4:4];  // ATX_CONTROL.atx_control__auto_parity
+  assign rtl018_control_o[3] = atx_control_q[3:3];  // ATX_CONTROL.atx_control__irq_enable
+  assign rtl018_control_o[2] = atx_control_q[2:2];  // ATX_CONTROL.atx_control__event_enable
+  assign rtl018_control_o[1] = atx_control_q[1:1];  // ATX_CONTROL.atx_control__high_speed
+  assign rtl018_control_o[0] = atx_control_q[0:0];  // ATX_CONTROL.atx_control__enable
+
+  // ==========================================================================
   // Aggregated rtl024arxadapter_control_o -- real forwarding to RTL024-ARX-ADAPTER, replacing the disconnected placeholder.
   // Every assignment below is sourced from a real stored register or a real
   // one-cycle pulse-capture register above, at the exact bit position the
@@ -3261,16 +3311,16 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_RTL017_EVT_OVERFLOW_STATUS: begin rdata_o = rtl017_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ARX_REJECTED_ACCESS_COUNT: begin rdata_o = arx_rejected_access_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ATX_CONTROL: begin rdata_o = atx_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_ATX_STATUS: begin rdata_o = atx_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ATX_STATUS: begin rdata_o = atx_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ATX_QUEUE_LEVEL: begin rdata_o = atx_queue_level_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ATX_DATA_STAGE: begin rdata_o = atx_data_stage_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ATX_META_STAGE: begin rdata_o = atx_meta_stage_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ATX_PUSH: begin rdata_o = atx_push_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ATX_ERROR_COUNT: begin rdata_o = atx_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ATX_UNDERRUN_COUNT: begin rdata_o = atx_underrun_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL018_EVT_OVERFLOW_STATUS: begin rdata_o = rtl018_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ATX_ERROR_COUNT: begin rdata_o = atx_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ATX_UNDERRUN_COUNT: begin rdata_o = atx_underrun_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL018_EVT_OVERFLOW_STATUS: begin rdata_o = rtl018_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ATX_INTERWORD_GAP_BITS: begin rdata_o = atx_interword_gap_bits_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_ATX_REJECTED_PUSH_COUNT: begin rdata_o = atx_rejected_push_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ATX_REJECTED_PUSH_COUNT: begin rdata_o = atx_rejected_push_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_CONTROL: begin rdata_o = can_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_CAN_STATUS: begin rdata_o = can_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_BIT_TIMING: begin rdata_o = can_bit_timing_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end

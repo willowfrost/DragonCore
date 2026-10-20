@@ -593,3 +593,58 @@ next two in that SAME already-confirmed ordering, not a fresh board-file
 lookup. The J1/J2 position label follows the same convention as every
 earlier section: the position number of each `gn<N>`'s paired `gp<N>`
 silkscreen position.
+
+## 12. ARINC 429 Transmit Interface (RTL-018) — J2 gn17/gn18/gn19, 3 real pads
+
+RTL-018 is the second Databus-domain module with a real, physical
+interface, confirming the real total Section 10/11 already flagged (RTL-018
+needs `arinc_tx_ctrl_o[1:0]` + `arinc_tx_adapter_error_i` = 3 pads). This
+session's own scope is compile/synthesize/verify only (no place-and-route,
+no bitstream) — the pin assignment and `.lpf`/`ulx3s_dfc_top.sv` wiring
+below are still real and complete, since synthesis needs real top-level
+connectivity to elaborate correctly, but this session does not itself
+confirm these SITEs route or time on real hardware.
+
+| Port | Pin | J1/J2 position | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|
+| `arinc_tx_ctrl_o[0]` | `gn17` | J2-17 (`gn` conductor) | L17 | Output |
+| `arinc_tx_ctrl_o[1]` | `gn18` | J2-18 (`gn` conductor) | H17 | Output |
+| `arinc_tx_adapter_error_i` | `gn19` | J2-19 (`gn` conductor) | G18 | Input |
+
+**Choice rationale:** same "exhaust unshared, lowest-numbered first" rule
+as every earlier section. Of Section 11's own `gn17`-`gn21` remaining
+accounting (5 unshared positions left after RTL-017 consumed `gn15`/`gn16`),
+these are the three LOWEST-numbered. `arinc_tx_ctrl_o[1:0]` are pure
+outputs (no pull resistor needed — `PULLMODE=NONE`, same convention as
+Section 10's Safety Output pads, the project's own established convention
+for an ECP5-driven output); `arinc_tx_adapter_error_i` is an ordinary
+single-ended digital input, pulled up (`PULLMODE=UP`, same convention as
+every other input pin in this table) so an unconnected/not-yet-wired
+transceiver reads idle-high rather than floating.
+
+**This tightens the same project-wide constraint Sections 10/11 already
+flagged.** Of the 5 remaining unshared `gn17`-`gn21` positions, 3 are now
+consumed by RTL-018, leaving 2 (`gn20`-`gn21`) plus the still-untouched
+WiFi-shared `gp11`-`gp13`/`gn11`-`gn13` (3 true pairs, 6 conductors) for
+RTL-019 (CAN, needs `can_rx_i`/`can_tx_o`/`can_transceiver_error_i` = 3)
+and RTL-020 (UART, needs `uart_rx_i`/`uart_tx_o` = 2) — a real total of 5
+against 8 remaining conductors (2 unshared + 6 WiFi-shared), still fitting
+but with no further spare margin after RTL-020 — any module after that
+will need the WiFi-shared range. Flagged here explicitly, the same
+discipline every earlier section's own note followed.
+
+**Provenance:** the `gn17`/`gn18`/`gn19` SITE assignments (L17/H17/G18) are
+simply the next three in Section 10's own already-confirmed
+`gn14`-`gn21` (SITEs U17/P16/M17/L17/H17/G18/E17/D17) ordering — not a
+fresh board-file lookup, following the exact same provenance chain Section
+11 already used for `gn15`/`gn16`. The J1/J2 position label follows the
+same convention as every earlier section: the position number of each
+`gn<N>`'s paired `gp<N>` silkscreen position.
+
+**ARCH-002-internal naming note (see `OPEN_ISSUES.md` and `dfc_rtl018.sv`'s
+own header):** the RTL-018-level port is named `atx_adapter_error_i`
+(already-synchronized, same-domain, fed by RTL-024's own real CDC-ATXERR
+two-stage synchronizer); the chip-level external pad this table assigns a
+real SITE to is `arinc_tx_adapter_error_i` (asynchronous, active-high) --
+two different names for the same logical signal at two hierarchy levels,
+both ARCH-002's own, not reconciled here.

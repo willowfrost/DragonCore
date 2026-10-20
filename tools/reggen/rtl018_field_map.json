@@ -1,0 +1,139 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md Section 15 (0x1100-0x1128) per-field bit tables, cited by contract ID, and RCA-DFC-ARCH-002.md's dfc_rtl018_control_t/status_t Appendix B tables. Covers all 11 real ATX registers actually enumerated in REG-002 (see OPEN_ISSUES.md for the genuine REG-002-internal register-count discrepancy: Section 6's own Address-Map Summary says 11, Section 15's own block-header 'Register count' field says 12, and only 11 are ever defined -- resolved in favor of the 11 actually-enumerated registers, the only number with any real content behind it). ATX_DATA_STAGE/ATX_META_STAGE/ATX_CONTROL/ATX_PUSH/ATX_INTERWORD_GAP_BITS are plain RW/WO-CMD registers with readback class 'internal_reg'/'zero' -- the generic regbank already stores and returns their written value directly, so none of them need a status_registers entry, same precedent as RTL-017's own ARX_CONTROL/ARX_SNAPSHOT/ARX_POP. One real gap found and fixed while building this field map (the tenth real instance of the exact gap class already fixed for RTL-002 through RTL-017, approved before this session's edit): RTL018_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW had no clear-forwarding control field at all in dfc_rtl018_control_t as ARCH-002 originally defined it. Fixed the same way as every prior instance: ARCH-002 grew dfc_rtl018_control_t 162->163 bits, adding rtl018_evt_overflow_status__event_overflow as a new clear_mask field at the new highest bit (162) -- every pre-existing field's bit position confirmed unchanged by direct comparison against the already-generated include/dfc_types_pkg.sv before this edit. See OPEN_ISSUES.md for the full disclosure.",
+  "consumer_module": "RTL-018",
+  "control_struct": "dfc_rtl018_control_t",
+  "status_struct": "dfc_rtl018_status_t",
+  "control_registers": [
+    {
+      "register": "ATX_CONTROL",
+      "contract_id": "REG-1100",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "atx_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "atx_control__high_speed" },
+        { "reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "atx_control__event_enable" },
+        { "reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "atx_control__irq_enable" },
+        { "reg_hi": 4, "reg_lo": 4, "class": "RW", "struct_field": "atx_control__auto_parity" }
+      ]
+    },
+    {
+      "register": "ATX_STATUS",
+      "contract_id": "REG-1104",
+      "fields": [
+        { "reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "atx_status__complete" },
+        { "reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "atx_status__underrun" },
+        { "reg_hi": 6, "reg_lo": 6, "class": "W1C", "struct_field": "atx_status__rejected" },
+        { "reg_hi": 7, "reg_lo": 7, "class": "W1C", "struct_field": "atx_status__adapter_error" }
+      ]
+    },
+    {
+      "register": "ATX_DATA_STAGE",
+      "contract_id": "REG-110C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "atx_data_stage__word" }
+      ]
+    },
+    {
+      "register": "ATX_META_STAGE",
+      "contract_id": "REG-1110",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "atx_meta_stage__parity_override_valid" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "atx_meta_stage__parity_bit" },
+        { "reg_hi": 15, "reg_lo": 2, "class": "RW", "struct_field": "atx_meta_stage__tag" }
+      ]
+    },
+    {
+      "register": "ATX_PUSH",
+      "contract_id": "REG-1114",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "atx_push__push" }
+      ]
+    },
+    {
+      "register": "ATX_ERROR_COUNT",
+      "contract_id": "REG-1118",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "atx_error_count__count" }
+      ]
+    },
+    {
+      "register": "ATX_UNDERRUN_COUNT",
+      "contract_id": "REG-111C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "atx_underrun_count__count" }
+      ]
+    },
+    {
+      "register": "RTL018_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-1120",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl018_evt_overflow_status__event_overflow" }
+      ]
+    },
+    {
+      "register": "ATX_INTERWORD_GAP_BITS",
+      "contract_id": "REG-1124",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "atx_interword_gap_bits__gap_bits" }
+      ]
+    },
+    {
+      "register": "ATX_REJECTED_PUSH_COUNT",
+      "contract_id": "REG-1128",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "atx_rejected_push_count__count" }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "ATX_STATUS",
+      "contract_id": "REG-1104",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "atx_status__enabled" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "atx_status__busy" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "atx_status__queue_empty" },
+        { "reg_hi": 3, "reg_lo": 3, "struct_field": "atx_status__queue_full" },
+        { "reg_hi": 4, "reg_lo": 4, "struct_field": "atx_status__complete" },
+        { "reg_hi": 5, "reg_lo": 5, "struct_field": "atx_status__underrun" },
+        { "reg_hi": 6, "reg_lo": 6, "struct_field": "atx_status__rejected" },
+        { "reg_hi": 7, "reg_lo": 7, "struct_field": "atx_status__adapter_error" }
+      ]
+    },
+    {
+      "register": "ATX_QUEUE_LEVEL",
+      "contract_id": "REG-1108",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "struct_field": "atx_queue_level__level" }
+      ]
+    },
+    {
+      "register": "ATX_ERROR_COUNT",
+      "contract_id": "REG-1118",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "atx_error_count__count" }
+      ]
+    },
+    {
+      "register": "ATX_UNDERRUN_COUNT",
+      "contract_id": "REG-111C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "atx_underrun_count__count" }
+      ]
+    },
+    {
+      "register": "RTL018_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-1120",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow" },
+        { "reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count" }
+      ]
+    },
+    {
+      "register": "ATX_REJECTED_PUSH_COUNT",
+      "contract_id": "REG-1128",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "atx_rejected_push_count__count" }
+      ]
+    }
+  ]
+}
