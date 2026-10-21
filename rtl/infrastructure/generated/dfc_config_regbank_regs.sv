@@ -17,6 +17,7 @@
 // Cross-module forwarding: RTL-016 (see tools/reggen/rtl016_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-017 (see tools/reggen/rtl017_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-018 (see tools/reggen/rtl018_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-019 (see tools/reggen/rtl019_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL024-ARX-ADAPTER (see tools/reggen/rtl024arxadapter_field_map.json's own _source note for exact scope/citations)
 
 
@@ -54,6 +55,8 @@
   // Aggregated real RTL-017 control, replacing the prior disconnected placeholder for: ARX_ERROR_COUNT, ARX_OVERFLOW_COUNT, ARX_POP, ARX_REJECTED_ACCESS_COUNT, ARX_SNAPSHOT, ARX_STATUS, RTL017_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-018 status, replacing individual ports for: ATX_ERROR_COUNT, ATX_QUEUE_LEVEL, ATX_REJECTED_PUSH_COUNT, ATX_STATUS, ATX_UNDERRUN_COUNT, RTL018_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-018 control, replacing the prior disconnected placeholder for: ATX_CONTROL, ATX_DATA_STAGE, ATX_ERROR_COUNT, ATX_INTERWORD_GAP_BITS, ATX_META_STAGE, ATX_PUSH, ATX_REJECTED_PUSH_COUNT, ATX_STATUS, ATX_UNDERRUN_COUNT, RTL018_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-019 status, replacing individual ports for: CAN_ERROR_COUNT, CAN_RX_DATA_HI, CAN_RX_DATA_LO, CAN_RX_ID, CAN_RX_LEVEL, CAN_RX_META, CAN_RX_OVERFLOW_COUNT, CAN_RX_TIME_HI, CAN_RX_TIME_LO, CAN_STATUS, CAN_TX_LEVEL, CAN_TX_REJECTED_COUNT, RTL019_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-019 control, replacing the prior disconnected placeholder for: CAN_BIT_TIMING, CAN_CONTROL, CAN_RECOVERY, CAN_RX_OVERFLOW_COUNT, CAN_RX_POP, CAN_RX_SNAPSHOT, CAN_STATUS, CAN_TX_DATA_HI_STAGE, CAN_TX_DATA_LO_STAGE, CAN_TX_ID_STAGE, CAN_TX_META_STAGE, CAN_TX_PUSH, CAN_TX_REJECTED_COUNT, RTL019_EVT_OVERFLOW_STATUS
   // Aggregated real RTL024-ARX-ADAPTER status, replacing individual ports for: 
   // Aggregated real RTL024-ARX-ADAPTER control, replacing the prior disconnected placeholder for: ARX_CONTROL
 module dfc_config_regbank_regs (
@@ -87,19 +90,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  buffer_internal_error_count_status_i,
   input  logic [31:0]  test_status_status_i,
   input  logic [31:0]  test_rejection_abort_count_status_i,
-  input  logic [31:0]  can_status_status_i,
-  input  logic [31:0]  can_error_count_status_i,
-  input  logic [31:0]  can_rx_level_status_i,
-  input  logic [31:0]  can_rx_id_status_i,
-  input  logic [31:0]  can_rx_meta_status_i,
-  input  logic [31:0]  can_rx_data_lo_status_i,
-  input  logic [31:0]  can_rx_data_hi_status_i,
-  input  logic [31:0]  can_rx_time_lo_status_i,
-  input  logic [31:0]  can_rx_time_hi_status_i,
-  input  logic [31:0]  can_tx_level_status_i,
-  input  logic [31:0]  rtl019_evt_overflow_status_status_i,
-  input  logic [31:0]  can_rx_overflow_count_status_i,
-  input  logic [31:0]  can_tx_rejected_count_status_i,
   input  logic [31:0]  uart_status_status_i,
   input  logic [31:0]  uart_rx_level_status_i,
   input  logic [31:0]  uart_rx_data_status_i,
@@ -174,6 +164,8 @@ module dfc_config_regbank_regs (
   output logic [104:0] rtl017_control_o,
   input  logic [126:0]  rtl018_status_i,
   output logic [162:0] rtl018_control_o,
+  input  logic [325:0]  rtl019_status_i,
+  output logic [203:0] rtl019_control_o,
   input  logic [0:0]  rtl024arxadapter_status_i,
   output logic [4:0] rtl024arxadapter_control_o
 );
@@ -895,8 +887,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) can_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_CONTROL)) can_control_q <= wdata_i;
 
-  // CAN_STATUS (0x1204) -- external passthrough, owner RTL-019
-  wire [31:0] can_status_q = can_status_status_i;
+  // CAN_STATUS (0x1204) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-019, real
+  //   generation per contract REG-1204, not a permanent tie.
+  logic [31:0] can_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) can_status_pulse_q <= 32'h0;
+    else can_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_STATUS)) ? wdata_i : 32'h0;
+
+  // CAN_STATUS (0x1204) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1204), not an individual per-register port.
+  wire [31:0] can_status_q = {21'h0, rtl019_status_i[261:261], rtl019_status_i[12:12], rtl019_status_i[11:11], rtl019_status_i[10:10], rtl019_status_i[9:9], rtl019_status_i[8:8], rtl019_status_i[7:7], rtl019_status_i[6:6], rtl019_status_i[5:5], rtl019_status_i[4:4], rtl019_status_i[3:3]};
 
   // CAN_BIT_TIMING (0x1208) -- Mixed: RW, RSV0, owner RTL-019
   logic [31:0] can_bit_timing_q;
@@ -904,38 +904,54 @@ module dfc_config_regbank_regs (
     if (!rst_ni) can_bit_timing_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_BIT_TIMING)) can_bit_timing_q <= wdata_i;
 
-  // CAN_ERROR_COUNT (0x120C) -- external passthrough, owner RTL-019
-  wire [31:0] can_error_count_q = can_error_count_status_i;
+  // CAN_ERROR_COUNT (0x120C) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-120C), not an individual per-register port.
+  wire [31:0] can_error_count_q = {rtl019_status_i[44:29], rtl019_status_i[28:21], rtl019_status_i[20:13]};
 
-  // CAN_RX_LEVEL (0x1210) -- external passthrough, owner RTL-019
-  wire [31:0] can_rx_level_q = can_rx_level_status_i;
+  // CAN_RX_LEVEL (0x1210) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1210), not an individual per-register port.
+  wire [31:0] can_rx_level_q = {28'h0, rtl019_status_i[48:45]};
 
-  // CAN_RX_SNAPSHOT (0x1214) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_RX_SNAPSHOT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // CAN_RX_SNAPSHOT (0x1214) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-019, real
+  //   generation per contract REG-1214, not a permanent tie.
+  logic [31:0] can_rx_snapshot_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) can_rx_snapshot_pulse_q <= 32'h0;
+    else can_rx_snapshot_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_RX_SNAPSHOT)) ? wdata_i : 32'h0;
+
+  // CAN_RX_SNAPSHOT (0x1214) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-019 via can_rx_snapshot_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] can_rx_snapshot_q = 32'h00000000;
 
-  // CAN_RX_ID (0x1218) -- external passthrough, owner RTL-019
-  wire [31:0] can_rx_id_q = can_rx_id_status_i;
+  // CAN_RX_ID (0x1218) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1218), not an individual per-register port.
+  wire [31:0] can_rx_id_q = {rtl019_status_i[80:80], rtl019_status_i[79:79], rtl019_status_i[78:78], rtl019_status_i[77:49]};
 
-  // CAN_RX_META (0x121C) -- external passthrough, owner RTL-019
-  wire [31:0] can_rx_meta_q = can_rx_meta_status_i;
+  // CAN_RX_META (0x121C) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-121C), not an individual per-register port.
+  wire [31:0] can_rx_meta_q = {rtl019_status_i[112:97], rtl019_status_i[96:85], rtl019_status_i[84:81]};
 
-  // CAN_RX_DATA_LO (0x1220) -- external passthrough, owner RTL-019
-  wire [31:0] can_rx_data_lo_q = can_rx_data_lo_status_i;
+  // CAN_RX_DATA_LO (0x1220) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1220), not an individual per-register port.
+  wire [31:0] can_rx_data_lo_q = {rtl019_status_i[144:113]};
 
-  // CAN_RX_DATA_HI (0x1224) -- external passthrough, owner RTL-019
-  wire [31:0] can_rx_data_hi_q = can_rx_data_hi_status_i;
+  // CAN_RX_DATA_HI (0x1224) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1224), not an individual per-register port.
+  wire [31:0] can_rx_data_hi_q = {rtl019_status_i[176:145]};
 
-  // CAN_RX_TIME_LO (0x1228) -- external passthrough, owner RTL-019
-  wire [31:0] can_rx_time_lo_q = can_rx_time_lo_status_i;
+  // CAN_RX_TIME_LO (0x1228) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1228), not an individual per-register port.
+  wire [31:0] can_rx_time_lo_q = {rtl019_status_i[208:177]};
 
-  // CAN_RX_TIME_HI (0x122C) -- external passthrough, owner RTL-019
-  wire [31:0] can_rx_time_hi_q = can_rx_time_hi_status_i;
+  // CAN_RX_TIME_HI (0x122C) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-122C), not an individual per-register port.
+  wire [31:0] can_rx_time_hi_q = {rtl019_status_i[240:209]};
 
-  // CAN_RX_POP (0x1230) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_RX_POP)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // CAN_RX_POP (0x1230) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-019, real
+  //   generation per contract REG-1230, not a permanent tie.
+  logic [31:0] can_rx_pop_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) can_rx_pop_pulse_q <= 32'h0;
+    else can_rx_pop_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_RX_POP)) ? wdata_i : 32'h0;
+
+  // CAN_RX_POP (0x1230) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-019 via can_rx_pop_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] can_rx_pop_q = 32'h00000000;
 
-  // CAN_TX_LEVEL (0x1234) -- external passthrough, owner RTL-019
-  wire [31:0] can_tx_level_q = can_tx_level_status_i;
+  // CAN_TX_LEVEL (0x1234) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1234), not an individual per-register port.
+  wire [31:0] can_tx_level_q = {28'h0, rtl019_status_i[244:241]};
 
   // CAN_TX_ID_STAGE (0x1238) -- Mixed: RW, RSV0, owner RTL-001 / RTL-019
   logic [31:0] can_tx_id_stage_q;
@@ -961,20 +977,44 @@ module dfc_config_regbank_regs (
     if (!rst_ni) can_tx_data_hi_stage_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_TX_DATA_HI_STAGE)) can_tx_data_hi_stage_q <= wdata_i;
 
-  // CAN_TX_PUSH (0x1248) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_TX_PUSH)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // CAN_TX_PUSH (0x1248) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-019, real
+  //   generation per contract REG-1248, not a permanent tie.
+  logic [31:0] can_tx_push_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) can_tx_push_pulse_q <= 32'h0;
+    else can_tx_push_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_TX_PUSH)) ? wdata_i : 32'h0;
+
+  // CAN_TX_PUSH (0x1248) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-019 via can_tx_push_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] can_tx_push_q = 32'h00000000;
 
-  // RTL019_EVT_OVERFLOW_STATUS (0x124C) -- external passthrough, owner RTL-019
-  wire [31:0] rtl019_evt_overflow_status_q = rtl019_evt_overflow_status_status_i;
+  // RTL019_EVT_OVERFLOW_STATUS (0x124C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-019, real
+  //   generation per contract REG-124C, not a permanent tie.
+  logic [31:0] rtl019_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl019_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl019_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL019_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // CAN_RECOVERY (0x1250) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_RECOVERY)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // RTL019_EVT_OVERFLOW_STATUS (0x124C) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-124C), not an individual per-register port.
+  wire [31:0] rtl019_evt_overflow_status_q = {8'h0, rtl019_status_i[260:245], 7'h0, rtl019_status_i[2:2]};
+
+  // CAN_RECOVERY (0x1250) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-019, real
+  //   generation per contract REG-1250, not a permanent tie.
+  logic [31:0] can_recovery_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) can_recovery_pulse_q <= 32'h0;
+    else can_recovery_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_CAN_RECOVERY)) ? wdata_i : 32'h0;
+
+  // CAN_RECOVERY (0x1250) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-019 via can_recovery_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] can_recovery_q = 32'h00000000;
 
-  // CAN_RX_OVERFLOW_COUNT (0x1254) -- external passthrough, owner RTL-019
-  wire [31:0] can_rx_overflow_count_q = can_rx_overflow_count_status_i;
+  // CAN_RX_OVERFLOW_COUNT (0x1254) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1254), not an individual per-register port.
+  wire [31:0] can_rx_overflow_count_q = {rtl019_status_i[293:262]};
 
-  // CAN_TX_REJECTED_COUNT (0x1258) -- external passthrough, owner RTL-019
-  wire [31:0] can_tx_rejected_count_q = can_tx_rejected_count_status_i;
+  // CAN_TX_REJECTED_COUNT (0x1258) -- external passthrough, owner RTL-019. Reconstructed from the aggregated rtl019_status_i input (contract REG-1258), not an individual per-register port.
+  wire [31:0] can_tx_rejected_count_q = {rtl019_status_i[325:294]};
 
   // UART_CONTROL (0x1300) -- Mixed: RW, RSV0, owner RTL-020
   logic [31:0] uart_control_q;
@@ -3175,6 +3215,42 @@ module dfc_config_regbank_regs (
   assign rtl018_control_o[0] = atx_control_q[0:0];  // ATX_CONTROL.atx_control__enable
 
   // ==========================================================================
+  // Aggregated rtl019_control_o -- real forwarding to RTL-019, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl019_control_t defines --
+  // cross-checked at generation time (204/204 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl019_control_o[203] = rtl019_evt_overflow_status_pulse_q[0:0];  // RTL019_EVT_OVERFLOW_STATUS.rtl019_evt_overflow_status__event_overflow
+  assign rtl019_control_o[202:171] = can_tx_rejected_count_q[31:0];  // CAN_TX_REJECTED_COUNT.can_tx_rejected_count__count
+  assign rtl019_control_o[170:139] = can_rx_overflow_count_q[31:0];  // CAN_RX_OVERFLOW_COUNT.can_rx_overflow_count__count
+  assign rtl019_control_o[138] = can_status_pulse_q[10:10];  // CAN_STATUS.can_status__rx_pop_rejected
+  assign rtl019_control_o[137] = can_recovery_pulse_q[0:0];  // CAN_RECOVERY.can_recovery__request
+  assign rtl019_control_o[136] = can_control_q[5:5];  // CAN_CONTROL.can_control__automatic_bus_off_recovery
+  assign rtl019_control_o[135] = can_tx_push_pulse_q[0:0];  // CAN_TX_PUSH.can_tx_push__push
+  assign rtl019_control_o[134:103] = can_tx_data_hi_stage_q[31:0];  // CAN_TX_DATA_HI_STAGE.can_tx_data_hi_stage__data_4_7
+  assign rtl019_control_o[102:71] = can_tx_data_lo_stage_q[31:0];  // CAN_TX_DATA_LO_STAGE.can_tx_data_lo_stage__data_0_3
+  assign rtl019_control_o[70:67] = can_tx_meta_stage_q[3:0];  // CAN_TX_META_STAGE.can_tx_meta_stage__dlc
+  assign rtl019_control_o[66] = can_tx_id_stage_q[30:30];  // CAN_TX_ID_STAGE.can_tx_id_stage__rtr
+  assign rtl019_control_o[65] = can_tx_id_stage_q[29:29];  // CAN_TX_ID_STAGE.can_tx_id_stage__ide
+  assign rtl019_control_o[64:36] = can_tx_id_stage_q[28:0];  // CAN_TX_ID_STAGE.can_tx_id_stage__identifier
+  assign rtl019_control_o[35] = can_rx_pop_pulse_q[0:0];  // CAN_RX_POP.can_rx_pop__pop
+  assign rtl019_control_o[34] = can_rx_snapshot_pulse_q[0:0];  // CAN_RX_SNAPSHOT.can_rx_snapshot__capture
+  assign rtl019_control_o[33:30] = can_bit_timing_q[24:21];  // CAN_BIT_TIMING.can_bit_timing__sjw_minus_1
+  assign rtl019_control_o[29:25] = can_bit_timing_q[20:16];  // CAN_BIT_TIMING.can_bit_timing__tseg2_minus_1
+  assign rtl019_control_o[24:19] = can_bit_timing_q[15:10];  // CAN_BIT_TIMING.can_bit_timing__tseg1_minus_1
+  assign rtl019_control_o[18:9] = can_bit_timing_q[9:0];  // CAN_BIT_TIMING.can_bit_timing__prescaler_minus_1
+  assign rtl019_control_o[8] = can_status_pulse_q[9:9];  // CAN_STATUS.can_status__transceiver_error
+  assign rtl019_control_o[7] = can_status_pulse_q[8:8];  // CAN_STATUS.can_status__protocol_error
+  assign rtl019_control_o[6] = can_status_pulse_q[7:7];  // CAN_STATUS.can_status__tx_rejected
+  assign rtl019_control_o[5] = can_status_pulse_q[6:6];  // CAN_STATUS.can_status__rx_overflow
+  assign rtl019_control_o[4] = can_control_q[4:4];  // CAN_CONTROL.can_control__irq_enable
+  assign rtl019_control_o[3] = can_control_q[3:3];  // CAN_CONTROL.can_control__event_enable
+  assign rtl019_control_o[2] = can_control_q[2:2];  // CAN_CONTROL.can_control__listen_only
+  assign rtl019_control_o[1] = can_control_q[1:1];  // CAN_CONTROL.can_control__loopback
+  assign rtl019_control_o[0] = can_control_q[0:0];  // CAN_CONTROL.can_control__enable
+
+  // ==========================================================================
   // Aggregated rtl024arxadapter_control_o -- real forwarding to RTL024-ARX-ADAPTER, replacing the disconnected placeholder.
   // Every assignment below is sourced from a real stored register or a real
   // one-cycle pulse-capture register above, at the exact bit position the
@@ -3322,7 +3398,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ATX_INTERWORD_GAP_BITS: begin rdata_o = atx_interword_gap_bits_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_ATX_REJECTED_PUSH_COUNT: begin rdata_o = atx_rejected_push_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_CONTROL: begin rdata_o = can_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_CAN_STATUS: begin rdata_o = can_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_CAN_STATUS: begin rdata_o = can_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_BIT_TIMING: begin rdata_o = can_bit_timing_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_CAN_ERROR_COUNT: begin rdata_o = can_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_RX_LEVEL: begin rdata_o = can_rx_level_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
@@ -3340,10 +3416,10 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_CAN_TX_DATA_LO_STAGE: begin rdata_o = can_tx_data_lo_stage_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_TX_DATA_HI_STAGE: begin rdata_o = can_tx_data_hi_stage_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_TX_PUSH: begin rdata_o = can_tx_push_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL019_EVT_OVERFLOW_STATUS: begin rdata_o = rtl019_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL019_EVT_OVERFLOW_STATUS: begin rdata_o = rtl019_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_RECOVERY: begin rdata_o = can_recovery_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_CAN_RX_OVERFLOW_COUNT: begin rdata_o = can_rx_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_CAN_TX_REJECTED_COUNT: begin rdata_o = can_tx_rejected_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_CAN_RX_OVERFLOW_COUNT: begin rdata_o = can_rx_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_CAN_TX_REJECTED_COUNT: begin rdata_o = can_tx_rejected_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UART_CONTROL: begin rdata_o = uart_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_UART_STATUS: begin rdata_o = uart_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UART_BAUD_DIV: begin rdata_o = uart_baud_div_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end

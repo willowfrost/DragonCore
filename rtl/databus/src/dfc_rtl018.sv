@@ -213,11 +213,16 @@
 //     of RTL-018's real event conditions can fire in this integration yet,
 //     the same disclosed consequence as RTL-017's own finding 9.
 //
-//  8. ACTIVITY/FAULT. activity_o pulses one CORE_CLK cycle on a successful
-//     dequeue-complete (ARCH-002's own "one CORE_CLK pulse on qualified
-//     accepted unit of work"), reaching RTL-015.activity_i[3] (the next
-//     free index after RTL-017's own activity_i[2]). fault_req_o: DISCLOSED
-//     CHOICE, same reasoning as RTL-017's own finding 10 -- asserted
+//  8. FAULT, AND A REAL CORRECTION TO THIS MODULE'S OWN PRIOR PORT LIST
+//     (found during RTL-019's session, not this one -- disclosed here since
+//     this is the file it affects): an earlier draft of this module added
+//     an `activity_o` port, modeled on RTL-017's own real one, WITHOUT
+//     confirming ARCH-002's own real 28-row RTL-018 port table actually
+//     defines one -- it does not. RTL-018 has no `activity_o` port in
+//     ARCH-002 at all; the fictional port and its RTL-015.activity_i[3]
+//     wiring (which, worse, collides with RTL-019's own REAL, ARCH-002-
+//     confirmed activity_i[3] citation) have been removed. fault_req_o:
+//     DISCLOSED CHOICE, same reasoning as RTL-017's own finding 10 -- asserted
 //     whenever the ADAPTER_ERROR sticky bit is set (the only condition here
 //     severe enough to warrant system-wide fault escalation; underrun and
 //     rejected-push are ordinary operational conditions already visible via
@@ -272,7 +277,6 @@ module dfc_rtl018 #(
 
   input  logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i,
   input  logic         observational_mode_i,
-  output logic         activity_o,           // RTL-015.activity_i[3]
   input  logic         module_enable_i,      // RTL-002.module_enable_o[17]
   input  logic         effective_operational_enable_i,
 
@@ -502,7 +506,7 @@ module dfc_rtl018 #(
   // parity bit-time is a constant, not the real word's parity, since the
   // live shift register has already been fully drained by that point).
   logic        ser_parity_q;
-  logic        complete_pulse, activity_pulse;
+  logic        complete_pulse;
 
   wire [15:0] cycles_per_bit = ser_high_speed_q ? CYCLES_PER_BIT_HIGH[15:0] : CYCLES_PER_BIT_LOW[15:0];
   wire        bit_time_done  = (ser_cycle_count_q >= cycles_per_bit - 16'd1);
@@ -553,7 +557,7 @@ module dfc_rtl018 #(
       ser_gap_count_q <= 8'd0; ser_cycle_count_q <= 16'd0;
       ser_high_speed_q <= 1'b0; ser_auto_parity_q <= 1'b0;
       ser_override_valid_q <= 1'b0; ser_override_bit_q <= 1'b0; ser_parity_q <= 1'b0;
-      busy_q <= 1'b0; complete_pulse <= 1'b0; activity_pulse <= 1'b0;
+      busy_q <= 1'b0; complete_pulse <= 1'b0;
     end else if (module_reset_i) begin
       op_q <= OP_NONE; phase_q <= PH_IDLE; word_idx_q <= 1'b0;
       head_q <= 3'd0; tail_q <= 3'd0; count_q <= 4'd0;
@@ -562,9 +566,9 @@ module dfc_rtl018 #(
       rejected_sticky_q <= 1'b0; adapter_error_sticky_q <= 1'b0;
       underrun_pending_q <= 1'b0; push_pending_q <= 1'b0;
       ser_state_q <= SER_IDLE; busy_q <= 1'b0;
-      complete_pulse <= 1'b0; activity_pulse <= 1'b0;
+      complete_pulse <= 1'b0;
     end else begin
-      complete_pulse <= 1'b0; activity_pulse <= 1'b0;  // default: one-cycle pulses
+      complete_pulse <= 1'b0;  // default: one-cycle pulse
 
       // ---- edge-detected COUNTER-CLR clears ----
       error_count_wr_q          <= ctl_error_count_wr;
@@ -668,7 +672,6 @@ module dfc_rtl018 #(
         head_q <= head_q + 3'd1;
         complete_sticky_q <= 1'b1;
         complete_pulse    <= 1'b1;
-        activity_pulse    <= 1'b1;
       end
       count_q <= count_q + (tail_advance ? 4'd1 : 4'd0) - (head_advance ? 4'd1 : 4'd0);
 
@@ -758,8 +761,6 @@ module dfc_rtl018 #(
       arinc_tx_ctrl_o = tx_bit_value ? (ser_high_speed_q ? 2'b10 : 2'b01) : 2'b00;
     end
   end
-
-  assign activity_o = activity_pulse;
 
   // ==========================================================================
   // Event/IRQ generation (finding 7): one shared pending slot, 8 independent

@@ -196,6 +196,44 @@ IOBUF PORT "gn17" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gn18" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gn19" PULLMODE=UP IO_TYPE=LVCMOS33;
 
+# ---- Classical CAN Interface (RTL-019): gn20/gn21/gn11, 3 real pads --
+# can_rx_i (line data, already digital per the same "external transceiver
+# converts the real CAN physical layer to NRZ" scope assumption as
+# ARCH-BUS-001 makes for ARINC), can_tx_o (line data out), and
+# can_transceiver_error_i (the transceiver's own fault output). gn20/gn21
+# are the real board file SITEs E17/D17 -- confirmed via a direct fetch of
+# the real raw emard/ulx3s doc/constraints/ulx3s_v20.lpf content against the
+# exact "gn20"/"gn21" LOCATE lines, same provenance discipline as every
+# earlier section (not recalled from memory): both carry only a plain
+# "# DIFF" comment, no wifi-sharing tag, confirmed free, and are exactly
+# the 2 remaining unshared gn14-gn21 positions this file's own RTL-016/017/
+#018 sections already flagged as the last ones before the WiFi-shared
+# range. RTL-019 needs a 3rd pin (3 total vs 2 remaining unshared), so
+# can_transceiver_error_i genuinely spills into the WiFi-shared range as
+# already flagged in ULX3S_CONNECTION_MAP.md Section 12's own note --
+# gn11 (SITE E3, real board file comment "DIFF wifi_gpio25") is the
+# LOWEST-numbered WiFi-shared position, same "exhaust unshared first, then
+# lowest-numbered shared" rule this project has used throughout. Real
+# consequence of sharing a pin with the onboard WiFi module: per the
+# project's own established disclosure (ULX3S_CONNECTION_MAP.md Sections
+# 9/12), using gn11 for can_transceiver_error_i means this input is not
+# available for actual standalone use while the WiFi module is active on
+# real hardware -- acceptable for this session's own compile/synthesize/
+# verify-only scope (no real board bring-up performed), but a real
+# constraint for any future bring-up session to resolve.
+# can_rx_i is a pure input, pulled up (same PULLMODE=UP convention as
+# gn15/gn16/gn19 above) so an unconnected/not-yet-wired transceiver reads
+# idle-recessive rather than floating; can_tx_o is a pure output (no
+# PULLMODE, matching this file's own ARINC TX/Safety Output convention);
+# can_transceiver_error_i is a pure input, pulled up for the same
+# idle-safe reason as can_rx_i.
+LOCATE COMP "gn20" SITE "E17";
+LOCATE COMP "gn21" SITE "D17";
+LOCATE COMP "gn11" SITE "E3";
+IOBUF PORT "gn20" PULLMODE=UP IO_TYPE=LVCMOS33;
+IOBUF PORT "gn21" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "gn11" PULLMODE=UP IO_TYPE=LVCMOS33;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

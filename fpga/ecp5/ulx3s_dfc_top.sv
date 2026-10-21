@@ -112,6 +112,9 @@ module ulx3s_dfc_top (
   output logic gn17,  // ARINC 429 transmit control bit 0 (RTL-018)
   output logic gn18,  // ARINC 429 transmit control bit 1 (RTL-018)
   input  logic gn19,  // ARINC 429 transmit adapter error (RTL-018)
+  input  logic gn20,  // CAN receive line data (RTL-019)
+  output logic gn21,  // CAN transmit line data (RTL-019)
+  input  logic gn11,  // CAN transceiver fault (RTL-019, WiFi-shared position)
   output logic [7:0] led
 );
 
@@ -197,9 +200,9 @@ module ulx3s_dfc_top (
     .arinc_rx_adapter_error_i   (gn16),  // real pin, RTL-017
     .arinc_tx_adapter_error_i   (gn19),  // real pin, RTL-018 this session
 
-    .can_rx_i                (1'b1),  // recessive idle
-    .can_tx_o                (),
-    .can_transceiver_error_i (1'b0),
+    .can_rx_i                (gn20),  // real pin, RTL-019 this session
+    .can_tx_o                (gn21),  // real pin, RTL-019 this session
+    .can_transceiver_error_i (gn11),  // real pin (WiFi-shared position), RTL-019 this session
 
     .uart_rx_i (1'b1),  // idle high
     .uart_tx_o (),

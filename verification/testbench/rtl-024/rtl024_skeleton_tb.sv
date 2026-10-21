@@ -10,7 +10,12 @@ module rtl024_skeleton_tb;
   logic [7:0] gpio_i=0, gpio_o, gpio_oe_o;
   logic arinc_rx_i=0, arinc_rx_adapter_error_i=0, arinc_tx_adapter_error_i=0;
   logic [1:0] arinc_tx_ctrl_o;
-  logic can_rx_i=0, can_tx_o, can_transceiver_error_i=0;
+  // can_rx_i idles recessive (1), the real CAN bus idle state -- RTL-019
+  // is now real (this session); driving it dominant (0) by default would
+  // be a landmine for any future extension of this skeleton test that
+  // enables CAN_CONTROL.ENABLE (harmless today only because this test
+  // never does).
+  logic can_rx_i=1, can_tx_o, can_transceiver_error_i=0;
   logic uart_rx_i=0, uart_tx_o;
   logic rotor_i=0, engine_i=0;
   logic [1:0] pulse_i=0;
@@ -188,7 +193,14 @@ module rtl024_skeleton_tb;
     @(posedge core_clk_i); #1; check("rst_n released after 4 valid edges", dut.core_rst_n, 1'b1);
 
     check("host_irq_n_o safe-high with no sources", host_irq_n_o, 1'b1);
-    check("can_tx_o recessive high stub", can_tx_o, 1'b1);
+    // RTL-019 is real (this session); can_tx_o reads recessive at reset
+    // because CAN_CONTROL.ENABLE defaults to 0 (the bit-timing generator
+    // never runs), not because the port is an unconnected stub -- see
+    // rtl019_integration_tb.sv for this module's own real functional
+    // coverage. A deeper CAN exercise here would duplicate that dedicated
+    // testbench without adding real bring-up value; disclosed, not
+    // expanded (OPEN_ISSUES.md item 138).
+    check("can_tx_o recessive at reset (CAN_CONTROL.ENABLE defaults off)", can_tx_o, 1'b1);
     check("uart_tx_o idle high stub", uart_tx_o, 1'b1);
     check("safety_out_o inactive at reset (real RTL-016, unconfigured)", |safety_out_o, 1'b0);
     check("spi_miso_oe_o disabled while CS_N inactive", spi_miso_oe_o, 1'b0);

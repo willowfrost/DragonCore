@@ -3474,3 +3474,318 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      RTL-018's status is "compiled, synthesized, verified," not "built" or
      "complete" -- the project continues holding at the RTL-016 FPGA
      baseline (item 112) for any real hardware target.
+
+## RTL-019 (Classical CAN Interface) integration — compile/synthesize/verify scope only, most protocol-complex module to date
+
+122. **Resolved in favor of ARCH-002's own real Appendix A port table, same
+     resolution style as items 1/10/11/13/19/117 (the module spec is a
+     derived artifact, never the owning document, per CHTR-DOC-003).**
+     `RTL-019_RevA.md` SS2 claims "19 total" ports and SS1/SS5 claim "21
+     registers" -- both stale, the third consecutive module spec with this
+     exact class of error (RTL-017: 20 vs 33 real; RTL-018: 18 vs 28 real).
+     ARCH-002's own Appendix A header reads "RTL-019 - Classical CAN
+     Interface (33 ports)" with exactly 33 real rows, counted directly, not
+     assumed. `dfc_rtl019.sv` implements all 33 real ports.
+
+123. **REG-002's own CAN block (0x1200-0x1258) is genuinely self-consistent
+     at 23 registers** (block header, Section 6 Address-Map Summary, and
+     the actual enumerated row count all agree) -- unlike RTL-018's own
+     ARINC TX 11-vs-12 discrepancy (item 113), there is no internal REG-002
+     conflict to resolve here; `RTL-019_RevA.md`'s stale "21" (item 122) is
+     the module spec's own error alone. `tools/reggen/rtl019_field_map.json`
+     implements all 23 real, enumerated registers.
+
+124. **RESOLVED (2026-10-20), the 11th real instance of the exact gap class
+     already fixed for RTL-002 through RTL-018 (items 2/7/8/12/20/24/28/32/
+     36/114/etc.), approved before implementation.** `dfc_rtl019_control_t`
+     had no clear-forwarding field for `RTL019_EVT_OVERFLOW_STATUS.
+     EVENT_OVERFLOW` (REG-124C bit 0, a real W1C field). Fixed: ARCH-002
+     grew the struct 203->204 bits, adding
+     `rtl019_evt_overflow_status__event_overflow` at the new highest bit
+     (203) -- every pre-existing field's bit position confirmed unchanged
+     via a real `regenerate.ps1` run. `tools/reggen/rtl019_field_map.json`
+     carries the corresponding `control_registers` entry from the start.
+
+125. **A real, pre-existing defect in RTL-018 (not RTL-019), found while
+     wiring THIS module, fixed in `dfc_rtl018.sv`/`dfc_rtl024.sv`/
+     `rtl018_integration_tb.sv`, disclosed here since it directly affects
+     RTL-019's own `activity_o` slot.** ARCH-002's real, 28-row RTL-018
+     port table (confirmed by direct count) has NO `activity_o` port at
+     all -- an earlier session invented one, modeling it on RTL-017's real
+     one without checking, and wired it to `RTL-015.activity_i[3]`, the
+     EXACT bit ARCH-002 real explicitly reserves for RTL-019
+     (`RTL-019.activity_o | RTL-015.activity_i[3]`, confirmed directly).
+     The fictional port and its wiring have been fully removed; RTL-019's
+     own `activity_o` is the real, ARCH-002-confirmed occupant of that bit.
+
+126. **Real, disclosed gap -- neither ARCH-002 nor REG-002 states the
+     classical CAN numeric error-confinement thresholds anywhere.**
+     ARCH-002/REG-002 give only the counter widths (8 bits each, CAN_ERROR_
+     COUNT) and the bus-off recovery count (128 occurrences of 11
+     consecutive recessive bits, stated explicitly, twice) -- no numeric
+     value for ERROR_WARNING/ERROR_PASSIVE/BUS_OFF thresholds anywhere.
+     `dfc_rtl019.sv` uses the real, standard, external ISO 11898-1 values
+     (not invented): ERROR_WARNING at TEC>=96 or REC>=96; ERROR_PASSIVE at
+     TEC>127 or REC>127; BUS_OFF at TEC>255. Same class of disclosure as
+     RTL-018's own real ARINC bit-rate constants (item set for that
+     module). See `dfc_rtl019.sv`'s own header (finding 6) for the full
+     disclosure, including the deliberately simplified (non-real-standard)
+     TEC/REC increment/decrement rules (a bounded, disclosed scope cut
+     given the number of narrow exception cases in the real standard).
+
+127. **Real, disclosed gap -- the real CAN CRC-15 polynomial and the 5-bit
+     stuffing interval are external, well-known standard values, not
+     invented, but ARCH-002/REG-002 state neither numerically.** `dfc_rtl019.sv`
+     uses the real, standard CAN CRC-15 polynomial
+     (x^15+x^14+x^10+x^8+x^7+x^4+x^3+1, 0x4599) and the real, standard
+     5-consecutive-bit stuffing interval. See `dfc_rtl019.sv`'s own header
+     (findings 2/3) for the full algorithmic disclosure.
+
+128. **Real, disclosed simplification: hard synchronization at SOF only, no
+     continuous mid-frame resynchronization.** The real ISO 11898-1
+     standard requires continuously correcting the current bit's TSEG1/
+     TSEG2 boundary by up to SJW quanta on every unexpected edge, needed
+     for robustness against two independent nodes' oscillators drifting
+     apart over a frame. `dfc_rtl019.sv` only resets its bit-phase counter
+     to quantum 0 on a real recessive-to-dominant edge while bus-idle
+     (hard sync at SOF) -- `SJW_MINUS_1` is still a real, validated
+     register field but is not consumed by any resync logic. A real,
+     narrower scope than a full conformant CAN PHY would need for two
+     genuinely independent, free-running-clock nodes on a real bus;
+     sufficient for this project's own real verification path (loopback
+     self-test, and a synchronous CORE_CLK-timed bus with no independent
+     oscillator drift to correct for). See `dfc_rtl019.sv`'s own header
+     (finding 1) for the full disclosure.
+
+129. **Real, disclosed design choice for LOOPBACK's own ACK behavior.**
+     ARCH-BUS-003's own "disconnects external TX... internal echo only"
+     text does not specify what happens at the ACK slot when there is no
+     real second node to generate one. `dfc_rtl019.sv` unconditionally
+     treats the ACK slot as acknowledged while `LOOPBACK=1` -- a real,
+     common simplification for self-test loopback modes (without it, every
+     loopback TX would show a real ACK error despite sending a
+     structurally perfect frame). See `dfc_rtl019.sv`'s own header (finding
+     5) for the full disclosure.
+
+130. **Real, disclosed design choice for LISTEN_ONLY's own TX-queue
+     interaction.** REG-ENC-006's "never drives dominant, including no
+     ACK" is unambiguous about the PAD, but ARCH-002/REG-002 do not say
+     whether a queued TX entry should still ATTEMPT arbitration while
+     listen-only (which could only ever "lose," since this module can
+     never assert a dominant bit). `dfc_rtl019.sv` disables the TX-dequeue
+     engine itself while `LISTEN_ONLY=1` -- queued entries simply wait, not
+     popped, not retried-and-failed -- rather than attempting a
+     structurally-guaranteed-to-fail transmission that would corrupt error
+     counters for no reason. See `dfc_rtl019.sv`'s own header (finding 5)
+     for the full disclosure.
+
+131. **Real, disclosed defensive clamp for REG-ENC-006's own `11`
+     LOOPBACK/LISTEN_ONLY illegal combination.** REG-002's own per-field
+     validation text is generic ("value and cross-field constraints
+     validated") without a field-map mechanism (reggen v5) to express a
+     real cross-field rejection rule at the regbank level -- a real,
+     disclosed gap in reggen v5's own expressiveness, not something this
+     session's scope extends to fixing. `dfc_rtl019.sv` defends the
+     invariant itself: if both raw bits are ever seen asserted
+     simultaneously on live `control_i`, LOOPBACK wins (LISTEN_ONLY is
+     combinationally clamped to 0), as a last-resort measure, never
+     operating with both true regardless of how that live state was
+     reached. Verified directly by `rtl019_integration_tb.sv`'s own Case
+     13. See `dfc_rtl019.sv`'s own header (finding 9) for the full
+     disclosure.
+
+132. **Real, disclosed gap -- `CAN_RECOVERY.REQUEST`'s own rejection has no
+     dedicated evidence field.** REG-1250's own text ("after the
+     Architecture-defined recessive-bus observation requirement is
+     satisfied") confirms a premature manual recovery request is NOT an
+     unconditional override, but REG-002 gives this specific WO-CMD
+     register no rejection-count/evidence field of its own to report
+     through (unlike `CAN_TX_PUSH`'s own `CAN_TX_REJECTED_COUNT`). A
+     rejected manual request is silently ignored in `dfc_rtl019.sv` --
+     disclosed, not a bug. Verified directly by `rtl019_integration_tb.sv`'s
+     own Case 15 (both the premature-rejection and eventual-acceptance
+     paths, though see item 136 below for a real caveat on how reliably
+     the premature-rejection path can be exercised).
+
+133. **CAN_RX_META.FLAGS bit meanings are found in ARCH-002's own SS11.1
+     prose, not in REG-002's own register-field tables.** The real, cited
+     meanings (0 CRC error, 1 stuff error, 2 form error, 3 bit error, 4 ACK
+     error, 5 arbitration lost, 6 error passive, 7 bus off, 8 transceiver
+     error, 9 injected, 10-11 reserved) are implemented in
+     `dfc_rtl019.sv`'s own RX-capture W5 assembly. Bits 0-4 are
+     tautologically always 0 for any frame that reaches real capture (any
+     of those conditions would have diverted the frame to the error-flag
+     path instead, never reaching capture). Bit 5 (arbitration lost) is a
+     real per-frame history bit, separately latched (`arb_loss_in_frame_q`)
+     since the point-in-time arbitration-loss pulse happens earlier in the
+     same frame than its own eventual capture. Bits 6-8 are real STATE at
+     the moment of capture, not per-frame history. Bit 9 (injected) has no
+     real source anywhere in this design -- disclosed, left 0, not
+     silently assumed.
+
+134. **Self-referential `ARCH-MSG-002` routing (CAN RX and CAN TX share
+     module ID 0x01) is confirmed NOT this module's own concern.**
+     ARCH-002's own 5x5 routing authorization matrix explicitly marks
+     CAN-RX-to-CAN-TX as disallowed (a real `0` in that matrix cell) --
+     the policy question of whether RTL-021 (Message Router, not yet
+     built) is ever allowed to route CAN RX's own output back to CAN TX's
+     own input is RTL-021's to enforce, not something `dfc_rtl019.sv`
+     needs to special-case or prevent itself. `dfc_rtl019.sv` implements
+     two ordinary, independent route port pairs
+     (`rx_msg_valid_o`/`rx_msg_ready_i`/`rx_msg_record_o` and
+     `tx_msg_valid_i`/`tx_msg_ready_o`/`tx_msg_record_i`) with no internal
+     cross-wiring between them, same pattern as RTL-017's own source-only
+     and RTL-018's own destination-only route ports. The generic
+     `dfc_message_record_t`'s own CAN-specific ID/IDE/RTR bit-packing
+     convention (into the record's payload field, since that 192-bit
+     layout was never designed with CAN's own arbitration fields in mind)
+     is this module's own disclosed interpretation choice, exercised
+     directly by `rtl019_integration_tb.sv`'s own Case 8 route-push path.
+
+135. **Six real, genuine RTL bugs found and fixed while implementing this
+     module, all caught by this module's own dedicated testbench before
+     this entry was written, none left unfixed:**
+     - **Swapped RTR/IDE bit positions** when loading `is_extended_q`/
+       `is_rtr_q` from a dequeued TX entry's own W0 word (`tx_stage_w[0]`)
+       -- the two fields were read from each other's real bit position.
+     - **`ctrl_field_last_bit` declared `[1:0]` (0-3 only)** but needed to
+       hold 4 or 5 (the real standard/extended control-field bit counts)
+       -- silently truncated, causing the control field to exit after only
+       1-2 bits instead of the real 5/6 in every case not masked by
+       loopback's own TX-side preload.
+     - **No real bit-by-bit ID/IDE/RTR/DLC capture existed for a genuinely
+       RECEIVED (non-loopback, non-self-originated) frame** -- only the
+       TX-side preload path populated `frame_id_q`/`is_extended_q`/
+       `is_rtr_q`/`frame_dlc_q`, so a real external frame's own arbitration
+       and control fields were never actually decoded bit-by-bit at all.
+       Real standard-vs-extended determination (both real formats share
+       the identical bit position for the IDE bit) and a same-edge hazard
+       in the resulting exit-condition check (the newly-determined
+       `is_extended_q`/live DLC value is not yet visible via the
+       registered read on the very cycle it is determined) were both
+       fixed together.
+     - **Multi-byte data field transmitted/received the LAST byte first**
+       instead of the real standard's byte-0-first, MSB-first-within-byte
+       order -- a flat `(total_bits-1-bit_idx_q)` index over the whole
+       64-bit `frame_data_q` register reverses byte order for any payload
+       over 1 byte.
+     - **The internal `rd_w_q[]` read-accumulator was shared between
+       host/route-visible RX reads (SNAPSHOT/ROUTE) and the purely
+       internal TX-dequeue read** -- every time this module dequeued its
+       OWN queued TX entry to attempt transmission, it silently clobbered
+       the host-visible `CAN_RX_ID`/`CAN_RX_META`/`CAN_RX_DATA`/`CAN_RX_TIME`
+       status fields with the TX entry's own, unrelated W0-W5 content.
+       TX-dequeue now reads directly into `tx_stage_w[]` instead.
+     - **A real same-edge hazard in the TX-dequeue arbiter request**: the
+       exit condition `tx_count_q != 0` read the stale pre-decrement value
+       on the exact cycle a real pop was also retiring, letting a spurious
+       extra dequeue start against an already-logically-empty queue and
+       underflow `tx_count_q` into a large garbage value that never
+       self-corrected (since `tx_queue_empty`'s own `==0` check could never
+       match again) -- a real, reproducible runaway bug, not a cosmetic
+       off-by-one. Guarded with `&& !frame_tx_commit_pop`; the equivalent
+       RX-side guard was added defensively even though the specific race
+       was only directly observed on the TX side.
+     - **A lost-arbitration node kept driving its own (no-longer-relevant)
+       staged frame content** instead of going silent (recessive) for the
+       rest of that frame's arbitration/control/data/CRC fields --
+       `compute_tx_bit()` never checked `is_transmitter_q` for those
+       states. Fixed with an explicit override (ST_ACK and the
+       error-flag states, where every node drives regardless of role, are
+       deliberately excluded).
+     - **LOOPBACK frame completion only ever took the TX-commit path OR
+       the RX-capture path (an if/else), never both** -- since
+       `is_transmitter_q` never clears in a pure loopback round-trip (no
+       real external node exists to contest it), a successfully
+       self-looped frame was popping its own TX entry but never actually
+       landing in the RX queue at all. Fixed so loopback explicitly does
+       BOTH: the TX commit (the entry was genuinely sent) and the RX
+       capture (this module is also, genuinely, the frame's own receiver
+       in loopback).
+     - **`effective_operational_enable_i` was a declared port, read nowhere
+       in the module.** Real architectural gap (the same signal gates
+       RTL-018's own TX dequeue) -- `want_tx_frame` now requires it, same
+       role as RTL-018's own identical port.
+
+     Every one of these was found via this module's own dedicated
+     testbench (`rtl019_integration_tb.sv`), not by inspection alone --
+     several only became visible once the testbench's own bit-timing
+     margin was widened enough to stop masking them with a coincidental
+     one-bit misalignment (see item 137).
+
+136. **Real, disclosed testbench-level finding (not an RTL defect): the
+     128x11 bus-off recovery observation counter runs continuously
+     regardless of recovery mode (matching real hardware), so it can
+     become satisfied DURING an error-passive TEC-building retry phase,
+     before bus-off even latches** -- once error-passive (TEC>127), this
+     module's own error flag becomes all-recessive by design (a passive
+     node's error flag must not disturb other traffic), and each further
+     retry's flag+delimiter is itself a real multi-bit recessive run. This
+     is a genuine protocol property this testbench's own TEC-building
+     strategy exposed, not an artifact: `rtl019_integration_tb.sv`'s own
+     Case 15 checks `recovery_ready_q` directly and only asserts the
+     "premature rejection" sub-case when it is actually still
+     unsatisfied, rather than assuming a fixed timing window.
+
+137. **Real testbench-level finding: the bit-timing margin matters for a
+     synchronous, software-driven testbench stimulus, separate from any
+     RTL defect.** This module's own hard-sync edge detection is
+     correctly REGISTERED (`sensed_bus_prev_q`, one real CORE_CLK cycle of
+     latency, a real and correct synchronous design, not a bug), so the
+     phase-counter reset lands one cycle into the externally-driven SOF
+     bit's own held window. `rtl019_integration_tb.sv` originally used a
+     4-cycle-per-bit test configuration (BRP=1/TSEG1=2/TSEG2=1) with a
+     sample point only 2 quanta after reset, leaving just one cycle of
+     margin -- too tight for the testbench's own bit-driving task
+     boundaries, producing a real, reproducible one-bit sampling
+     misalignment on every externally-driven frame. Widened to 8
+     cycles/bit (BRP=1/TSEG1=4/TSEG2=3) to give real margin; real external
+     CAN traffic on an actual bus would never run this close to the wire.
+
+138. **Compile/synthesize/verify scope, explicitly NOT full P&R-level
+     completeness -- same disclosed scope as RTL-018 (item 121), not a
+     RTL-017-style full close-out.** Per this session's own explicit task
+     scope: a real `gate.ps1` run passed clean (lint/sim/formal/coverage),
+     including a new dedicated `rtl019_integration_tb.sv` (567/567 checks)
+     covering standard and extended frames, remote (RTR) frames, DLC edge
+     cases (0 and 8), the real 5-bit stuffing boundary, a REAL externally-
+     driven frame (not just a self-consistent loopback round trip, using a
+     real CRC-15/bit-stuffing reference model built into the testbench
+     itself), a real CRC error and a real ACK error (each independently
+     checked for correct sticky/count/REC-or-TEC evidence and non-
+     capture), the host-vs-route last-free-slot tiebreaker, TX and RX
+     queue overflow, a real externally-forced arbitration loss (confirmed
+     via the real internal `is_transmitter_q`, with the retained entry
+     verified to actually drain once it can get a real ACK), LISTEN_ONLY
+     (confirmed never driving dominant, confirmed never even attempting a
+     queued transmission), the REG-ENC-006 `11` illegal combination
+     clamp, a full TEC-to-BUS_OFF-to-AUTOMATIC-recovery cycle via the real
+     128x11 count, a second BUS_OFF cycle exercising MANUAL recovery's own
+     premature-rejection/eventual-acceptance behavior, and
+     `can_transceiver_error_i` passthrough to both the dedicated sticky
+     bit and `fault_req_o`. Two incidental stale-port breakages were found
+     and fixed in `verification/testbench/rtl-001/regbank_smoke_tb.sv` and
+     `dri_transaction_tb.sv` (both still referencing the 13 individual
+     per-register CAN status stub ports removed from `dfc_rtl001.sv` in
+     this same session, instead of the new aggregate `rtl019_control_o`/
+     `rtl019_status_i` pair). A real Yosys `synth_ecp5` run (Build ID
+     `20261020_180031`, via `build_ecp5.ps1 -SynthOnly`) completed cleanly,
+     0 CHECK-pass problems reported, full statistics recorded in
+     `output/logs/ecp5_synth_20261020_180031.log`. Real cumulative design
+     totals (vs the RTL-018 baseline, Build ID `20261020_132014`): CCU2C
+     3470->3719 (+249), L6MUX21 189->215 (+26), LUT4 28654->30286 (+1632),
+     PFUMX 2598->2716 (+118), TRELLIS_FF 22360->23437 (+1077), MULT18X18D
+     12->13 (+1, the client-2 word-offset `entry*6` multiply), PDPW16KD
+     unchanged at 1. The real module-level delta is substantially bigger
+     than RTL-018's own (+93 CCU2C/+864 LUT4/+188 PFUMX/+488 TRELLIS_FF),
+     consistent with RTL-019 being the most protocol-complex single module
+     in this project to date. **`nextpnr-ecp5` was never invoked this
+     session** -- no
+     place-and-route, no timing closure, no bitstream. RTL-019's status is
+     "compiled, synthesized, verified," not "built" or "complete" -- the
+     project continues holding at the RTL-016 FPGA baseline (item 112)
+     for any real hardware target. Real physical pin assignment
+     (`gn20`/`gn21`/`gn11`, the last two unshared `gn14`-`gn21` positions
+     plus a genuine first spillover into the WiFi-shared range) is
+     recorded in `ULX3S_CONNECTION_MAP.md`'s own new Section 13, not
+     repeated here.

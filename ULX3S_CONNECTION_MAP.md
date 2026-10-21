@@ -648,3 +648,67 @@ two-stage synchronizer); the chip-level external pad this table assigns a
 real SITE to is `arinc_tx_adapter_error_i` (asynchronous, active-high) --
 two different names for the same logical signal at two hierarchy levels,
 both ARCH-002's own, not reconciled here.
+
+## 13. Classical CAN Interface (RTL-019) — J2 gn20/gn21, J1 gn11 (WiFi-shared), 3 real pads
+
+RTL-019 is the third Databus-domain module with a real, physical
+interface, and the first to actually hit the constraint Sections 10/11/12
+already flagged: only 2 unshared `gn14`-`gn21` positions remained
+(`gn20`/`gn21`) by the time this module needed 3 real pads
+(`can_rx_i`/`can_tx_o`/`can_transceiver_error_i`), so the third genuinely
+spills into the WiFi-shared `gp11`-`gp13`/`gn11`-`gn13` range. This
+session's own scope is compile/synthesize/verify only (no place-and-route,
+no bitstream) — the pin assignment and `.lpf`/`ulx3s_dfc_top.sv` wiring
+below are still real and complete, since synthesis needs real top-level
+connectivity to elaborate correctly, but this session does not itself
+confirm these SITEs route or time on real hardware.
+
+| Port | Pin | J1/J2 position | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|
+| `can_rx_i` | `gn20` | J2-20 (`gn` conductor) | E17 | Input |
+| `can_tx_o` | `gn21` | J2-21 (`gn` conductor) | D17 | Output |
+| `can_transceiver_error_i` | `gn11` | J1-11 (`gn` conductor, WiFi-shared) | E3 | Input |
+
+**Choice rationale:** `gn20`/`gn21` are simply the two LAST remaining
+unshared `gn14`-`gn21` positions (SITEs E17/D17, confirmed via a direct
+fetch of the real raw `emard/ulx3s` `doc/constraints/ulx3s_v20.lpf`
+content against the exact `"gn20"`/`"gn21"` LOCATE lines — both carry only
+a plain `# DIFF` comment, no wifi-sharing tag, confirmed free), same
+"exhaust unshared, lowest-numbered first" rule as every earlier section.
+With no further unshared positions left, the 3rd pin
+(`can_transceiver_error_i`) uses `gn11` (SITE E3, real board file comment
+`# DIFF wifi_gpio25`) — the LOWEST-numbered WiFi-shared position, same
+"lowest-numbered first" rule extended into the shared range now that the
+unshared range is genuinely exhausted. `can_rx_i`/`can_transceiver_error_i`
+are pure inputs, pulled up (`PULLMODE=UP`, same convention as every other
+input pin in this table) so an unconnected/not-yet-wired transceiver reads
+idle-recessive/idle-safe rather than floating; `can_tx_o` is a pure output
+(`PULLMODE=NONE`, same convention as every other ECP5-driven output pin in
+this table).
+
+**Real, disclosed consequence of the WiFi-shared pin:** per this project's
+own established disclosure (Sections 9/12), `can_transceiver_error_i`
+sharing `gn11` with the onboard WiFi module's `wifi_gpio25` means this
+input is not genuinely available for standalone CAN transceiver-fault
+sensing while the WiFi module is active on real hardware. Acceptable for
+this session's own compile/synthesize/verify-only scope (no real board
+bring-up performed), but a real constraint for any future bring-up session
+to resolve (e.g. disabling the onboard WiFi module, or re-routing this
+signal to a different position once one becomes free as other modules'
+own pin needs are finalized).
+
+**This exhausts the real pin budget Sections 10/11/12 already projected.**
+After this module, ZERO unshared `gn14`-`gn21` positions remain, and only
+`gp11`-`gp13`/`gn12`-`gn13` (5 conductors) of the WiFi-shared range are
+still untouched. RTL-020 (UART, needs `uart_rx_i`/`uart_tx_o` = 2) can
+still fit entirely within the remaining WiFi-shared conductors, but any
+module after that will need a different pin source entirely (the
+differential-capable range is now fully committed). Flagged here
+explicitly, the same discipline every earlier section's own note followed.
+
+**Provenance:** the `gn20`/`gn21`/`gn11` SITE assignments (E17/D17/E3) were
+confirmed via a direct fetch of the real raw `emard/ulx3s`
+`doc/constraints/ulx3s_v20.lpf` content against the exact `"gn20"`,
+`"gn21"`, and `"gn11"` `LOCATE COMP` lines (and their real comments), not
+recalled from memory or accepted from a single partial match — same
+provenance discipline as every earlier section in this table.

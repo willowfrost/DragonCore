@@ -1,0 +1,231 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md Section 16 (0x1200-0x1258) per-field bit tables, cited by contract ID, and RCA-DFC-ARCH-002.md's dfc_rtl019_control_t/status_t Appendix B tables. Covers all 23 real CAN registers -- REG-002 is internally consistent for this block (Section 6 Address-Map Summary, the block's own header, and the actual enumerated row count all agree at 23, unlike RTL-018's own ARINC TX block). ATX-style plain RW/WO-CMD staging registers (CAN_CONTROL, CAN_BIT_TIMING, CAN_RX_SNAPSHOT, CAN_RX_POP, CAN_TX_ID_STAGE, CAN_TX_META_STAGE, CAN_TX_DATA_LO_STAGE, CAN_TX_DATA_HI_STAGE, CAN_TX_PUSH, CAN_RECOVERY) have readback class 'internal_reg'/'zero' -- the generic regbank already stores and returns their written value directly, no status_registers entry needed, same precedent as every prior module's own staging/command registers. One real gap found and fixed while building this field map (the 11th real instance of the exact gap class already fixed for RTL-002 through RTL-018, approved before this session's edit): RTL019_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW had no clear-forwarding control field at all in dfc_rtl019_control_t as ARCH-002 originally defined it. Fixed the same way as every prior instance: ARCH-002 grew dfc_rtl019_control_t 203->204 bits, adding rtl019_evt_overflow_status__event_overflow as a new clear_mask field at the new highest bit (203) -- every pre-existing field's bit position confirmed unchanged by direct comparison against the already-generated include/dfc_types_pkg.sv before this edit. See OPEN_ISSUES.md for the full disclosure.",
+  "consumer_module": "RTL-019",
+  "control_struct": "dfc_rtl019_control_t",
+  "status_struct": "dfc_rtl019_status_t",
+  "control_registers": [
+    {
+      "register": "CAN_CONTROL",
+      "contract_id": "REG-1200",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "can_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "can_control__loopback" },
+        { "reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "can_control__listen_only" },
+        { "reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "can_control__event_enable" },
+        { "reg_hi": 4, "reg_lo": 4, "class": "RW", "struct_field": "can_control__irq_enable" },
+        { "reg_hi": 5, "reg_lo": 5, "class": "RW", "struct_field": "can_control__automatic_bus_off_recovery" }
+      ]
+    },
+    {
+      "register": "CAN_STATUS",
+      "contract_id": "REG-1204",
+      "fields": [
+        { "reg_hi": 6, "reg_lo": 6, "class": "W1C", "struct_field": "can_status__rx_overflow" },
+        { "reg_hi": 7, "reg_lo": 7, "class": "W1C", "struct_field": "can_status__tx_rejected" },
+        { "reg_hi": 8, "reg_lo": 8, "class": "W1C", "struct_field": "can_status__protocol_error" },
+        { "reg_hi": 9, "reg_lo": 9, "class": "W1C", "struct_field": "can_status__transceiver_error" },
+        { "reg_hi": 10, "reg_lo": 10, "class": "W1C", "struct_field": "can_status__rx_pop_rejected" }
+      ]
+    },
+    {
+      "register": "CAN_BIT_TIMING",
+      "contract_id": "REG-1208",
+      "fields": [
+        { "reg_hi": 9, "reg_lo": 0, "class": "RW", "struct_field": "can_bit_timing__prescaler_minus_1" },
+        { "reg_hi": 15, "reg_lo": 10, "class": "RW", "struct_field": "can_bit_timing__tseg1_minus_1" },
+        { "reg_hi": 20, "reg_lo": 16, "class": "RW", "struct_field": "can_bit_timing__tseg2_minus_1" },
+        { "reg_hi": 24, "reg_lo": 21, "class": "RW", "struct_field": "can_bit_timing__sjw_minus_1" }
+      ]
+    },
+    {
+      "register": "CAN_RX_SNAPSHOT",
+      "contract_id": "REG-1214",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "can_rx_snapshot__capture" }
+      ]
+    },
+    {
+      "register": "CAN_RX_POP",
+      "contract_id": "REG-1230",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "can_rx_pop__pop" }
+      ]
+    },
+    {
+      "register": "CAN_TX_ID_STAGE",
+      "contract_id": "REG-1238",
+      "fields": [
+        { "reg_hi": 28, "reg_lo": 0, "class": "RW", "struct_field": "can_tx_id_stage__identifier" },
+        { "reg_hi": 29, "reg_lo": 29, "class": "RW", "struct_field": "can_tx_id_stage__ide" },
+        { "reg_hi": 30, "reg_lo": 30, "class": "RW", "struct_field": "can_tx_id_stage__rtr" }
+      ]
+    },
+    {
+      "register": "CAN_TX_META_STAGE",
+      "contract_id": "REG-123C",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "class": "RW", "struct_field": "can_tx_meta_stage__dlc" }
+      ]
+    },
+    {
+      "register": "CAN_TX_DATA_LO_STAGE",
+      "contract_id": "REG-1240",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "can_tx_data_lo_stage__data_0_3" }
+      ]
+    },
+    {
+      "register": "CAN_TX_DATA_HI_STAGE",
+      "contract_id": "REG-1244",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "can_tx_data_hi_stage__data_4_7" }
+      ]
+    },
+    {
+      "register": "CAN_TX_PUSH",
+      "contract_id": "REG-1248",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "can_tx_push__push" }
+      ]
+    },
+    {
+      "register": "RTL019_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-124C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl019_evt_overflow_status__event_overflow" }
+      ]
+    },
+    {
+      "register": "CAN_RECOVERY",
+      "contract_id": "REG-1250",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "can_recovery__request" }
+      ]
+    },
+    {
+      "register": "CAN_RX_OVERFLOW_COUNT",
+      "contract_id": "REG-1254",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "can_rx_overflow_count__count" }
+      ]
+    },
+    {
+      "register": "CAN_TX_REJECTED_COUNT",
+      "contract_id": "REG-1258",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "can_tx_rejected_count__count" }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "CAN_STATUS",
+      "contract_id": "REG-1204",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "can_status__enabled" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "can_status__rx_not_empty" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "can_status__tx_not_full" },
+        { "reg_hi": 3, "reg_lo": 3, "struct_field": "can_status__error_warning" },
+        { "reg_hi": 4, "reg_lo": 4, "struct_field": "can_status__error_passive" },
+        { "reg_hi": 5, "reg_lo": 5, "struct_field": "can_status__bus_off" },
+        { "reg_hi": 6, "reg_lo": 6, "struct_field": "can_status__rx_overflow" },
+        { "reg_hi": 7, "reg_lo": 7, "struct_field": "can_status__tx_rejected" },
+        { "reg_hi": 8, "reg_lo": 8, "struct_field": "can_status__protocol_error" },
+        { "reg_hi": 9, "reg_lo": 9, "struct_field": "can_status__transceiver_error" },
+        { "reg_hi": 10, "reg_lo": 10, "struct_field": "can_status__rx_pop_rejected" }
+      ]
+    },
+    {
+      "register": "CAN_ERROR_COUNT",
+      "contract_id": "REG-120C",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "struct_field": "can_error_count__tx_error_count" },
+        { "reg_hi": 15, "reg_lo": 8, "struct_field": "can_error_count__rx_error_count" },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "can_error_count__protocol_error_count" }
+      ]
+    },
+    {
+      "register": "CAN_RX_LEVEL",
+      "contract_id": "REG-1210",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "struct_field": "can_rx_level__level" }
+      ]
+    },
+    {
+      "register": "CAN_RX_ID",
+      "contract_id": "REG-1218",
+      "fields": [
+        { "reg_hi": 28, "reg_lo": 0, "struct_field": "can_rx_id__identifier" },
+        { "reg_hi": 29, "reg_lo": 29, "struct_field": "can_rx_id__ide" },
+        { "reg_hi": 30, "reg_lo": 30, "struct_field": "can_rx_id__rtr" },
+        { "reg_hi": 31, "reg_lo": 31, "struct_field": "can_rx_id__valid" }
+      ]
+    },
+    {
+      "register": "CAN_RX_META",
+      "contract_id": "REG-121C",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "struct_field": "can_rx_meta__dlc" },
+        { "reg_hi": 15, "reg_lo": 4, "struct_field": "can_rx_meta__flags" },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "can_rx_meta__sequence" }
+      ]
+    },
+    {
+      "register": "CAN_RX_DATA_LO",
+      "contract_id": "REG-1220",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "can_rx_data_lo__data_0_3" }
+      ]
+    },
+    {
+      "register": "CAN_RX_DATA_HI",
+      "contract_id": "REG-1224",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "can_rx_data_hi__data_4_7" }
+      ]
+    },
+    {
+      "register": "CAN_RX_TIME_LO",
+      "contract_id": "REG-1228",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "can_rx_time_lo__timestamp_lo" }
+      ]
+    },
+    {
+      "register": "CAN_RX_TIME_HI",
+      "contract_id": "REG-122C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "can_rx_time_hi__timestamp_hi" }
+      ]
+    },
+    {
+      "register": "CAN_TX_LEVEL",
+      "contract_id": "REG-1234",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "struct_field": "can_tx_level__level" }
+      ]
+    },
+    {
+      "register": "RTL019_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-124C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow" },
+        { "reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count" }
+      ]
+    },
+    {
+      "register": "CAN_RX_OVERFLOW_COUNT",
+      "contract_id": "REG-1254",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "can_rx_overflow_count__count" }
+      ]
+    },
+    {
+      "register": "CAN_TX_REJECTED_COUNT",
+      "contract_id": "REG-1258",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "can_tx_rejected_count__count" }
+      ]
+    }
+  ]
+}

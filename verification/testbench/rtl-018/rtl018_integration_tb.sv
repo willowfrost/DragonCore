@@ -78,7 +78,9 @@ module rtl018_integration_tb;
 
   logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i = '0;
   logic observational_mode_i = 1'b0;
-  wire  activity_o;
+  // No activity_o here -- a real correction found during RTL-019's own
+  // session: ARCH-002's real RTL-018 port table never defines one (see
+  // dfc_rtl018.sv's own header).
   logic module_enable_i = 1'b1;
   logic effective_operational_enable_i = 1'b1;
 
@@ -110,7 +112,6 @@ module rtl018_integration_tb;
     .atx_adapter_error_i      (atx_adapter_error_i),
     .operating_state_i        (operating_state_i),
     .observational_mode_i     (observational_mode_i),
-    .activity_o               (activity_o),
     .module_enable_i          (module_enable_i),
     .effective_operational_enable_i (effective_operational_enable_i),
     .buf_req_valid_o          (buf_req_valid),

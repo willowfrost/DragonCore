@@ -177,17 +177,11 @@ module regbank_smoke_tb;
   logic [dfc_types_pkg::DFC_RTL018_CONTROL_WIDTH-1:0] rtl018_control_o;
   logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_STATUS_WIDTH-1:0]  rtl024arxadapter_status_i;
   logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_CONTROL_WIDTH-1:0] rtl024arxadapter_control_o;
-  logic [31:0] can_status_status_i;
-  logic [31:0] can_error_count_status_i;
-  logic [31:0] can_rx_level_status_i;
-  logic [31:0] can_rx_id_status_i;
-  logic [31:0] can_rx_meta_status_i;
-  logic [31:0] can_rx_data_lo_status_i;
-  logic [31:0] can_rx_data_hi_status_i;
-  logic [31:0] can_rx_time_lo_status_i;
-  logic [31:0] can_rx_time_hi_status_i;
-  logic [31:0] can_tx_level_status_i;
-  logic [31:0] rtl019_evt_overflow_status_status_i;
+  // Real cross-module register bus to RTL-019, same treatment as RTL-018
+  // above -- replaces the prior individual per-register can_*_status_i /
+  // rtl019_evt_overflow_status_status_i stub ports.
+  logic [dfc_types_pkg::DFC_RTL019_STATUS_WIDTH-1:0]  rtl019_status_i;
+  logic [dfc_types_pkg::DFC_RTL019_CONTROL_WIDTH-1:0] rtl019_control_o;
   logic [31:0] uart_status_status_i;
   logic [31:0] uart_rx_level_status_i;
   logic [31:0] uart_rx_data_status_i;
@@ -278,17 +272,8 @@ module regbank_smoke_tb;
     .rtl018_control_o(rtl018_control_o),
     .rtl024arxadapter_status_i(rtl024arxadapter_status_i),
     .rtl024arxadapter_control_o(rtl024arxadapter_control_o),
-    .can_status_status_i(can_status_status_i),
-    .can_error_count_status_i(can_error_count_status_i),
-    .can_rx_level_status_i(can_rx_level_status_i),
-    .can_rx_id_status_i(can_rx_id_status_i),
-    .can_rx_meta_status_i(can_rx_meta_status_i),
-    .can_rx_data_lo_status_i(can_rx_data_lo_status_i),
-    .can_rx_data_hi_status_i(can_rx_data_hi_status_i),
-    .can_rx_time_lo_status_i(can_rx_time_lo_status_i),
-    .can_rx_time_hi_status_i(can_rx_time_hi_status_i),
-    .can_tx_level_status_i(can_tx_level_status_i),
-    .rtl019_evt_overflow_status_status_i(rtl019_evt_overflow_status_status_i),
+    .rtl019_status_i(rtl019_status_i),
+    .rtl019_control_o(rtl019_control_o),
     .uart_status_status_i(uart_status_status_i),
     .uart_rx_level_status_i(uart_rx_level_status_i),
     .uart_rx_data_status_i(uart_rx_data_status_i),
@@ -362,17 +347,7 @@ module regbank_smoke_tb;
     rtl017_status_i = '0;
     rtl018_status_i = '0;
     rtl024arxadapter_status_i = '0;
-    can_status_status_i = 32'h0;
-    can_error_count_status_i = 32'h0;
-    can_rx_level_status_i = 32'h0;
-    can_rx_id_status_i = 32'h0;
-    can_rx_meta_status_i = 32'h0;
-    can_rx_data_lo_status_i = 32'h0;
-    can_rx_data_hi_status_i = 32'h0;
-    can_rx_time_lo_status_i = 32'h0;
-    can_rx_time_hi_status_i = 32'h0;
-    can_tx_level_status_i = 32'h0;
-    rtl019_evt_overflow_status_status_i = 32'h0;
+    rtl019_status_i = '0;
     uart_status_status_i = 32'h0;
     uart_rx_level_status_i = 32'h0;
     uart_rx_data_status_i = 32'h0;

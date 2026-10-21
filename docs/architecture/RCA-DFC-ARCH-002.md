@@ -626,7 +626,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl017_status_i | input | dfc_rtl017_status_t / 256 | RTL-017.status_o | RTL-001.rtl017_status_i; RTL-002.module_ready_i[16]; RTL-002.module_fault_i[16] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl018_control_o | output | dfc_rtl018_control_t / 163 | RTL-001.rtl018_control_o | RTL-018.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl018_status_i | input | dfc_rtl018_status_t / 127 | RTL-018.status_o | RTL-001.rtl018_status_i; RTL-002.module_ready_i[17]; RTL-002.module_fault_i[17] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl019_control_o | output | dfc_rtl019_control_t / 203 | RTL-001.rtl019_control_o | RTL-019.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl019_control_o | output | dfc_rtl019_control_t / 204 | RTL-001.rtl019_control_o | RTL-019.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl019_status_i | input | dfc_rtl019_status_t / 326 | RTL-019.status_o | RTL-001.rtl019_status_i; RTL-002.module_ready_i[18]; RTL-002.module_fault_i[18] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl020_control_o | output | dfc_rtl020_control_t / 215 | RTL-001.rtl020_control_o | RTL-020.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl020_status_i | input | dfc_rtl020_status_t / 217 | RTL-020.status_o | RTL-001.rtl020_status_i; RTL-002.module_ready_i[19]; RTL-002.module_fault_i[19] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
@@ -1079,7 +1079,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-019.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-019.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[18] | RTL-019.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl019_control_t / 203 | RTL-001.rtl019_control_o | RTL-019.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| control_i | input | dfc_rtl019_control_t / 204 | RTL-001.rtl019_control_o | RTL-019.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
 | status_o | output | dfc_rtl019_status_t / 326 | RTL-019.status_o | RTL-001.rtl019_status_i; RTL-002.module_ready_i[18]; RTL-002.module_fault_i[18] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-019.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-019.evt_valid_o | RTL-005.evt_valid_i[18] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
@@ -2271,7 +2271,7 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 94:79 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 | 126:95 | atx_rejected_push_count__count | 32 | unsigned | 0 | saturating count of full or invalid PUSH rejection |
 
-### `dfc_rtl019_control_t` — 203 bits
+### `dfc_rtl019_control_t` — 204 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2302,6 +2302,7 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 138 | can_status__rx_pop_rejected | 1 | unsigned | 0 | W1C rejected empty-POP evidence |
 | 170:139 | can_rx_overflow_count__count | 32 | unsigned | 0 | whole-counter clear |
 | 202:171 | can_tx_rejected_count__count | 32 | unsigned | 0 | whole-counter clear |
+| 203 | rtl019_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
 
 ### dfc_rtl019_status_t — 326 bits
 

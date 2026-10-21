@@ -2591,8 +2591,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL018_STATUS__ATX_REJECTED_PUSH_COUNT__COUNT_HI = 126;
   localparam int unsigned DFC_RTL018_STATUS__ATX_REJECTED_PUSH_COUNT__COUNT_LO = 95;
 
-  // ARCH-002 Appendix B dfc_rtl019_control_t (203 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl019_control_t (204 bits, rich format)
   typedef struct packed {
+    logic rtl019_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic [31:0] can_tx_rejected_count__count;  //  reset=0 :: whole-counter clear
     logic [31:0] can_rx_overflow_count__count;  //  reset=0 :: whole-counter clear
     logic can_status__rx_pop_rejected;  //  reset=0 :: W1C rejected empty-POP evidence
@@ -2621,9 +2622,9 @@ package dfc_types_pkg;
     logic can_control__loopback;  //  reset=0 :: control_value
     logic can_control__enable;  //  reset=0 :: control_value
   } dfc_rtl019_control_t;
-  // total width: 203 bits
+  // total width: 204 bits
 
-  localparam int unsigned DFC_RTL019_CONTROL_WIDTH = 203;
+  localparam int unsigned DFC_RTL019_CONTROL_WIDTH = 204;
   localparam int unsigned DFC_RTL019_CONTROL__CAN_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL019_CONTROL__CAN_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL019_CONTROL__CAN_CONTROL__LOOPBACK_HI = 1;
@@ -2678,6 +2679,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL019_CONTROL__CAN_RX_OVERFLOW_COUNT__COUNT_LO = 139;
   localparam int unsigned DFC_RTL019_CONTROL__CAN_TX_REJECTED_COUNT__COUNT_HI = 202;
   localparam int unsigned DFC_RTL019_CONTROL__CAN_TX_REJECTED_COUNT__COUNT_LO = 171;
+  localparam int unsigned DFC_RTL019_CONTROL__RTL019_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 203;
+  localparam int unsigned DFC_RTL019_CONTROL__RTL019_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 203;
 
   // ARCH-002 Appendix B dfc_rtl019_status_t (326 bits, rich format)
   typedef struct packed {

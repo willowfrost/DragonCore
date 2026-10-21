@@ -7134,8 +7134,8 @@
     },
     {
       "name": "dfc_rtl019_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl019_control_t (203 bits, rich format)",
-      "width": 203,
+      "trace": "ARCH-002 Appendix B dfc_rtl019_control_t (204 bits, rich format)",
+      "width": 204,
       "fields": [
         {
           "name": "can_control__enable",
@@ -7379,6 +7379,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "whole-counter clear"
+        },
+        {
+          "name": "rtl019_evt_overflow_status__event_overflow",
+          "hi": 203,
+          "lo": 203,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },
