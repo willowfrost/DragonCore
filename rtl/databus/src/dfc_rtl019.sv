@@ -30,11 +30,19 @@
 // this module's own activity_o wiring): ARCH-002's real RTL-018 port table
 // has NO `activity_o` port at all -- an earlier session invented one,
 // modeled on RTL-017's real one, without checking. Worse, the fictional
-// port was wired to RTL-015.activity_i[3] -- the exact bit ARCH-002 real
-// explicitly reserves for THIS module (confirmed directly: "RTL-019.
-// activity_o | RTL-015.activity_i[3]"). The fictional RTL-018 port and its
-// wiring have been removed (see dfc_rtl018.sv's own header); RTL-019's own
-// activity_o below is the real, ARCH-002-confirmed occupant of that bit.
+// port was wired to RTL-015.activity_i[3] -- the bit THIS module's own
+// Appendix A row names (confirmed directly: "RTL-019.activity_o |
+// RTL-015.activity_i[3]"). The fictional RTL-018 port and its wiring have
+// been removed (see dfc_rtl018.sv's own header).
+//
+// FOLLOW-UP CORRECTION (OPEN_ISSUES.md item 140): wiring this module's real
+// activity_o to bit [3] (this module's own row's literal value) was ITSELF
+// wrong -- it silently reopened and reversed OPEN_ISSUES.md item 83
+// (2026-10-03), which had already resolved this exact class of conflict
+// (every producing module's own Appendix A row disagreeing with RTL-015's
+// own activity_i row / ARCH-SAFE-007) in favor of RTL-015's own row. Per
+// that resolution this module's real activity_o belongs on activity_i[2]
+// (ARCH-SAFE-007 ID 2, "CAN RX frame"), not [3]. Fixed in dfc_rtl024.sv.
 //
 // Clock/reset: CORE_CLK only; core_rst_n_i asynchronous assert (RDC-001),
 // module_reset_i synchronous local reset (RTL-002.module_reset_o[18]).
@@ -308,7 +316,7 @@ module dfc_rtl019 (
 
   input  logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i,
   input  logic         observational_mode_i,
-  output logic         activity_o,           // RTL-015.activity_i[3]
+  output logic         activity_o,           // RTL-015.activity_i[2] (item 140)
   input  logic         module_enable_i,      // RTL-002.module_enable_o[18]
   input  logic         effective_operational_enable_i,
 

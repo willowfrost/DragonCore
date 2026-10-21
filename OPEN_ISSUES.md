@@ -3518,6 +3518,14 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      The fictional port and its wiring have been fully removed; RTL-019's
      own `activity_o` is the real, ARCH-002-confirmed occupant of that bit.
 
+     **FOLLOW-UP CORRECTION (see item 140): "that bit" above (`activity_i[3]`)
+     was itself the wrong resolution** -- it silently reopened and reversed
+     item 83's earlier, already-made decision for this exact conflict class.
+     RTL-019's real `activity_o` has been moved to `activity_i[2]` (the bit
+     item 83's resolution actually assigns it). Left here unedited as an
+     accurate record of what this session found and did at the time; item
+     140 is the real, final correction.
+
 126. **Real, disclosed gap -- neither ARCH-002 nor REG-002 states the
      classical CAN numeric error-confinement thresholds anywhere.**
      ARCH-002/REG-002 give only the counter widths (8 bits each, CAN_ERROR_
@@ -3642,7 +3650,7 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      is this module's own disclosed interpretation choice, exercised
      directly by `rtl019_integration_tb.sv`'s own Case 8 route-push path.
 
-135. **Six real, genuine RTL bugs found and fixed while implementing this
+135. **Nine real, genuine RTL bugs found and fixed while implementing this
      module, all caught by this module's own dedicated testbench before
      this entry was written, none left unfixed:**
      - **Swapped RTR/IDE bit positions** when loading `is_extended_q`/
@@ -3789,3 +3797,282 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      plus a genuine first spillover into the WiFi-shared range) is
      recorded in `ULX3S_CONNECTION_MAP.md`'s own new Section 13, not
      repeated here.
+
+139. **RESOLVED (2026-10-20): the `check_coverage.py` 189/353-unchanged
+     finding reported across the RTL-017, RTL-018, and RTL-019 gate runs
+     (items 112 and 138) was a real, fixable script defect, not a
+     "known limitation" -- that framing was asserted three times and never
+     actually verified until this session. Closing it out with the real
+     explanation and the real fix:**
+     - **The prior explanation ("a word-boundary regex problem against
+       this project's own `__`-delimited compound identifiers") was
+       checked against `check_coverage.py`'s real matching code and found
+       to be wrong.** The script's only pattern was `\bDFC_ADDR_<NAME>\b`,
+       and that `\b`-bounded match was never the obstacle -- `DFC_ADDR_` is
+       a plain, unambiguous prefix with no compound-identifier collision
+       risk. The real cause, confirmed directly: `DFC_ADDR_` **never
+       appears at all** in `verification/testbench/rtl-017`,
+       `rtl-018`, or `rtl-019` (`grep -c DFC_ADDR_` on each is 0/0/0).
+     - **Real root cause: a reference-PATTERN gap, not a regex-correctness
+       bug.** RTL-001 through RTL-016's testbenches exercise registers
+       almost entirely through a bus-level `dri_write`/`dri_read(
+       DFC_ADDR_<NAME>, ...)` driver. RTL-017/018/019's own dedicated
+       integration testbenches instead exercise the same registers
+       directly at each module's `control_i`/`status_o` ports, indexed by
+       the per-module aggregated-struct bit constants
+       `pkggen.py`'s `emit_struct_field_consts()` emits for every
+       register/field pair: `DFC_RTL<NNN>_(CONTROL|STATUS)__<REG_NAME>__
+       <FIELD_NAME>_(HI|LO)` (e.g.
+       `DFC_RTL017_STATUS__ARX_STATUS__NOT_EMPTY_HI`). `check_coverage.py`
+       never recognized this second, equally-real reference convention, so
+       every register exercised only that way counted as "unreferenced"
+       regardless of how thoroughly it was actually tested.
+     - **Fix**: `scripts/check_coverage.py` now also matches the
+       `__<REG_NAME>__` substring that convention always embeds, alongside
+       the original `DFC_ADDR_<NAME>` match (either counts as
+       "referenced"). The double-underscore wrapping is itself an
+       unambiguous delimiter -- a shorter register name cannot falsely
+       match inside a different, longer register name's own `__..__`
+       wrapping, since the character immediately following the shorter
+       name would be `_`+a letter, not a second `_`.
+     - **Real, confirmed result**: a real `gate.ps1` run after the fix
+       moved coverage from the stale 189/353 (53.5%) to **225/353
+       (63.7%)**, a genuine +36-register jump with zero RTL/testbench
+       changes -- confirming the fix recognizes real, pre-existing test
+       references the old script simply couldn't see, not new testing
+       added to produce a number. `ARX_STATUS`, `ATX_CONTROL`,
+       `CAN_CONTROL`, and every other register exercised only via the
+       per-module bit-constant convention now correctly show as
+       referenced. The remaining 128 unreferenced registers (e.g.
+       `DFC_PRODUCT_REV`, `HOST_CONTROL`, `TEST_CONTROL`,
+       `RTL02x_EVT_OVERFLOW_STATUS` for not-yet-implemented modules, the
+       event/IRQ condition masks) are real, unaffected gaps -- genuinely
+       untouched by any test, through either convention -- not an
+       artifact of this fix.
+     - Lint/sim (24/24 testbenches)/formal (4/4 tasks) were unaffected and
+       unchanged by this fix, as expected: it only changes how
+       `check_coverage.py` counts existing references, not any RTL or
+       testbench behavior.
+
+140. **RESOLVED (2026-10-20): a real, fixable `activity_i` wiring regression
+     against this project's OWN already-made decision (item 83), found by a
+     deliberate, project-wide master shared-resource-index audit (every
+     `irq_source_i`/`fault_source_i`/`evt_valid_i`/`evt_record_i`/`activity_i`
+     bit, RTL-001 through RTL-019, cross-referenced against ARCH-002's real,
+     claimed owner for each bit and against `dfc_rtl024.sv`'s actual
+     wiring) -- this generalizes item 125's accidental RTL-018/019 collision
+     into the deliberate, complete check that collision implicitly called
+     for, and it found one more real defect of the same underlying class
+     (a module wired to the wrong shared-vector bit), this time a
+     regression rather than a fresh collision.**
+
+     **The master table** (bit : real claimed owner : real wiring before
+     this item's fix : status):
+
+     `irq_source_i[31:0]` (RTL-003), all 32 bits checked: 0=RTL-002,
+     1=RTL-005, 2=RTL-006, 3=RTL-017, 4=RTL-018, 5=RTL-019, 6=RTL-020(not
+     real yet), 7=RTL-021(not real yet), 8=RTL-007, 9=RTL-008, 10=RTL-009,
+     11=RTL-010, 12=RTL-011, 13=RTL-012, 14=RTL-013, 15=RTL-014, 16=RTL-015,
+     17=RTL-016, 18=RTL-022(not real yet), 19=RTL-023(not real yet),
+     20=reserved, 21=RTL-001(claimed by ARCH-002 Appendix A, but RTL-001 has
+     no real `irq_req_o` port yet -- pre-existing, already-disclosed gap,
+     confirmed still correctly stubbed at `dfc_rtl024.sv:894`, not new),
+     22-23=reserved. **Real wiring (`dfc_rtl024.sv:932`) matches exactly,
+     bit for bit** -- no collisions, no fixes needed.
+
+     `fault_source_i[31:0]` (RTL-013), all 17 real bits checked: 0=RTL-012,
+     1=RTL-014, 2=RTL-015, 3=RTL-016, 4=RTL-011, 5=RTL-005, 6=RTL-007,
+     7=RTL-008, 8=RTL-009, 9=RTL-010, 10=RTL-017, 11=RTL-018, 12=RTL-019,
+     13-16=RTL-020..023 (not real yet), 17-31=reserved. **Real wiring
+     (`dfc_rtl024.sv:548-564`) matches exactly** -- no collisions, no fixes
+     needed.
+
+     `evt_valid_i[23:0]`/`evt_record_i[23:0]` (RTL-005), all 24 slots
+     checked: 0=RTL-001(claimed, but RTL-001 has no real `evt_valid_o` yet --
+     pre-existing, already-disclosed gap, correctly stubbed), 1=RTL-002,
+     2=RTL-003, 3=RTL-004, 4=RTL-005 (self-loop), 5=RTL-006, 6=RTL-007,
+     7=RTL-008, 8=RTL-009, 9=RTL-010, 10=RTL-011, 11=RTL-012, 12=RTL-013,
+     13=RTL-014, 14=RTL-015, 15=RTL-016, 16=RTL-017, 17=RTL-018, 18=RTL-019,
+     19-22=RTL-020..023 (not real yet), 23=RTL-024 (no self-event). **Real
+     wiring (`dfc_rtl024.sv:1041-1061`) matches exactly** -- no collisions,
+     no fixes needed.
+
+     `activity_i[7:0]` (RTL-015) -- **the one vector with a real, confirmed
+     discrepancy.** `RTL-015.activity_i`'s own Appendix A row states the
+     vector follows "exact source order from ARCH-SAFE-007" (ARCH-002:338,
+     970): 0=host accepted command, 1=ARINC RX word, 2=CAN RX frame,
+     3=UART RX byte, 4=GPIO qualified transition, 5=health qualified
+     transition, 6=user diagnostic input transition, 7=watchdog-service
+     pulse. Item 83 (2026-10-03) already found and resolved a conflict here
+     in favor of this exact row, over five other modules' own individual
+     Appendix A rows that each claimed a different bit for themselves
+     (`RTL-012`/`RTL-017`/`RTL-019`/`RTL-020`/`RTL-021`'s own rows) -- and
+     fixed `dfc_rtl012.sv`'s comment (bit1 -> bit7) accordingly at the time.
+     **This audit found that item 83's resolution had been silently
+     reversed for TWO of those five bits since then, by two later,
+     unrelated sessions that never checked item 83 first:** RTL-017's own
+     session (2026-10-06) wired its real `activity_o` to `activity_i[2]`
+     (its own row's literal value, not the `[1]` item 83 had already
+     decided), and this project's own RTL-019 session (today, item 125
+     above) did the same for `activity_i[3]` (`[2]` was correct). Net
+     effect before this fix: bit 1 was dead (tied 0, though ARINC RX
+     activity is real and available), bit 2 carried ARINC RX activity
+     instead of CAN RX frame activity, and bit 3 carried CAN RX frame
+     activity instead of being dead -- RTL-015's loss-detection monitor
+     configured for "ARINC RX word" (ID 1) was silently watching a
+     permanently-dead bit, and a monitor configured for "CAN RX frame"
+     (ID 2) was silently watching ARINC RX activity instead. Bits 4/5/7
+     (RTL-006 GPIO, RTL-011 health, RTL-012 watchdog) were, by contrast,
+     already correctly wired to item 83's resolution and are unaffected.
+     Confirmed this bit position is not a configurable, don't-care detail
+     before fixing it: REG-002's `LLINK_MONITOR_SELECT.MONITOR` (Section 27)
+     only selects which of the 8 monitors `LLINK_MONITOR_CONTROL` configures
+     (enable/event/irq/fault/response-mask) -- there is no separate
+     activity-source-ID remapping field anywhere in RTL-015's register set,
+     and `dfc_rtl015.sv`'s own header confirms monitor `m` is structurally
+     hardwired to watch `activity_i[m]` directly. So which physical bit
+     ARINC/CAN activity lands on directly determines which monitor's
+     lost-link detection is actually watching it -- not a cosmetic detail.
+     **Fixed**: `dfc_rtl024.sv`'s `rtl015_activity_vector_comb` now assigns
+     `[1]=rtl017_activity`, `[2]=rtl019_activity` (previously `[2]`/`[3]`),
+     consistent with bits 4/5/7 and with item 83's original resolution;
+     updated comments in `dfc_rtl024.sv`, `dfc_rtl017.sv`, `dfc_rtl018.sv`,
+     and `dfc_rtl019.sv` to match and to cross-reference this item. Bit 0
+     (no real port anywhere, item 84, unchanged) and bit 6 (no real
+     producer yet -- RTL-022/023 unimplemented) remain disclosed stub
+     zeros, not invented. A real `gate.ps1` re-run after this fix
+     (lint/sim 24/24/formal 4/4/coverage) confirms no regression; this
+     wiring is combinational/registered-vector-composition only, not
+     exercised bit-exactly by any existing testbench (`rtl015_integration_tb.sv`
+     and `rtl024_skeleton_tb.sv` both only ever exercise bit 4 for their
+     whole-system activity proofs), so no testbench changes were needed or
+     made.
+
+     **Why this is a DEFECT, not a fresh ambiguity**: the underlying
+     ARCH-002-internal inconsistency (five conflicting rows vs. one
+     canonical row) is the same one item 83 already classified and
+     resolved; nothing new about ARCH-002 itself was discovered here. What
+     was found is a real implementation regression -- two already-shipped
+     modules' wiring silently drifted away from a decision this project had
+     already made and recorded, exactly the class of mistake Part 2 of this
+     session's task was designed to catch project-wide, not module-by-
+     module.
+
+141. **Real, disclosed ARCH-002-internal (Appendix A vs Appendix B) width
+     staleness, found during this session's module-by-module RTL-001..019
+     audit -- FOUR instances (a fourth found on a direct re-check of the
+     full RTL-001..024 width table, after this item's own first pass missed
+     it), same root cause, not an RTL defect (the implementation correctly
+     follows the owning Appendix B/REG-002 struct width in all four cases,
+     not Appendix A's stale annotation).** When a module's control struct
+     grew by one bit to add an `EVT_OVERFLOW_STATUS`/`EVT_STATUS`-class
+     clear-request field (the same fix class as items 40/43/122/etc.),
+     Appendix B's own field table and the generated `dfc_types_pkg.sv` were
+     correctly updated, but Appendix A's two restated width annotations for
+     that struct (the producer row in RTL-001's own port table and the
+     consumer row in the module's own port table) were left at the
+     pre-growth value in four cases: `dfc_rtl005_control_t` (Appendix A
+     says 128 at `docs/architecture/RCA-DFC-ARCH-002.md:601,734`; Appendix
+     B `:1455` and `include/dfc_types_pkg.sv:418` correctly say 129 --
+     `evt_status__snapshot_valid`, a `EVT_STATUS.SNAPSHOT_VALID` W1C clear
+     field, added at the new highest bit per that struct's own header
+     comment), `dfc_rtl007_control_t` (Appendix A says 135 at
+     `docs/architecture/RCA-DFC-ARCH-002.md:605,783`; Appendix B and
+     `include/dfc_types_pkg.sv:648` correctly say 136),
+     `dfc_rtl011_control_t` (Appendix A says 121 at `ARCH-002:613,870`;
+     Appendix B `:1733` and `dfc_types_pkg.sv:1138,1160` correctly say 122;
+     see item 43's own original fix), and `dfc_rtl013_control_t` (Appendix A
+     says 112 at `ARCH-002:617,914`; Appendix B `:1810` and
+     `dfc_types_pkg.sv:1337,1359` correctly say 113; see item 110's area).
+     Logged here per CHTR-DOC-006/this session's own instructions rather
+     than silently fixed -- correcting Appendix A's own prose width columns
+     is a documentation edit to a `-002` source document, not something an
+     RTL session resolves unilaterally. RTL-001 through RTL-019's full
+     control/status struct width table was mechanically cross-checked
+     (Appendix A row vs Appendix B heading vs generated `_WIDTH` constant)
+     during this audit; these four are the only mismatches found, and all
+     four share the identical root cause (an `EVT_STATUS`/
+     `EVT_OVERFLOW_STATUS`-class clear field added without touching
+     Appendix A's two restated copies), not four independent defects.
+
+142. **RESOLVED (2026-10-20): a real, confirmed missing-port defect in
+     RTL-001, found during this session's RTL-001..005 module audit --
+     the mirror-image of item 125's fabricated-port class (a real port
+     ARCH-002 requires that the implementation never added, not an invented
+     one it shouldn't have).** ARCH-002's real 74-port RTL-001 catalog
+     includes `timestamp_i` (producer RTL-004, `ARCH-002:642`),
+     `operating_state_i` (producer RTL-002, `ARCH-002:647`), and
+     `observational_mode_i` (producer RTL-002, `ARCH-002:648`) -- none of
+     the three self-referencing-row table-generation artifacts item 10
+     already excuses (different real producer modules, not RTL-001 itself).
+     `dfc_rtl001.sv` never declared any of the three. Confirmed this was a
+     genuine oversight, not a deliberate scope cut: every other real module
+     in this project (RTL-003/005/006/etc.) implements all three as real
+     ports with an explicit RTLSTD-MOD-009 unused-port-sink tie-off when
+     it has no functional consumer for them yet, and `dfc_rtl024.sv`'s own
+     RTL-004 instantiation comment already (incorrectly) claimed
+     "`timestamp_o` now genuinely reaches RTL-001/RTL-002/RTL-003" -- the
+     comment was aspirational, not a description of real code; RTL-001 was
+     simply never actually wired.
+
+     **Fixed** (a real, mechanical defect fix, not an architecture
+     judgment call -- RTL-001 has no state-dependent behavior and does not
+     yet generate its own events, per that module's own header, so there
+     is no real consumer for any of the three yet, same as RTL-003/005's
+     own precedent):
+     - Added `timestamp_i` (64 bits), `operating_state_i`
+       (`dfc_types_pkg::DFC_OPERATING_STATE_WIDTH` bits), and
+       `observational_mode_i` (1 bit) to `dfc_rtl001.sv`'s port list, with
+       the same `unused_stub_sink` XOR tie-off idiom `dfc_rtl003.sv`/
+       `dfc_rtl005.sv` already use for the identical situation.
+     - Wired all three at `dfc_rtl024.sv`'s `u_rtl001` instantiation
+       (`rtl004_timestamp`, `rtl002_operating_state`,
+       `rtl002_observational_mode` -- the same broadcast wires every other
+       consumer already uses). `rtl002_operating_state`/
+       `rtl002_observational_mode`'s own declarations had to move earlier
+       in the file (before `u_rtl001`, not their original spot just before
+       `u_rtl002`) since `iverilog` requires a signal's declaration to
+       lexically precede the instance referencing it.
+     - Corrected `dfc_rtl024.sv`'s stale RTL-004-instantiation comment that
+       had falsely claimed RTL-001 was already a consumer.
+     - Added the same disclosed-stub `timestamp_i`/`operating_state_i`/
+       `observational_mode_i` ('0) to `dri_transaction_tb.sv`, the one
+       testbench that instantiates `dfc_rtl001` via a `.*` wildcard
+       connection (which requires an exact-name match for every port,
+       unlike an explicit named-connection instantiation).
+     - The RTL-001 formal harness (`dri_one_outstanding_formal.sv`) uses
+       explicit named port connections and was left as-is -- an omitted
+       input port is legal SV (floats as a formal-solver free variable)
+       and these three signals feed nothing but the new dead-end
+       `unused_stub_sink`, so leaving them unconnected there changes
+       nothing the proof actually checks.
+     - A real `gate.ps1` re-run confirms no regression: lint PASSED; sim
+       24/24 testbenches, 0 failures; formal 4/4 tasks PASSED (one
+       interim run hit `dri_one_outstanding_prove`'s "Unexpected EOF
+       response from solver" at the basecase engine -- reproduced in
+       isolation and confirmed to be solver flakiness, not a real proof
+       regression: an immediate standalone re-run of the identical task
+       passed cleanly, basecase and induction both PASS); coverage
+       unchanged at 225/353 (expected -- this fix adds dead-end plumbing,
+       not new testable register behavior).
+
+     **Full RTL-001..005 audit result (the rest of this session's
+     module-by-module Part 2 coverage for these five modules):**
+     - RTL-001: the one defect above; register/field audit otherwise
+       clean (`dfc_rtl001_status_t`, 19 bits, matches Appendix B/REG-002
+       bit-for-bit; no `rtl001_field_map.json` exists, correctly -- RTL-001
+       uses `tools/reggen/dfc_rtl001_regbank_slice.json` per CLAUDE.md,
+       being the regbank itself).
+     - RTL-002: audited, no discrepancies found (24/24 ports, struct
+       widths, REG-002 §7 fields, and `irq_source_i[0]`/`evt_valid_i[1]`
+       wiring all confirmed correct).
+     - RTL-003: audited, no discrepancies found (16/16 ports, struct
+       widths, REG-002 §8's 8 registers, and `irq_source_i[31:0]`
+       assembly all confirmed correct).
+     - RTL-004: audited, no discrepancies found (13 real ports, correctly
+       excluding item 10's self-referencing row; struct widths and REG-002
+       §9's 12 registers confirmed correct).
+     - RTL-005: audited, no discrepancies found beyond item 141's own
+       already-disclosed Appendix A width staleness (confirmed, not new);
+       19/19 ports including the deliberate `evt_valid_i[4]` self-loop,
+       and REG-002 §10's 15 registers, all confirmed correct.

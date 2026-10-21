@@ -220,7 +220,9 @@
 // 10. ACTIVITY/FAULT. activity_o pulses one CORE_CLK cycle on a successful
 //     WRITE commit (ARCH-002's own "one CORE_CLK pulse on qualified
 //     accepted unit of work" -- a word accepted into the queue is this
-//     module's clearest unit of work), reaching RTL-015.activity_i[2].
+//     module's clearest unit of work), reaching RTL-015.activity_i[1]
+//     (ARCH-SAFE-007 ID 1, "ARINC RX word" -- not this module's own
+//     Appendix A row's literal [2]; see OPEN_ISSUES.md items 83/140).
 //     fault_req_o/status_o.fault: DISCLOSED CHOICE -- asserted whenever
 //     the ADAPTER_ERROR sticky bit is set (a genuine external-transceiver
 //     fault, the only condition here severe enough to warrant system-wide
@@ -262,7 +264,7 @@ module dfc_rtl017 (
 
   input  logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i,
   input  logic         observational_mode_i,
-  output logic         activity_o,           // RTL-015.activity_i[2]
+  output logic         activity_o,           // RTL-015.activity_i[1] (item 140)
   input  logic         module_enable_i,      // RTL-002.module_enable_o[16]
   output logic         fault_req_o,          // RTL-013.fault_source_i[10]
 

@@ -3618,12 +3618,26 @@ written in this project going forward, not just a historical note.
   rather than waiting on item 112 to block all further RTL work. RTL-018
   (ARINC 429 Transmit Interface) is now REAL at exactly that scope — see
   Section 4's own RTL-018 entry and `OPEN_ISSUES.md` items 113-121 for
-  the full account. The next real step is RTL-019, at the SAME
-  compile/synthesize/verify scope, unless the user says otherwise — one
-  module at a time, using the exact same real-verification discipline as
-  every prior module (compile, simulate, and only then trust — never
-  claim something works without actually running it), just without the
-  place-and-route step until item 112 is resolved.
+  the full account. **RTL-019 (Classical CAN Interface) has since shipped
+  too, at the same compile/synthesize/verify scope** — see
+  `OPEN_ISSUES.md` items 122-138. A dedicated follow-up session
+  (2026-10-20) then did two mandatory things, documented in
+  `OPEN_ISSUES.md` items 139-142: (1) found and fixed the REAL root cause
+  of `check_coverage.py`'s textual coverage count being frozen at
+  189/353 across the RTL-017/018/019 gate runs (a reference-pattern gap
+  in the script, not the previously-asserted-but-never-verified
+  word-boundary regex explanation) — real coverage is now 225/353; and
+  (2) ran a deliberate, project-wide audit of RTL-001 through RTL-019's
+  ports/registers against the real ARCH-002/REG-002 text, finding and
+  fixing two real cross-module defects (an `activity_i` shared-vector
+  wiring regression that had silently reversed an earlier, already-made
+  decision — item 83 — and a genuinely missing RTL-001 port set). The
+  next real step is RTL-020, at the SAME compile/synthesize/verify scope,
+  unless the user says otherwise — one module at a time, using the exact
+  same real-verification discipline as every prior module (compile,
+  simulate, and only then trust — never claim something works without
+  actually running it), just without the place-and-route step until item
+  112 is resolved.
   **RTL-013's own session reconfirmed a pattern this document has now
   flagged three separate times (RTL-002/003's own port-catalog gaps in
   RTL-002, then RTL-006's own module_enable_o/effective_operational_

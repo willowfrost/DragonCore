@@ -18,6 +18,15 @@ module dri_transaction_tb;
   logic [31:0] dri_rsp_rdata_o;
   logic [2:0]  dri_rsp_code_o;
 
+  // Same isolation choice for RTL-001's own real timestamp_i/
+  // operating_state_i/observational_mode_i broadcast inputs, added this
+  // session (OPEN_ISSUES.md item 142): this testbench exercises the DRI
+  // protocol in isolation and has no RTL-002/RTL-004 to drive these for
+  // real, so they're tied to a disclosed stub (all-zero).
+  logic [63:0] timestamp_i = '0;
+  logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i = '0;
+  logic        observational_mode_i = '0;
+
   // This testbench exercises RTL-001's DRI protocol in isolation and does
   // not model RTL-002 at all -- rtl002_status_i is tied to a disclosed
   // stub ('0) and rtl002_control_o is left unread. This is fine for this

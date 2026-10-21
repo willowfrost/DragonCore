@@ -18,6 +18,34 @@ written once by some test; it may still be almost entirely unverified.
 Use this to find registers with ZERO test references (a real, unambiguous
 gap) -- do not read a nonzero count as "covered."
 
+ROOT-CAUSE NOTE (fixed 2026-10-20, see OPEN_ISSUES.md item 139): for three
+gate.ps1 runs in a row (RTL-017, RTL-018, RTL-019) this script reported an
+identical 189/353 even though each of those modules added real, newly-
+exercised registers. The prior, never-actually-verified explanation on
+record was "a word-boundary regex problem against this project's own
+`__`-delimited compound identifiers." That explanation was wrong: the
+`\b...\b` match against `DFC_ADDR_<NAME>` was never the issue, because
+`DFC_ADDR_<NAME>` literally never appears in rtl-017/018/019's own
+testbenches at all (confirmed: `grep -c DFC_ADDR_` across
+verification/testbench/rtl-017, rtl-018, rtl-019 is 0/0/0). The real cause
+is a reference-PATTERN gap, not a regex-correctness bug: RTL-001 through
+RTL-016's testbenches exercise registers mostly through a bus-level
+`dri_write`/`dri_read(DFC_ADDR_<NAME>, ...)` driver, while RTL-017/018/019's
+dedicated integration testbenches exercise the same registers directly at
+the module's `control_i`/`status_o` ports, indexed by the per-module
+aggregated-struct bit constants `pkggen.py` emits for every register/field
+pair: `DFC_RTL<NNN>_(CONTROL|STATUS)__<REG_NAME>__<FIELD_NAME>_(HI|LO)`
+(see tools/pkggen/pkggen.py's `emit_struct_field_consts`). This script only
+ever recognized the first convention, so every register exercised only via
+the second convention silently counted as "unreferenced" -- not because of
+any word-boundary failure, but because the search pattern for that
+convention never existed at all. Fixed by also matching the `__<REG_NAME>__`
+substring the second convention always embeds (the double underscore is
+itself an unambiguous delimiter here: a register's name can never falsely
+match inside a different, longer register name's own `__..__` wrapping,
+since the character immediately after the shorter name would be `_`+a
+letter, not a second `_`).
+
 Usage: scripts/check_coverage.py [--registers path] [--testdir path]
 """
 import argparse
@@ -66,8 +94,17 @@ def main():
         ident = f"DFC_ADDR_{r['name']}"
         # word-boundary match so e.g. DFC_ADDR_SYS_CONTROL doesn't false-
         # positive match on a hypothetical DFC_ADDR_SYS_CONTROL_EXT
-        pattern = re.compile(r"\b" + re.escape(ident) + r"\b")
-        count = len(pattern.findall(corpus))
+        addr_pattern = re.compile(r"\b" + re.escape(ident) + r"\b")
+        # Second, independent reference convention: a module's own
+        # aggregated control/status struct bit constants, emitted by
+        # pkggen.py's emit_struct_field_consts() as
+        # DFC_RTL<NNN>_(CONTROL|STATUS)__<REG_NAME>__<FIELD_NAME>_(HI|LO).
+        # The register's own name always appears wrapped in a literal
+        # "__<NAME>__" -- that double-underscore wrapping is itself an
+        # unambiguous delimiter (a shorter register name can't falsely
+        # match inside a longer one's own wrapping; see module header).
+        field_pattern = re.compile(r"__" + re.escape(r["name"]) + r"__")
+        count = len(addr_pattern.findall(corpus)) + len(field_pattern.findall(corpus))
         if count > 0:
             referenced.append((r["name"], count))
         else:

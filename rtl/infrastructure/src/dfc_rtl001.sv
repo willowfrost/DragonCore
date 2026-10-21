@@ -323,7 +323,22 @@ module dfc_rtl001 (
   // state governs ordinary production interfaces; this is a deliberate,
   // documented exception for formal-verification observability, not a
   // violation of it.
-  output logic         dbg_regbank_write_en_o
+  output logic         dbg_regbank_write_en_o,
+
+  // REAL ports per ARCH-002 Appendix A (RTL-001's own 74-port catalog --
+  // confirmed directly, not a self-referencing table-generation artifact
+  // like item 10's RTL-004 case: the real producers here, RTL-002 and
+  // RTL-004, are different modules). Missing entirely until this fix
+  // (found during the project-wide RTL-001..019 audit session, OPEN_
+  // ISSUES.md item 142) despite dfc_rtl024.sv's own instantiation-site
+  // comment already claiming they were wired -- they were not. Same
+  // unused-port-sink treatment as dfc_rtl003.sv/dfc_rtl005.sv (RTLSTD-
+  // MOD-009): RTL-001 has no state-dependent behavior and does not yet
+  // generate its own events (see status_o's own header note above), so
+  // there is no real consumer for any of the three yet.
+  input  logic [63:0]  timestamp_i,
+  input  logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i,
+  input  logic         observational_mode_i
 );
 
   // RTLSTD-LANG-008 prohibits wildcard imports; confirmed via real Yosys
@@ -625,5 +640,15 @@ module dfc_rtl001 (
     .uart_tx_underflow_count_status_i('0), .uli_mailbox_loss_count_0_1_status_i('0), .uli_mailbox_loss_count_2_3_status_i('0),
     .uli_mailbox_status_status_i('0), .uroute_active_control_status_i('0)
   );
+
+  // ---- unused-port sink (RTLSTD-MOD-009): timestamp_i/operating_state_i/
+  // observational_mode_i are real ports per the Architecture catalog with
+  // no functional consumer in this first implementation (no event
+  // generation to timestamp, no state-dependent behavior -- see status_o's
+  // own header note above). Intentionally consumed here, not silently
+  // dropped. ----
+  logic unused_stub_sink;
+  assign unused_stub_sink = (^timestamp_i) ^ (^operating_state_i) ^
+                            observational_mode_i;
 
 endmodule : dfc_rtl001

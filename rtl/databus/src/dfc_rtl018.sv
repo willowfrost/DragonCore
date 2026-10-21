@@ -220,8 +220,12 @@
 //     confirming ARCH-002's own real 28-row RTL-018 port table actually
 //     defines one -- it does not. RTL-018 has no `activity_o` port in
 //     ARCH-002 at all; the fictional port and its RTL-015.activity_i[3]
-//     wiring (which, worse, collides with RTL-019's own REAL, ARCH-002-
-//     confirmed activity_i[3] citation) have been removed. fault_req_o:
+//     wiring (which, worse, collided with RTL-019's own Appendix A row's
+//     literal activity_i[3] citation) have been removed. (RTL-019's real
+//     activity_o has since been corrected to activity_i[2] -- the bit
+//     RTL-015's own row/ARCH-SAFE-007 actually assigns it -- per
+//     OPEN_ISSUES.md item 140; bit [3] is unused by any real module.)
+//     fault_req_o:
 //     DISCLOSED CHOICE, same reasoning as RTL-017's own finding 10 -- asserted
 //     whenever the ADAPTER_ERROR sticky bit is set (the only condition here
 //     severe enough to warrant system-wide fault escalation; underrun and
