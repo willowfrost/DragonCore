@@ -3874,11 +3874,25 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      real yet), 7=RTL-021(not real yet), 8=RTL-007, 9=RTL-008, 10=RTL-009,
      11=RTL-010, 12=RTL-011, 13=RTL-012, 14=RTL-013, 15=RTL-014, 16=RTL-015,
      17=RTL-016, 18=RTL-022(not real yet), 19=RTL-023(not real yet),
-     20=reserved, 21=RTL-001(claimed by ARCH-002 Appendix A, but RTL-001 has
-     no real `irq_req_o` port yet -- pre-existing, already-disclosed gap,
-     confirmed still correctly stubbed at `dfc_rtl024.sv:894`, not new),
-     22-23=reserved. **Real wiring (`dfc_rtl024.sv:932`) matches exactly,
-     bit for bit** -- no collisions, no fixes needed.
+     20=RTL-024 "Host Interface", 21=RTL-001(claimed by ARCH-002 Appendix A,
+     but RTL-001 has no real `irq_req_o` port yet -- pre-existing,
+     already-disclosed gap, confirmed still correctly stubbed at
+     `dfc_rtl024.sv:894`, not new), 22=RTL-024 "Clock/Reset Integration",
+     23=RTL-024 "Production Test". **CORRECTED (2026-10-22, whole-project
+     audit, Track D): this entry originally mischaracterized bits 20/22/23
+     as "reserved" -- ARCH-002's own real Appendix C.4 table claims them as
+     real, non-reserved RTL-024-owned slots (Host Interface/Clock-Reset
+     Integration/Production Test respectively), not reserved at all. This
+     was wrong from the moment this item was first written and was
+     silently copied forward by every later citation (items 164, 175)
+     without re-checking the primary source. Real wiring is unaffected and
+     already safe either way** (`dfc_rtl024.sv`'s own real wiring correctly
+     ties these three bits to 0 via its own disclosed stub prefix, since
+     RTL-024 has no internal irq-generation logic implemented yet for any
+     of these three conditions -- a real, accurate "not yet real" gap, just
+     mislabeled as "reserved" instead). **Real wiring (`dfc_rtl024.sv:932`)
+     matches exactly, bit for bit** -- no collisions, no RTL fixes needed,
+     only this documentation correction.
 
      `fault_source_i[31:0]` (RTL-013), all 17 real bits checked: 0=RTL-012,
      1=RTL-014, 2=RTL-015, 3=RTL-016, 4=RTL-011, 5=RTL-005, 6=RTL-007,
@@ -5227,3 +5241,192 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      check), not a new finding specific to RTL-023 and not investigated
      further, consistent with item 172's own precedent for exactly this
      pattern.
+
+185. **WHOLE-PROJECT INTEGRATION AUDIT (this session), structured around the
+     three failure classes items 125/154/172 each found only by accident:
+     a fabricated/misrouted port (125), a declared-but-never-joined
+     cross-module connection (154), and a real multi-driver synthesis
+     defect (172).** This session does the deliberate search those three
+     were never the product of, across all 24 modules at once, rather than
+     continuing to rely on a 26th accident. Four tracks, each reported
+     separately below (items 186-189); real, full re-verification
+     (`gate.ps1` + `build_ecp5.ps1 -SynthOnly` across the complete,
+     current 24-module design) in item 190. No real RTL defect of any
+     kind was found by this audit -- every finding was either already
+     fully disclosed by a prior session, a cosmetic stale comment, or (one
+     case) a real inaccuracy in this project's OWN documentation of its
+     prior findings, not in the RTL itself. This is itself a meaningful,
+     reportable result: four independent, deliberate sweeps across all 24
+     modules came back clean of the three specific failure classes named
+     above.
+
+186. **Track A -- port/register audit, RTL-020 through RTL-023 (items
+     139-142's own original sweep covered RTL-001-019 only; these four
+     modules had never been independently audited this way, only
+     self-checked by their own individual sessions).** Independently
+     re-derived each module's real Appendix A port table and REG-002
+     register table fresh from the `-002` documents and diffed against
+     the real `.sv` port lists, `dfc_rtlNNN_control_t`/`status_t` structs,
+     and `tools/reggen/rtlNNN_field_map.json` files -- not re-trusting any
+     prior session's own self-check.
+     - **RTL-020 (UART): CLEAN.** 32-port Appendix A table matches the
+       real port list exactly; every wiring point in `dfc_rtl024.sv`
+       (reset/enable index, CDC synchronizer, irq bit 6, evt slot 19,
+       fault bit 13 disclosed stub, shared-buffer client 3, message
+       channel into RTL-021 index 2) independently re-confirmed correct.
+       REG-002 Section 17's own "15" register count confirmed correct by
+       direct row count (already known to be the one Databus module
+       whose own stale-count streak doesn't apply); field-map union
+       matches exactly, struct widths match Appendix A's own citations.
+     - **RTL-021 (Databus Routing Engine): CLEAN.** 30-port table matches
+       exactly; the 5-channel source/dest index mapping (0=RTL-017,
+       1=RTL-019, 2=RTL-020, 3=RTL-001, 4=RTL-022) independently
+       re-derived from `dfc_rtl024.sv`'s own real concatenations and
+       cross-checked against all five consumers' own instantiations
+       individually -- no swapped or fabricated index. REG-002 Section
+       18's own "24" matches exactly; field-map union and struct widths
+       match.
+     - **RTL-022 (User Logic Island): CLEAN.** 35-port table matches
+       exactly; `u_rtl022`'s own real wiring (module index 21,
+       irq/fault/evt slots, the now-real `route_user_req_i`/`route_term_i`
+       from RTL-023) all independently re-confirmed. REG-002 Section 29's
+       own 23 real registers match the field-map exactly (`ULI_IO_
+       DIRECTION`'s own disclosed CONST-class exception, handled
+       generically by `reggen.py`, correctly not a field-map entry).
+       **One cosmetic finding, fixed in this session**:
+       `dfc_rtl022.sv`'s own inline comments on `route_user_req_i`/
+       `route_term_i` still read "forward-ref stub, RTL-023
+       unimplemented" -- stale since RTL-023 became real; the wiring
+       itself was always correct, only the comment text was outdated.
+       Corrected to describe the real, current state (still a disclosed
+       no-op per ARCH-ULI-005, now for the right reason).
+     - **RTL-023 (User-Configurable Routing Logic): CLEAN.** 19-port table
+       matches exactly; `u_rtl023`'s own real wiring (module index 22,
+       irq/fault/evt slots, `route_source_i` reusing
+       `internal_source_vector_q`) independently re-confirmed. REG-002
+       Section 30's own real 12-register table (already-disclosed stale
+       "11" in item 173) matches the field-map exactly; struct widths
+       match the already-fixed ARCH-002 gaps (item 174) exactly.
+     - **No new discrepancies found in any of the four modules.**
+
+187. **Track B -- retroactive join-verification sweep, RTL-017 through
+     RTL-019 (the "confirm actually joined end-to-end, not just declared
+     on both sides" discipline only started after item 154 was found,
+     during RTL-021's own session -- RTL-017/018/019 predate it and had
+     never been specifically re-checked against it).** For every port
+     each of these three modules connects through at `dfc_rtl024.sv`'s own
+     instantiations -- control/status register buses (both at
+     `dfc_rtl001.sv`'s own instantiation, exactly item 154's own bug
+     shape, and at each module's own `u_rtl0NN` instantiation), shared-
+     buffer client interfaces, irq/fault/evt/activity wiring, and Databus
+     message-channel ports into RTL-021 -- a real three-point grep
+     (producer's own output port connection -> the `dfc_rtl024.sv`-
+     declared wire -> consumer's own input port connection, confirming
+     all three exist and use the identical wire name) was performed for
+     every single connection, not a sample. **Result: every connection for
+     all three modules is CONFIRMED JOINED. No breaks found.** This is a
+     real, useful negative result -- it confirms item 154's own defect
+     was genuinely isolated to RTL-020 (as already established) and not a
+     systemic pattern silently affecting the three modules that predate
+     the discipline that caught it.
+
+188. **Track C -- project-wide multi-driver/synthesis-level defect sweep,
+     the complete CHECK-pass output across the whole current 24-module
+     design, every category, not just "multiple conflicting drivers"
+     (item 172's own class) or latch-inference (items 159/179's own
+     class).** A real, full `build_ecp5.ps1 -SynthOnly` run (Build ID
+     `20261022_155521`, `nextpnr-ecp5` confirmed never invoked -- the
+     script's own "-SynthOnly requested -- stopping here" line) was
+     grepped exhaustively: zero `ERROR:` lines anywhere in the complete
+     log (confirmed by direct count, not sampled); the real, authoritative
+     final whole-design `CHECK` pass (step 35.52) reports **0 problems**;
+     every `latch`-mentioning line in the entire log is either a benign
+     "No latch inferred" confirmation (473 instances) or a legitimately-
+     named register whose own SystemVariable name happens to contain the
+     word "latch" (`latched_request_q`, `latch_q`,
+     `degraded_ack_latched_q`, `rx_capture_req_latch`,
+     `fault_latched_source_pulse_q` -- each confirmed a real
+     `TRELLIS_FF`-backed register via its own "Creating register for
+     signal" log line, not an actual inferred combinational latch).
+     **The only warnings found anywhere in the log are the SAME benign,
+     already-disclosed, intermediate-pass-only artifact class established
+     by items 172/184** (a module's own event-slot-overflow bookkeeping,
+     or a handful of other simple sticky/count registers, split across
+     two `always_ff` processes in a shape Yosys's own `proc` pass folds
+     into one shared register cleanly -- confirmed, this sweep newly
+     enumerated `dfc_rtl020.sv`'s own `tx_shift_q`/`tx_count_q`/
+     `tx_head_q`/`parity_error_sticky_q`/`framing_error_sticky_q`/
+     `break_detected_sticky_q` as additional instances of this exact,
+     already-understood, harmless pattern -- appearing ONLY in the two
+     non-final hierarchical-optimization passes (steps 35.5/35.11),
+     resolving to 0 by every later pass including the real final one).
+     Real cell-count stats (CCU2C 4195, L6MUX21 899, LUT4 44016, PFUMX
+     4860, TRELLIS_FF 28323, MULT18X18D 44, PDPW16KD 1) are byte-for-byte
+     identical to RTL-023's own last build -- correctly, since this
+     session made no functional RTL change, only this audit's own
+     cosmetic comment fixes and one documentation correction (item 189).
+     **No new synthesis-level defect of any kind, in any module, found by
+     this complete sweep.**
+
+189. **Track D -- complete master shared-resource-index table rebuild, all
+     24 modules simultaneously (item 140's own table was built up and
+     checked incrementally, module session by module session -- never
+     re-verified in one single complete pass with every module's final
+     wiring coexisting).** Re-derived all four tracked vectors directly
+     from `dfc_rtl024.sv`'s own real, current text and cross-checked every
+     bit against ARCH-002's own real claimed owner (Appendix C.4/C.5/C.6,
+     and the ARCH-SAFE-007 ordering rule for `activity_i`):
+     - `fault_source_i[31:0]`: **perfect match, all 32 bits, zero drift.**
+     - `evt_valid_i[23:0]`/`evt_record_i`: **perfect match, all 24 bits,
+       zero drift.**
+     - `activity_i[7:0]`: matches ARCH-SAFE-007's own canonical order
+       exactly, consistent with item 83/140's own already-established
+       resolution; bits 0/6 remain correctly disclosed stub-zero (bit 6:
+       confirmed neither RTL-022 nor RTL-023 has an `activity_o` port
+       anywhere in its own real Appendix A catalog, independently
+       re-confirmed by each module's own prior session). **One stale
+       comment, fixed in this session**: `dfc_rtl024.sv`'s own inline note
+       on bit 6 read "RTL-022/023 unimplemented" -- both are real now; the
+       real reason the bit stays unsourced is structural (neither module
+       has the port at all), not that they don't exist yet. Corrected.
+     - `irq_source_i[31:0]`: real wiring matches ARCH-002 exactly, bit for
+       bit, and was ALREADY SAFE -- but **a real documentation inaccuracy
+       was found and corrected in item 140's own text itself** (not in the
+       RTL): bits 20/22/23 were mischaracterized as "reserved" since item
+       140 was first written, when ARCH-002's own real Appendix C.4 table
+       claims them as real, non-reserved RTL-024-owned slots ("Host
+       Interface"/"Clock/Reset Integration"/"Production Test"
+       respectively) -- simply not yet implemented in RTL-024's own
+       internal irq-generation logic, a genuine "not yet real" gap,
+       mislabeled as permanently "reserved." This was silently copied
+       forward by every later citation (items 164, 175) without
+       re-checking the primary ARCH-002 source. Item 140's own text is
+       now corrected in place; no RTL change was needed, since the real
+       wiring already safely ties these three bits to zero for the
+       correct underlying reason (no producer logic exists yet), just
+       under the wrong label.
+     - **No module collision found anywhere: no two modules ever claim
+       the same bit of any vector, and no ARCH-002-claimed real module is
+       silently left unstubbed without a disclosed reason.**
+
+190. **Final re-verification after this audit's own fixes (two cosmetic
+     comment corrections in `dfc_rtl022.sv`/`dfc_rtl024.sv`, one
+     `OPEN_ISSUES.md` documentation correction to item 140 -- no RTL logic
+     changed anywhere).** A real, full `gate.ps1` run across all 24
+     modules' own testbenches: **28 testbenches, 2181 checks total
+     (independently summed across every one of the 28 individual
+     per-testbench "N checks" summary lines, and cross-validated by a
+     direct count of every `PASS:` line in the complete log -- both
+     methods agree exactly at 2181), 0 failures, 0 errors.** Lint PASSED,
+     formal ALL PASSED (4/4), coverage 278/353 registers (78.8%). `GATE
+     PASSED`. A real, full `build_ecp5.ps1 -SynthOnly` re-run (Track C,
+     item 188) already independently confirmed 0 CHECK-pass problems and
+     `nextpnr-ecp5` never invoked, with cell counts byte-for-byte identical
+     to RTL-023's own last build -- both runs agree the whole-project
+     audit changed nothing functionally, exactly as expected for an audit
+     that found no real RTL defect.
+
+     **This closes the whole-project integration audit this session's own
+     task briefing opened**, and the loop RTL-023's own final report
+     opened by recommending it. `PROJECT_CONTINUITY.md` is updated with
+     its own dated completion note.

@@ -3617,6 +3617,38 @@ written in this project going forward, not just a historical note.
     natural point for a comprehensive, whole-project integration audit**
     — recommended as the next piece of work for a future session, not
     undertaken as part of RTL-023's own narrow scope.
+  - **UPDATE (2026-10-22), later still the same day: the recommended
+    whole-project integration audit is now COMPLETE.** Four tracks, each
+    targeting one of the three failure classes items 125/154/172 were
+    each found only by accident (a fabricated/misrouted port, a declared-
+    but-never-joined connection, a real multi-driver synthesis defect),
+    run deliberately across all 24 modules at once rather than continuing
+    to rely on later incidental collisions: **Track A** (independent
+    port/register audit, RTL-020 through RTL-023, the four modules item
+    139-142's own original sweep never covered) — clean, no new
+    discrepancies. **Track B** (retroactive join-verification sweep,
+    RTL-017 through RTL-019, the three modules that predate the
+    discipline item 154 itself established) — every connection confirmed
+    actually joined, no breaks found. **Track C** (complete CHECK-pass
+    sweep, every category, real `build_ecp5.ps1 -SynthOnly` run across the
+    whole 24-module design) — 0 problems in the real final whole-design
+    check, 0 `ERROR` lines anywhere, `nextpnr-ecp5` confirmed never
+    invoked. **Track D** (complete master shared-resource-index table
+    rebuild, all 24 modules simultaneously) — `fault_source_i`/
+    `evt_valid_i`/`evt_record_i` perfect zero-drift matches; one real
+    documentation inaccuracy found and corrected in `OPEN_ISSUES.md` item
+    140's own text itself (three `irq_source_i` bits mischaracterized as
+    "reserved" since the item was first written, when ARCH-002 claims them
+    as real RTL-024-owned slots not yet implemented — the RTL wiring was
+    already safe either way, only the label was wrong); two stale comments
+    fixed. **No real RTL defect of any kind was found by this audit** —
+    final re-verification (real `gate.ps1`: 28 testbenches, 2181 checks,
+    0 failures; real `build_ecp5.ps1 -SynthOnly`: 0 CHECK-pass problems,
+    cell counts unchanged from RTL-023's own last build) confirms the
+    audit's own fixes (two comments, one documentation correction) changed
+    nothing functionally. See `OPEN_ISSUES.md` items 185-190 for the full,
+    separately-reported findings per track. This closes the loop RTL-023's
+    own final report opened.
 - **RTL-002 through RTL-016 are now all real and implemented — the Safety
   domain (RTL-012 through RTL-016: Watchdog Manager, Fault Manager,
   Interlock Engine, Lost-Link Supervisor, Safety Output Controller) is

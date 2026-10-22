@@ -1710,8 +1710,11 @@ module dfc_rtl024 (
     // found and fixed back to item 83's resolution in OPEN_ISSUES.md item
     // 140. Bit 0 (host accepted command) has no real port anywhere to
     // source it from (item 84, unchanged) and bit 6 (user diagnostic input
-    // transition) has no real producer yet (RTL-022/023 unimplemented);
-    // both are disclosed stub zeros here, not silently invented.
+    // transition) has no real producer: RTL-022 and RTL-023 are both real
+    // now, but confirmed directly (not assumed) that neither has an
+    // activity_o port anywhere in its own real Appendix A port catalog, so
+    // this bit stays permanently unsourced regardless -- both bit 0 and
+    // bit 6 are disclosed stub zeros here, not silently invented.
     rtl015_activity_vector_comb[1] = rtl017_activity;   // ID 1: ARINC RX word
     rtl015_activity_vector_comb[2] = rtl019_activity;   // ID 2: CAN RX frame
     rtl015_activity_vector_comb[3] = rtl020_activity;   // ID 3: UART RX byte (item 140 -- NOT this module's own row's literal [4])

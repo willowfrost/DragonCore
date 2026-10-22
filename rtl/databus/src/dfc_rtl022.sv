@@ -218,8 +218,8 @@ module dfc_rtl022 (
   input  logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i,
   input  logic         observational_mode_i,
 
-  input  logic [3:0]   route_user_req_i,     // RTL-023.route_dest_o[12:9] -- forward-ref stub, RTL-023 unimplemented
-  input  logic [7:0]   route_term_i,         // RTL-023.route_dest_o[20:13] -- forward-ref stub, RTL-023 unimplemented
+  input  logic [3:0]   route_user_req_i,     // RTL-023.route_dest_o[12:9] -- real as of RTL-023's own session; still a disclosed no-op here per ARCH-ULI-005 (diagnostic only, never affects an output in Revision A)
+  input  logic [7:0]   route_term_i,         // RTL-023.route_dest_o[20:13] -- real as of RTL-023's own session; still a disclosed no-op here per ARCH-ULI-005 (diagnostic only, never affects an output in Revision A)
 
   input  logic         module_enable_i,      // RTL-002.module_enable_o[21]
   input  logic         effective_operational_enable_i,
