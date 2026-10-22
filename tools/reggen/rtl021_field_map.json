@@ -1,0 +1,267 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md Section 18 (0x1400-0x145C) per-field bit tables, cited by contract ID, and RCA-DFC-ARCH-002.md's dfc_rtl021_control_t/status_t Appendix B tables. Covers all 24 real RTL-021 registers -- REG-002's own block header (Section 18) says 24 and the block lists exactly 24 rows (confirmed by direct count); RTL-021_RevA.md's own stale '16 total ports'/'17 registers' claims are both wrong, disclosed in OPEN_ISSUES.md, not followed. Two real gaps found and fixed while building this field map: (1) RTL021_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW had no clear-forwarding control field at all in dfc_rtl021_control_t as ARCH-002 originally defined it -- the 13th real instance of the exact gap class already fixed for RTL-002 through RTL-020 (approved before this session's edit); fixed the same way, growing dfc_rtl021_control_t 135->136 bits (new clear_mask field at the new highest bit, 135). (2) ROUTE_ACTIVE_CONTROL's ENABLE/DROP_ON_FULL fields (0x145C, external readback, real REG-002-defined read behavior: 'Reads selected entry's active enable'/'active drop-on-full policy') had NO struct field anywhere in dfc_rtl021_status_t at all -- confirmed by direct field-by-field sum of the struct's own documented bit ranges (0 through 335 inclusive, exactly 336 bits, fully tiled with no gap for this). This is the same gap CLASS as (1) (ARCH-002 struct undershooting a REG-002-specified real forwarding need by a small, unambiguous number of bits) applied to the STATUS side instead of the CONTROL side; fixed identically, growing dfc_rtl021_status_t 336->338 bits (two new readback_value fields, route_active_control__enable/__drop_on_full, at the new highest bits 336/337). See OPEN_ISSUES.md for both disclosures. ROUTE_ACTIVE_SOURCE/DEST/TYPE_MASK/FILTER_VALUE/FILTER_MASK are pure-RO registers (status_registers entries only, no control_registers entry, same precedent as UART_RX_LEVEL/CAN_RX_ID/etc. in rtl019_field_map.json/rtl020_field_map.json). ROUTE_STAGE_SOURCE/DEST/TYPE_MASK/FILTER_VALUE/FILTER_MASK/CONTROL and ROUTE_ENTRY_SELECT are plain RW internal_reg staging registers forwarded to RTL-021 via control_registers only (status_registers entry not needed -- the generic regbank already stores and returns their written value directly, same precedent as CAN_BIT_TIMING/UART_BAUD_DIV/etc.). The 6 ROUTE_INGRESS_LOSS_COUNT_*/ROUTE_DESTINATION_DROP_COUNT_* registers are the first real use of the new COUNTER16-CLR access class (reggen.py v6): each register packs two INDEPENDENT 16-bit halfword saturating counters (or one real counter + one RSV0 halfword for the '_4' registers, source/dest ID 4 ULI), where REG-002's own text requires 'Independent halfword whole-counter clears' / 'Any other halfword rejects the complete word' -- a shape neither COUNTER-CLR (RTL-020's own UART_*_COUNT precedent: whole 32-bit raw-value-forward, consumer does its own edge detection) nor plain RW/W1C (whole-32-bit pulse or stored value) can produce. Each control_registers field names which single bit (0-4, source/destination ID) of the 5-bit dfc_rtl021_control_t clear vector (route_ingress_loss_count__clear[129:125] / route_destination_drop_count__clear[134:130]) this register HALF drives, via the new 'bit' key; each corresponding status_registers field names which fixed-width 16-bit slot of the 80-bit packed dfc_rtl021_status_t count vector (route_ingress_loss_count__count[255:176] / route_destination_drop_count__count[335:256], 'five packed 16-bit saturating counts ... in ascending slices' per ARCH-002's own text) this register half reads, via the same 'bit' key on the read side.",
+  "consumer_module": "RTL-021",
+  "control_struct": "dfc_rtl021_control_t",
+  "status_struct": "dfc_rtl021_status_t",
+  "control_registers": [
+    {
+      "register": "ROUTE_CONTROL",
+      "contract_id": "REG-1400",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "route_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "route_control__event_enable" },
+        { "reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "route_control__irq_enable" }
+      ]
+    },
+    {
+      "register": "ROUTE_STATUS",
+      "contract_id": "REG-1404",
+      "fields": [
+        { "reg_hi": 1, "reg_lo": 1, "class": "W1C", "struct_field": "route_status__commit_complete" },
+        { "reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "route_status__commit_rejected" },
+        { "reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "route_status__dest_overflow" },
+        { "reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "route_status__unauthorized" }
+      ]
+    },
+    {
+      "register": "ROUTE_ENTRY_SELECT",
+      "contract_id": "REG-1408",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "class": "RW", "struct_field": "route_entry_select__entry" }
+      ]
+    },
+    {
+      "register": "ROUTE_STAGE_SOURCE",
+      "contract_id": "REG-140C",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "route_stage_source__source_id" }
+      ]
+    },
+    {
+      "register": "ROUTE_STAGE_DEST",
+      "contract_id": "REG-1410",
+      "fields": [
+        { "reg_hi": 4, "reg_lo": 0, "class": "RW", "struct_field": "route_stage_dest__dest_mask" }
+      ]
+    },
+    {
+      "register": "ROUTE_STAGE_TYPE_MASK",
+      "contract_id": "REG-1414",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "route_stage_type_mask__type_mask" }
+      ]
+    },
+    {
+      "register": "ROUTE_STAGE_FILTER_VALUE",
+      "contract_id": "REG-1418",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "route_stage_filter_value__filter_value" }
+      ]
+    },
+    {
+      "register": "ROUTE_STAGE_FILTER_MASK",
+      "contract_id": "REG-141C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "route_stage_filter_mask__filter_mask" }
+      ]
+    },
+    {
+      "register": "ROUTE_STAGE_CONTROL",
+      "contract_id": "REG-1420",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "route_stage_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "route_stage_control__drop_on_full" }
+      ]
+    },
+    {
+      "register": "ROUTE_VALIDATE_COMMIT",
+      "contract_id": "REG-1424",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "route_validate_commit__validate_commit" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "WO-CMD", "struct_field": "route_validate_commit__disable_entry" }
+      ]
+    },
+    {
+      "register": "ROUTE_ENTRY_STATUS",
+      "contract_id": "REG-143C",
+      "fields": [
+        { "reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "route_entry_status__error" }
+      ]
+    },
+    {
+      "register": "RTL021_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-1440",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl021_evt_overflow_status__event_overflow" }
+      ]
+    },
+    {
+      "register": "ROUTE_INGRESS_LOSS_COUNT_0_1",
+      "contract_id": "REG-1444",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "class": "COUNTER16-CLR", "struct_field": "route_ingress_loss_count__clear", "bit": 0 },
+        { "reg_hi": 31, "reg_lo": 16, "class": "COUNTER16-CLR", "struct_field": "route_ingress_loss_count__clear", "bit": 1 }
+      ]
+    },
+    {
+      "register": "ROUTE_INGRESS_LOSS_COUNT_2_3",
+      "contract_id": "REG-1448",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "class": "COUNTER16-CLR", "struct_field": "route_ingress_loss_count__clear", "bit": 2 },
+        { "reg_hi": 31, "reg_lo": 16, "class": "COUNTER16-CLR", "struct_field": "route_ingress_loss_count__clear", "bit": 3 }
+      ]
+    },
+    {
+      "register": "ROUTE_INGRESS_LOSS_COUNT_4",
+      "contract_id": "REG-144C",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "class": "COUNTER16-CLR", "struct_field": "route_ingress_loss_count__clear", "bit": 4 }
+      ]
+    },
+    {
+      "register": "ROUTE_DESTINATION_DROP_COUNT_0_1",
+      "contract_id": "REG-1450",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "class": "COUNTER16-CLR", "struct_field": "route_destination_drop_count__clear", "bit": 0 },
+        { "reg_hi": 31, "reg_lo": 16, "class": "COUNTER16-CLR", "struct_field": "route_destination_drop_count__clear", "bit": 1 }
+      ]
+    },
+    {
+      "register": "ROUTE_DESTINATION_DROP_COUNT_2_3",
+      "contract_id": "REG-1454",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "class": "COUNTER16-CLR", "struct_field": "route_destination_drop_count__clear", "bit": 2 },
+        { "reg_hi": 31, "reg_lo": 16, "class": "COUNTER16-CLR", "struct_field": "route_destination_drop_count__clear", "bit": 3 }
+      ]
+    },
+    {
+      "register": "ROUTE_DESTINATION_DROP_COUNT_4",
+      "contract_id": "REG-1458",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "class": "COUNTER16-CLR", "struct_field": "route_destination_drop_count__clear", "bit": 4 }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "ROUTE_STATUS",
+      "contract_id": "REG-1404",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "route_status__active" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "route_status__commit_complete" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "route_status__commit_rejected" },
+        { "reg_hi": 3, "reg_lo": 3, "struct_field": "route_status__dest_overflow" },
+        { "reg_hi": 4, "reg_lo": 4, "struct_field": "route_status__unauthorized" },
+        { "reg_hi": 15, "reg_lo": 8, "struct_field": "route_status__last_error" },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "route_status__drop_count" }
+      ]
+    },
+    {
+      "register": "ROUTE_ACTIVE_SOURCE",
+      "contract_id": "REG-1428",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "struct_field": "route_active_source__source" }
+      ]
+    },
+    {
+      "register": "ROUTE_ACTIVE_DEST",
+      "contract_id": "REG-142C",
+      "fields": [
+        { "reg_hi": 4, "reg_lo": 0, "struct_field": "route_active_dest__dest_mask" }
+      ]
+    },
+    {
+      "register": "ROUTE_ACTIVE_TYPE_MASK",
+      "contract_id": "REG-1430",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "route_active_type_mask__type_mask" }
+      ]
+    },
+    {
+      "register": "ROUTE_ACTIVE_FILTER_VALUE",
+      "contract_id": "REG-1434",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "route_active_filter_value__filter_value" }
+      ]
+    },
+    {
+      "register": "ROUTE_ACTIVE_FILTER_MASK",
+      "contract_id": "REG-1438",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "route_active_filter_mask__filter_mask" }
+      ]
+    },
+    {
+      "register": "ROUTE_ENTRY_STATUS",
+      "contract_id": "REG-143C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "route_entry_status__active" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "route_entry_status__valid" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "route_entry_status__error" },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "route_entry_status__forwarded_count" }
+      ]
+    },
+    {
+      "register": "RTL021_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-1440",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow" },
+        { "reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count" }
+      ]
+    },
+    {
+      "register": "ROUTE_INGRESS_LOSS_COUNT_0_1",
+      "contract_id": "REG-1444",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "struct_field": "route_ingress_loss_count__count", "bit": 0 },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "route_ingress_loss_count__count", "bit": 1 }
+      ]
+    },
+    {
+      "register": "ROUTE_INGRESS_LOSS_COUNT_2_3",
+      "contract_id": "REG-1448",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "struct_field": "route_ingress_loss_count__count", "bit": 2 },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "route_ingress_loss_count__count", "bit": 3 }
+      ]
+    },
+    {
+      "register": "ROUTE_INGRESS_LOSS_COUNT_4",
+      "contract_id": "REG-144C",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "struct_field": "route_ingress_loss_count__count", "bit": 4 }
+      ]
+    },
+    {
+      "register": "ROUTE_DESTINATION_DROP_COUNT_0_1",
+      "contract_id": "REG-1450",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "struct_field": "route_destination_drop_count__count", "bit": 0 },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "route_destination_drop_count__count", "bit": 1 }
+      ]
+    },
+    {
+      "register": "ROUTE_DESTINATION_DROP_COUNT_2_3",
+      "contract_id": "REG-1454",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "struct_field": "route_destination_drop_count__count", "bit": 2 },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "route_destination_drop_count__count", "bit": 3 }
+      ]
+    },
+    {
+      "register": "ROUTE_DESTINATION_DROP_COUNT_4",
+      "contract_id": "REG-1458",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "struct_field": "route_destination_drop_count__count", "bit": 4 }
+      ]
+    },
+    {
+      "register": "ROUTE_ACTIVE_CONTROL",
+      "contract_id": "REG-145C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "route_active_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "route_active_control__drop_on_full" }
+      ]
+    }
+  ]
+}

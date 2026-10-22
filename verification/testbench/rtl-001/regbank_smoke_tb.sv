@@ -184,14 +184,12 @@ module regbank_smoke_tb;
   logic [dfc_types_pkg::DFC_RTL019_CONTROL_WIDTH-1:0] rtl019_control_o;
   logic [dfc_types_pkg::DFC_RTL020_STATUS_WIDTH-1:0]  rtl020_status_i;
   logic [dfc_types_pkg::DFC_RTL020_CONTROL_WIDTH-1:0] rtl020_control_o;
-  logic [31:0] route_status_status_i;
-  logic [31:0] route_active_source_status_i;
-  logic [31:0] route_active_dest_status_i;
-  logic [31:0] route_active_type_mask_status_i;
-  logic [31:0] route_active_filter_value_status_i;
-  logic [31:0] route_active_filter_mask_status_i;
-  logic [31:0] route_entry_status_status_i;
-  logic [31:0] rtl021_evt_overflow_status_status_i;
+  // Real cross-module register bus to RTL-021, same treatment as RTL-020
+  // above -- replaces the prior individual per-register route_*_status_i /
+  // rtl021_evt_overflow_status_status_i / route_destination_drop_count_*/
+  // route_ingress_loss_count_* stub ports.
+  logic [dfc_types_pkg::DFC_RTL021_STATUS_WIDTH-1:0]  rtl021_status_i;
+  logic [dfc_types_pkg::DFC_RTL021_CONTROL_WIDTH-1:0] rtl021_control_o;
   logic [31:0] uli_status_status_i;
   logic [31:0] uli_in_level_status_i;
   logic [31:0] uli_out_level_status_i;
@@ -272,14 +270,8 @@ module regbank_smoke_tb;
     .rtl019_control_o(rtl019_control_o),
     .rtl020_status_i(rtl020_status_i),
     .rtl020_control_o(rtl020_control_o),
-    .route_status_status_i(route_status_status_i),
-    .route_active_source_status_i(route_active_source_status_i),
-    .route_active_dest_status_i(route_active_dest_status_i),
-    .route_active_type_mask_status_i(route_active_type_mask_status_i),
-    .route_active_filter_value_status_i(route_active_filter_value_status_i),
-    .route_active_filter_mask_status_i(route_active_filter_mask_status_i),
-    .route_entry_status_status_i(route_entry_status_status_i),
-    .rtl021_evt_overflow_status_status_i(rtl021_evt_overflow_status_status_i),
+    .rtl021_status_i(rtl021_status_i),
+    .rtl021_control_o(rtl021_control_o),
     .rtl007_status_i(rtl007_status_i),
     .rtl007_control_o(rtl007_control_o),
     .rtl008_status_i(rtl008_status_i),
@@ -341,14 +333,7 @@ module regbank_smoke_tb;
     rtl024arxadapter_status_i = '0;
     rtl019_status_i = '0;
     rtl020_status_i = '0;
-    route_status_status_i = 32'h0;
-    route_active_source_status_i = 32'h0;
-    route_active_dest_status_i = 32'h0;
-    route_active_type_mask_status_i = 32'h0;
-    route_active_filter_value_status_i = 32'h0;
-    route_active_filter_mask_status_i = 32'h0;
-    route_entry_status_status_i = 32'h0;
-    rtl021_evt_overflow_status_status_i = 32'h0;
+    rtl021_status_i = '0;
     rtl007_status_i = '0;
     rtl008_status_i = '0;
     rtl009_status_i = '0;

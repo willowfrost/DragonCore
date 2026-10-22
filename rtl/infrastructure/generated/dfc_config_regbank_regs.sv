@@ -19,6 +19,7 @@
 // Cross-module forwarding: RTL-018 (see tools/reggen/rtl018_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-019 (see tools/reggen/rtl019_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-020 (see tools/reggen/rtl020_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-021 (see tools/reggen/rtl021_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL024-ARX-ADAPTER (see tools/reggen/rtl024arxadapter_field_map.json's own _source note for exact scope/citations)
 
 
@@ -60,6 +61,8 @@
   // Aggregated real RTL-019 control, replacing the prior disconnected placeholder for: CAN_BIT_TIMING, CAN_CONTROL, CAN_RECOVERY, CAN_RX_OVERFLOW_COUNT, CAN_RX_POP, CAN_RX_SNAPSHOT, CAN_STATUS, CAN_TX_DATA_HI_STAGE, CAN_TX_DATA_LO_STAGE, CAN_TX_ID_STAGE, CAN_TX_META_STAGE, CAN_TX_PUSH, CAN_TX_REJECTED_COUNT, RTL019_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-020 status, replacing individual ports for: RTL020_EVT_OVERFLOW_STATUS, UART_ERROR_COUNT, UART_RX_DATA, UART_RX_LEVEL, UART_RX_OVERFLOW_COUNT, UART_RX_UNDERFLOW_COUNT, UART_STATUS, UART_TX_LEVEL, UART_TX_REJECTED_COUNT, UART_TX_UNDERFLOW_COUNT
   // Aggregated real RTL-020 control, replacing the prior disconnected placeholder for: RTL020_EVT_OVERFLOW_STATUS, UART_BAUD_DIV, UART_CONTROL, UART_ERROR_COUNT, UART_RX_OVERFLOW_COUNT, UART_RX_POP, UART_RX_UNDERFLOW_COUNT, UART_STATUS, UART_TX_DATA, UART_TX_PUSH, UART_TX_REJECTED_COUNT, UART_TX_UNDERFLOW_COUNT
+  // Aggregated real RTL-021 status, replacing individual ports for: ROUTE_ACTIVE_CONTROL, ROUTE_ACTIVE_DEST, ROUTE_ACTIVE_FILTER_MASK, ROUTE_ACTIVE_FILTER_VALUE, ROUTE_ACTIVE_SOURCE, ROUTE_ACTIVE_TYPE_MASK, ROUTE_DESTINATION_DROP_COUNT_0_1, ROUTE_DESTINATION_DROP_COUNT_2_3, ROUTE_DESTINATION_DROP_COUNT_4, ROUTE_ENTRY_STATUS, ROUTE_INGRESS_LOSS_COUNT_0_1, ROUTE_INGRESS_LOSS_COUNT_2_3, ROUTE_INGRESS_LOSS_COUNT_4, ROUTE_STATUS, RTL021_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-021 control, replacing the prior disconnected placeholder for: ROUTE_CONTROL, ROUTE_DESTINATION_DROP_COUNT_0_1, ROUTE_DESTINATION_DROP_COUNT_2_3, ROUTE_DESTINATION_DROP_COUNT_4, ROUTE_ENTRY_SELECT, ROUTE_ENTRY_STATUS, ROUTE_INGRESS_LOSS_COUNT_0_1, ROUTE_INGRESS_LOSS_COUNT_2_3, ROUTE_INGRESS_LOSS_COUNT_4, ROUTE_STAGE_CONTROL, ROUTE_STAGE_DEST, ROUTE_STAGE_FILTER_MASK, ROUTE_STAGE_FILTER_VALUE, ROUTE_STAGE_SOURCE, ROUTE_STAGE_TYPE_MASK, ROUTE_STATUS, ROUTE_VALIDATE_COMMIT, RTL021_EVT_OVERFLOW_STATUS
   // Aggregated real RTL024-ARX-ADAPTER status, replacing individual ports for: 
   // Aggregated real RTL024-ARX-ADAPTER control, replacing the prior disconnected placeholder for: ARX_CONTROL
 module dfc_config_regbank_regs (
@@ -93,21 +96,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  buffer_internal_error_count_status_i,
   input  logic [31:0]  test_status_status_i,
   input  logic [31:0]  test_rejection_abort_count_status_i,
-  input  logic [31:0]  route_status_status_i,
-  input  logic [31:0]  route_active_source_status_i,
-  input  logic [31:0]  route_active_dest_status_i,
-  input  logic [31:0]  route_active_type_mask_status_i,
-  input  logic [31:0]  route_active_filter_value_status_i,
-  input  logic [31:0]  route_active_filter_mask_status_i,
-  input  logic [31:0]  route_entry_status_status_i,
-  input  logic [31:0]  rtl021_evt_overflow_status_status_i,
-  input  logic [31:0]  route_ingress_loss_count_0_1_status_i,
-  input  logic [31:0]  route_ingress_loss_count_2_3_status_i,
-  input  logic [31:0]  route_ingress_loss_count_4_status_i,
-  input  logic [31:0]  route_destination_drop_count_0_1_status_i,
-  input  logic [31:0]  route_destination_drop_count_2_3_status_i,
-  input  logic [31:0]  route_destination_drop_count_4_status_i,
-  input  logic [31:0]  route_active_control_status_i,
   input  logic [31:0]  uli_status_status_i,
   input  logic [31:0]  uli_in_level_status_i,
   input  logic [31:0]  uli_out_level_status_i,
@@ -161,6 +149,8 @@ module dfc_config_regbank_regs (
   output logic [203:0] rtl019_control_o,
   input  logic [216:0]  rtl020_status_i,
   output logic [215:0] rtl020_control_o,
+  input  logic [337:0]  rtl021_status_i,
+  output logic [135:0] rtl021_control_o,
   input  logic [0:0]  rtl024arxadapter_status_i,
   output logic [4:0] rtl024arxadapter_control_o
 );
@@ -1103,8 +1093,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) route_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_CONTROL)) route_control_q <= wdata_i;
 
-  // ROUTE_STATUS (0x1404) -- external passthrough, owner RTL-021
-  wire [31:0] route_status_q = route_status_status_i;
+  // ROUTE_STATUS (0x1404) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-021, real
+  //   generation per contract REG-1404, not a permanent tie.
+  logic [31:0] route_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_status_pulse_q <= 32'h0;
+    else route_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_STATUS)) ? wdata_i : 32'h0;
+
+  // ROUTE_STATUS (0x1404) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1404), not an individual per-register port.
+  wire [31:0] route_status_q = {rtl021_status_i[31:16], rtl021_status_i[15:8], 3'h0, rtl021_status_i[7:7], rtl021_status_i[6:6], rtl021_status_i[5:5], rtl021_status_i[4:4], rtl021_status_i[3:3]};
 
   // ROUTE_ENTRY_SELECT (0x1408) -- Mixed: RW, RSV0, owner RTL-001 / RTL-021
   logic [31:0] route_entry_select_q;
@@ -1148,50 +1146,132 @@ module dfc_config_regbank_regs (
     if (!rst_ni) route_stage_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_STAGE_CONTROL)) route_stage_control_q <= wdata_i;
 
-  // ROUTE_VALIDATE_COMMIT (0x1424) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_VALIDATE_COMMIT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // ROUTE_VALIDATE_COMMIT (0x1424) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-021, real
+  //   generation per contract REG-1424, not a permanent tie.
+  logic [31:0] route_validate_commit_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_validate_commit_pulse_q <= 32'h0;
+    else route_validate_commit_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_VALIDATE_COMMIT)) ? wdata_i : 32'h0;
+
+  // ROUTE_VALIDATE_COMMIT (0x1424) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-021 via route_validate_commit_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] route_validate_commit_q = 32'h00000000;
 
-  // ROUTE_ACTIVE_SOURCE (0x1428) -- external passthrough, owner RTL-021
-  wire [31:0] route_active_source_q = route_active_source_status_i;
+  // ROUTE_ACTIVE_SOURCE (0x1428) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1428), not an individual per-register port.
+  wire [31:0] route_active_source_q = {24'h0, rtl021_status_i[39:32]};
 
-  // ROUTE_ACTIVE_DEST (0x142C) -- external passthrough, owner RTL-021
-  wire [31:0] route_active_dest_q = route_active_dest_status_i;
+  // ROUTE_ACTIVE_DEST (0x142C) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-142C), not an individual per-register port.
+  wire [31:0] route_active_dest_q = {27'h0, rtl021_status_i[44:40]};
 
-  // ROUTE_ACTIVE_TYPE_MASK (0x1430) -- external passthrough, owner RTL-021
-  wire [31:0] route_active_type_mask_q = route_active_type_mask_status_i;
+  // ROUTE_ACTIVE_TYPE_MASK (0x1430) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1430), not an individual per-register port.
+  wire [31:0] route_active_type_mask_q = {rtl021_status_i[76:45]};
 
-  // ROUTE_ACTIVE_FILTER_VALUE (0x1434) -- external passthrough, owner RTL-021
-  wire [31:0] route_active_filter_value_q = route_active_filter_value_status_i;
+  // ROUTE_ACTIVE_FILTER_VALUE (0x1434) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1434), not an individual per-register port.
+  wire [31:0] route_active_filter_value_q = {rtl021_status_i[108:77]};
 
-  // ROUTE_ACTIVE_FILTER_MASK (0x1438) -- external passthrough, owner RTL-021
-  wire [31:0] route_active_filter_mask_q = route_active_filter_mask_status_i;
+  // ROUTE_ACTIVE_FILTER_MASK (0x1438) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1438), not an individual per-register port.
+  wire [31:0] route_active_filter_mask_q = {rtl021_status_i[140:109]};
 
-  // ROUTE_ENTRY_STATUS (0x143C) -- external passthrough, owner RTL-021
-  wire [31:0] route_entry_status_q = route_entry_status_status_i;
+  // ROUTE_ENTRY_STATUS (0x143C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-021, real
+  //   generation per contract REG-143C, not a permanent tie.
+  logic [31:0] route_entry_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_entry_status_pulse_q <= 32'h0;
+    else route_entry_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_ENTRY_STATUS)) ? wdata_i : 32'h0;
 
-  // RTL021_EVT_OVERFLOW_STATUS (0x1440) -- external passthrough, owner RTL-021
-  wire [31:0] rtl021_evt_overflow_status_q = rtl021_evt_overflow_status_status_i;
+  // ROUTE_ENTRY_STATUS (0x143C) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-143C), not an individual per-register port.
+  wire [31:0] route_entry_status_q = {rtl021_status_i[159:144], 13'h0, rtl021_status_i[143:143], rtl021_status_i[142:142], rtl021_status_i[141:141]};
 
-  // ROUTE_INGRESS_LOSS_COUNT_0_1 (0x1444) -- external passthrough, owner RTL-021
-  wire [31:0] route_ingress_loss_count_0_1_q = route_ingress_loss_count_0_1_status_i;
+  // RTL021_EVT_OVERFLOW_STATUS (0x1440) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-021, real
+  //   generation per contract REG-1440, not a permanent tie.
+  logic [31:0] rtl021_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl021_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl021_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL021_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // ROUTE_INGRESS_LOSS_COUNT_2_3 (0x1448) -- external passthrough, owner RTL-021
-  wire [31:0] route_ingress_loss_count_2_3_q = route_ingress_loss_count_2_3_status_i;
+  // RTL021_EVT_OVERFLOW_STATUS (0x1440) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1440), not an individual per-register port.
+  wire [31:0] rtl021_evt_overflow_status_q = {8'h0, rtl021_status_i[175:160], 7'h0, rtl021_status_i[2:2]};
 
-  // ROUTE_INGRESS_LOSS_COUNT_4 (0x144C) -- external passthrough, owner RTL-021
-  wire [31:0] route_ingress_loss_count_4_q = route_ingress_loss_count_4_status_i;
+  // ROUTE_INGRESS_LOSS_COUNT_0_1 (0x1444) -- COUNTER16-CLR, real per-
+  //   halfword one-cycle clear-pulse capture for RTL-021, generation per contract REG-1444.
+  logic route_ingress_loss_count_0_1_lo_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_ingress_loss_count_0_1_lo_clr_q <= 1'b0;
+    else route_ingress_loss_count_0_1_lo_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_0_1)) && (wdata_i[15:0] == 16'hFFFF);
+  logic route_ingress_loss_count_0_1_hi_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_ingress_loss_count_0_1_hi_clr_q <= 1'b0;
+    else route_ingress_loss_count_0_1_hi_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_0_1)) && (wdata_i[31:16] == 16'hFFFF);
 
-  // ROUTE_DESTINATION_DROP_COUNT_0_1 (0x1450) -- external passthrough, owner RTL-021
-  wire [31:0] route_destination_drop_count_0_1_q = route_destination_drop_count_0_1_status_i;
+  // ROUTE_INGRESS_LOSS_COUNT_0_1 (0x1444) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1444), not an individual per-register port.
+  wire [31:0] route_ingress_loss_count_0_1_q = {rtl021_status_i[207:192], rtl021_status_i[191:176]};
 
-  // ROUTE_DESTINATION_DROP_COUNT_2_3 (0x1454) -- external passthrough, owner RTL-021
-  wire [31:0] route_destination_drop_count_2_3_q = route_destination_drop_count_2_3_status_i;
+  // ROUTE_INGRESS_LOSS_COUNT_2_3 (0x1448) -- COUNTER16-CLR, real per-
+  //   halfword one-cycle clear-pulse capture for RTL-021, generation per contract REG-1448.
+  logic route_ingress_loss_count_2_3_lo_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_ingress_loss_count_2_3_lo_clr_q <= 1'b0;
+    else route_ingress_loss_count_2_3_lo_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_2_3)) && (wdata_i[15:0] == 16'hFFFF);
+  logic route_ingress_loss_count_2_3_hi_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_ingress_loss_count_2_3_hi_clr_q <= 1'b0;
+    else route_ingress_loss_count_2_3_hi_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_2_3)) && (wdata_i[31:16] == 16'hFFFF);
 
-  // ROUTE_DESTINATION_DROP_COUNT_4 (0x1458) -- external passthrough, owner RTL-021
-  wire [31:0] route_destination_drop_count_4_q = route_destination_drop_count_4_status_i;
+  // ROUTE_INGRESS_LOSS_COUNT_2_3 (0x1448) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1448), not an individual per-register port.
+  wire [31:0] route_ingress_loss_count_2_3_q = {rtl021_status_i[239:224], rtl021_status_i[223:208]};
 
-  // ROUTE_ACTIVE_CONTROL (0x145C) -- external passthrough, owner RTL-001 / RTL-021
-  wire [31:0] route_active_control_q = route_active_control_status_i;
+  // ROUTE_INGRESS_LOSS_COUNT_4 (0x144C) -- COUNTER16-CLR, real per-
+  //   halfword one-cycle clear-pulse capture for RTL-021, generation per contract REG-144C.
+  logic route_ingress_loss_count_4_lo_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_ingress_loss_count_4_lo_clr_q <= 1'b0;
+    else route_ingress_loss_count_4_lo_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_4)) && (wdata_i[15:0] == 16'hFFFF);
+
+  // ROUTE_INGRESS_LOSS_COUNT_4 (0x144C) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-144C), not an individual per-register port.
+  wire [31:0] route_ingress_loss_count_4_q = {16'h0, rtl021_status_i[255:240]};
+
+  // ROUTE_DESTINATION_DROP_COUNT_0_1 (0x1450) -- COUNTER16-CLR, real per-
+  //   halfword one-cycle clear-pulse capture for RTL-021, generation per contract REG-1450.
+  logic route_destination_drop_count_0_1_lo_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_destination_drop_count_0_1_lo_clr_q <= 1'b0;
+    else route_destination_drop_count_0_1_lo_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_0_1)) && (wdata_i[15:0] == 16'hFFFF);
+  logic route_destination_drop_count_0_1_hi_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_destination_drop_count_0_1_hi_clr_q <= 1'b0;
+    else route_destination_drop_count_0_1_hi_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_0_1)) && (wdata_i[31:16] == 16'hFFFF);
+
+  // ROUTE_DESTINATION_DROP_COUNT_0_1 (0x1450) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1450), not an individual per-register port.
+  wire [31:0] route_destination_drop_count_0_1_q = {rtl021_status_i[287:272], rtl021_status_i[271:256]};
+
+  // ROUTE_DESTINATION_DROP_COUNT_2_3 (0x1454) -- COUNTER16-CLR, real per-
+  //   halfword one-cycle clear-pulse capture for RTL-021, generation per contract REG-1454.
+  logic route_destination_drop_count_2_3_lo_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_destination_drop_count_2_3_lo_clr_q <= 1'b0;
+    else route_destination_drop_count_2_3_lo_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_2_3)) && (wdata_i[15:0] == 16'hFFFF);
+  logic route_destination_drop_count_2_3_hi_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_destination_drop_count_2_3_hi_clr_q <= 1'b0;
+    else route_destination_drop_count_2_3_hi_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_2_3)) && (wdata_i[31:16] == 16'hFFFF);
+
+  // ROUTE_DESTINATION_DROP_COUNT_2_3 (0x1454) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1454), not an individual per-register port.
+  wire [31:0] route_destination_drop_count_2_3_q = {rtl021_status_i[319:304], rtl021_status_i[303:288]};
+
+  // ROUTE_DESTINATION_DROP_COUNT_4 (0x1458) -- COUNTER16-CLR, real per-
+  //   halfword one-cycle clear-pulse capture for RTL-021, generation per contract REG-1458.
+  logic route_destination_drop_count_4_lo_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) route_destination_drop_count_4_lo_clr_q <= 1'b0;
+    else route_destination_drop_count_4_lo_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_4)) && (wdata_i[15:0] == 16'hFFFF);
+
+  // ROUTE_DESTINATION_DROP_COUNT_4 (0x1458) -- external passthrough, owner RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-1458), not an individual per-register port.
+  wire [31:0] route_destination_drop_count_4_q = {16'h0, rtl021_status_i[335:320]};
+
+  // ROUTE_ACTIVE_CONTROL (0x145C) -- external passthrough, owner RTL-001 / RTL-021. Reconstructed from the aggregated rtl021_status_i input (contract REG-145C), not an individual per-register port.
+  wire [31:0] route_active_control_q = {30'h0, rtl021_status_i[337:337], rtl021_status_i[336:336]};
 
   // ROTOR_CONTROL (0x2000) -- Mixed: RW, RSV0, owner RTL-007
   logic [31:0] rotor_control_q;
@@ -3308,6 +3388,43 @@ module dfc_config_regbank_regs (
   assign rtl020_control_o[0] = uart_control_q[0:0];  // UART_CONTROL.uart_control__enable
 
   // ==========================================================================
+  // Aggregated rtl021_control_o -- real forwarding to RTL-021, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl021_control_t defines --
+  // cross-checked at generation time (136/136 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl021_control_o[135] = rtl021_evt_overflow_status_pulse_q[0:0];  // RTL021_EVT_OVERFLOW_STATUS.rtl021_evt_overflow_status__event_overflow
+  assign rtl021_control_o[134] = route_destination_drop_count_4_lo_clr_q;  // ROUTE_DESTINATION_DROP_COUNT_4.route_destination_drop_count__clear
+  assign rtl021_control_o[133] = route_destination_drop_count_2_3_hi_clr_q;  // ROUTE_DESTINATION_DROP_COUNT_2_3.route_destination_drop_count__clear
+  assign rtl021_control_o[132] = route_destination_drop_count_2_3_lo_clr_q;  // ROUTE_DESTINATION_DROP_COUNT_2_3.route_destination_drop_count__clear
+  assign rtl021_control_o[131] = route_destination_drop_count_0_1_hi_clr_q;  // ROUTE_DESTINATION_DROP_COUNT_0_1.route_destination_drop_count__clear
+  assign rtl021_control_o[130] = route_destination_drop_count_0_1_lo_clr_q;  // ROUTE_DESTINATION_DROP_COUNT_0_1.route_destination_drop_count__clear
+  assign rtl021_control_o[129] = route_ingress_loss_count_4_lo_clr_q;  // ROUTE_INGRESS_LOSS_COUNT_4.route_ingress_loss_count__clear
+  assign rtl021_control_o[128] = route_ingress_loss_count_2_3_hi_clr_q;  // ROUTE_INGRESS_LOSS_COUNT_2_3.route_ingress_loss_count__clear
+  assign rtl021_control_o[127] = route_ingress_loss_count_2_3_lo_clr_q;  // ROUTE_INGRESS_LOSS_COUNT_2_3.route_ingress_loss_count__clear
+  assign rtl021_control_o[126] = route_ingress_loss_count_0_1_hi_clr_q;  // ROUTE_INGRESS_LOSS_COUNT_0_1.route_ingress_loss_count__clear
+  assign rtl021_control_o[125] = route_ingress_loss_count_0_1_lo_clr_q;  // ROUTE_INGRESS_LOSS_COUNT_0_1.route_ingress_loss_count__clear
+  assign rtl021_control_o[124] = route_entry_status_pulse_q[2:2];  // ROUTE_ENTRY_STATUS.route_entry_status__error
+  assign rtl021_control_o[123] = route_validate_commit_pulse_q[1:1];  // ROUTE_VALIDATE_COMMIT.route_validate_commit__disable_entry
+  assign rtl021_control_o[122] = route_validate_commit_pulse_q[0:0];  // ROUTE_VALIDATE_COMMIT.route_validate_commit__validate_commit
+  assign rtl021_control_o[121] = route_stage_control_q[1:1];  // ROUTE_STAGE_CONTROL.route_stage_control__drop_on_full
+  assign rtl021_control_o[120] = route_stage_control_q[0:0];  // ROUTE_STAGE_CONTROL.route_stage_control__enable
+  assign rtl021_control_o[119:88] = route_stage_filter_mask_q[31:0];  // ROUTE_STAGE_FILTER_MASK.route_stage_filter_mask__filter_mask
+  assign rtl021_control_o[87:56] = route_stage_filter_value_q[31:0];  // ROUTE_STAGE_FILTER_VALUE.route_stage_filter_value__filter_value
+  assign rtl021_control_o[55:24] = route_stage_type_mask_q[31:0];  // ROUTE_STAGE_TYPE_MASK.route_stage_type_mask__type_mask
+  assign rtl021_control_o[23:19] = route_stage_dest_q[4:0];  // ROUTE_STAGE_DEST.route_stage_dest__dest_mask
+  assign rtl021_control_o[18:11] = route_stage_source_q[7:0];  // ROUTE_STAGE_SOURCE.route_stage_source__source_id
+  assign rtl021_control_o[10:7] = route_entry_select_q[3:0];  // ROUTE_ENTRY_SELECT.route_entry_select__entry
+  assign rtl021_control_o[6] = route_status_pulse_q[4:4];  // ROUTE_STATUS.route_status__unauthorized
+  assign rtl021_control_o[5] = route_status_pulse_q[3:3];  // ROUTE_STATUS.route_status__dest_overflow
+  assign rtl021_control_o[4] = route_status_pulse_q[2:2];  // ROUTE_STATUS.route_status__commit_rejected
+  assign rtl021_control_o[3] = route_status_pulse_q[1:1];  // ROUTE_STATUS.route_status__commit_complete
+  assign rtl021_control_o[2] = route_control_q[2:2];  // ROUTE_CONTROL.route_control__irq_enable
+  assign rtl021_control_o[1] = route_control_q[1:1];  // ROUTE_CONTROL.route_control__event_enable
+  assign rtl021_control_o[0] = route_control_q[0:0];  // ROUTE_CONTROL.route_control__enable
+
+  // ==========================================================================
   // Aggregated rtl024arxadapter_control_o -- real forwarding to RTL024-ARX-ADAPTER, replacing the disconnected placeholder.
   // Every assignment below is sourced from a real stored register or a real
   // one-cycle pulse-capture register above, at the exact bit position the
@@ -3493,7 +3610,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_UART_TX_REJECTED_COUNT: begin rdata_o = uart_tx_rejected_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UART_TX_UNDERFLOW_COUNT: begin rdata_o = uart_tx_underflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_CONTROL: begin rdata_o = route_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_ROUTE_STATUS: begin rdata_o = route_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROUTE_STATUS: begin rdata_o = route_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_ENTRY_SELECT: begin rdata_o = route_entry_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_STAGE_SOURCE: begin rdata_o = route_stage_source_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_STAGE_DEST: begin rdata_o = route_stage_dest_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
@@ -3507,14 +3624,14 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ROUTE_ACTIVE_TYPE_MASK: begin rdata_o = route_active_type_mask_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_ACTIVE_FILTER_VALUE: begin rdata_o = route_active_filter_value_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_ACTIVE_FILTER_MASK: begin rdata_o = route_active_filter_mask_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ROUTE_ENTRY_STATUS: begin rdata_o = route_entry_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL021_EVT_OVERFLOW_STATUS: begin rdata_o = rtl021_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_0_1: begin rdata_o = route_ingress_loss_count_0_1_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_2_3: begin rdata_o = route_ingress_loss_count_2_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_4: begin rdata_o = route_ingress_loss_count_4_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_0_1: begin rdata_o = route_destination_drop_count_0_1_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_2_3: begin rdata_o = route_destination_drop_count_2_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_4: begin rdata_o = route_destination_drop_count_4_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROUTE_ENTRY_STATUS: begin rdata_o = route_entry_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL021_EVT_OVERFLOW_STATUS: begin rdata_o = rtl021_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_0_1: begin rdata_o = route_ingress_loss_count_0_1_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_2_3: begin rdata_o = route_ingress_loss_count_2_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROUTE_INGRESS_LOSS_COUNT_4: begin rdata_o = route_ingress_loss_count_4_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_0_1: begin rdata_o = route_destination_drop_count_0_1_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_2_3: begin rdata_o = route_destination_drop_count_2_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ROUTE_DESTINATION_DROP_COUNT_4: begin rdata_o = route_destination_drop_count_4_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_ACTIVE_CONTROL: begin rdata_o = route_active_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_CONTROL: begin rdata_o = rotor_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROTOR_STATUS: begin rdata_o = rotor_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

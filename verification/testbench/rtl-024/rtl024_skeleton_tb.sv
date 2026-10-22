@@ -1355,6 +1355,26 @@ module rtl024_skeleton_tb;
     check("ARX_CONTROL SPI write (ENABLE+HIGH_SPEED) accepted", |wr_status, 1'b0);
     repeat (4) @(posedge core_clk_i);  // let control_i settle through RTL-001
 
+    // REAL, CONFIRMED CONSEQUENCE OF WIRING RTL-021 FOR REAL THIS SESSION:
+    // RTL-017's own msg_ready_i is no longer tied to an unconditional
+    // 1'b1 stub (RTL-021 did not exist before) -- it is now RTL-021's own
+    // real source_ready_o[0], which requires ROUTE_CONTROL.ENABLE=1
+    // before accepting anything at all. Without this real enable write,
+    // RTL-017's queue would never drain again, which is exactly what a
+    // first (unmodified) re-run of this test after wiring RTL-021 in
+    // showed -- a real, disclosed test-assumption update, not an RTL-021
+    // defect (dfc_rtl021.sv's own finding 10: ROUTE_CONTROL.ENABLE
+    // correctly gates ingress admission; this test simply never turned it
+    // on before). REG-1400 ROUTE_CONTROL is Protection: Yes per REG-002,
+    // same re-arm sequence as every other protected register above.
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY1, wr_status);
+    check("PROTECT_KEY1 SPI write (re-arm for ROUTE_CONTROL) accepted", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_PROTECT_KEY, dfc_constants_pkg::DFC_PROTECT_KEY2, wr_status);
+    check("PROTECT_KEY2 SPI write (re-arm for ROUTE_CONTROL) accepted (now ARMED)", |wr_status, 1'b0);
+    spi_write32(DFC_ADDR_ROUTE_CONTROL, 32'h00000001, wr_status);  // ENABLE=1
+    check("ROUTE_CONTROL SPI write (RTL-021 routing ENABLE) accepted", |wr_status, 1'b0);
+    repeat (4) @(posedge core_clk_i);  // let control_i settle through RTL-001
+
     check("RTL-017 real queue starts empty before the real word is driven",
           (dut.u_rtl017.count_q == 4'd0), 1'b1);
 
@@ -1374,7 +1394,18 @@ module rtl024_skeleton_tb;
       end
     join
 
-    repeat (20) @(posedge core_clk_i);
+    // 20 cycles was enough for the OLD disclosed stub (msg_ready_i tied
+    // 1'b1, unconditional same-cycle drain); RTL-021 is now real, and even
+    // though this record resolves to "no match" (no committed route
+    // entry) and is released immediately rather than replicated, RTL-017
+    // still needs its OWN real shared-buffer round trip (reading its own
+    // queue's head entry back out before it can even present msg_valid_o)
+    // -- found via simulation to need well over 20 cycles, not assumed.
+    begin
+      int drain_wait;
+      for (drain_wait = 0; drain_wait < 300 && dut.u_rtl017.count_q != 4'd0; drain_wait = drain_wait + 1)
+        @(posedge core_clk_i);
+    end
     check("RTL-017's real queue is empty again after the real route-drain completes",
           (dut.u_rtl017.count_q == 4'd0), 1'b1);
 

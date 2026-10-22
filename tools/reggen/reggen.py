@@ -267,6 +267,40 @@ def emit_regbank(module, regs, fieldmaps, types_path, out_module_name):
             lines.append(f"    else {nm}_pulse_q <= ({wr_en}) ? wdata_i : 32'h0;")
             lines.append("")
 
+        # ---- COUNTER16-CLR one-cycle HALFWORD clear-pulse capture (v6,
+        # first needed by RTL-021's own ROUTE_INGRESS_LOSS_COUNT_*/
+        # ROUTE_DESTINATION_DROP_COUNT_* registers -- REG-002's own text:
+        # "Independent halfword whole-counter clears"). Unlike plain
+        # COUNTER-CLR (RTL-020's own UART_*_COUNT registers), where the
+        # generic external-readback path forwards the RAW written 32-bit
+        # value and the CONSUMING module does its own edge-detection
+        # against 0xFFFFFFFF, ARCH-002's own dfc_rtl021_control_t struct
+        # declares `route_ingress_loss_count__clear`/
+        # `route_destination_drop_count__clear` as a pre-processed 5-bit
+        # (one bit per source/destination) PULSE field, not a 32/96-bit
+        # raw forward -- there is no room in the struct for the raw value,
+        # so the per-halfword 0xFFFF-write detection must happen HERE, in
+        # the generator, not in the consumer. Each COUNTER16-CLR field in
+        # the field-map names which SINGLE bit of its target struct field
+        # it drives (the "bit" key) -- reggen.py has no other way to know
+        # that two DIFFERENT registers' own halfword writes must land on
+        # two DIFFERENT bits of the SAME struct field. ----
+        counter16_fields = [f for f in (ctrl_entry["fields"] if ctrl_entry else [])
+                             if f["class"] == "COUNTER16-CLR"]
+        if counter16_fields:
+            lines.append(f"  // {r['name']} (0x{r['addr']:04X}) -- COUNTER16-CLR, real per-")
+            lines.append(f"  //   halfword one-cycle clear-pulse capture for "
+                         f"{ctrl_ctx['consumer_module']}, generation per contract "
+                         f"{ctrl_entry['contract_id']}.")
+            for f in counter16_fields:
+                half = "lo" if f["reg_lo"] == 0 else "hi"
+                half_slice = "15:0" if half == "lo" else "31:16"
+                lines.append(f"  logic {nm}_{half}_clr_q;")
+                lines.append(f"  always_ff @(posedge clk_i or negedge rst_ni)")
+                lines.append(f"    if (!rst_ni) {nm}_{half}_clr_q <= 1'b0;")
+                lines.append(f"    else {nm}_{half}_clr_q <= ({wr_en}) && (wdata_i[{half_slice}] == 16'hFFFF);")
+            lines.append("")
+
         if rb == "internal_reg" and r["name"] in indexed_specs:
             # v5: selector-indexed staged storage (REG-COH-001/REG-GEN-015 --
             # first needed by RTL-014's eight-entry interlock staging bank).
@@ -339,7 +373,34 @@ def emit_regbank(module, regs, fieldmaps, types_path, out_module_name):
                              f"owner {r['owner']}. Reconstructed from the aggregated "
                              f"{consumer}_status_i input (contract {status_entry['contract_id']}), "
                              f"not an individual per-register port.")
+                def _counter16_status_slice(f, status_fields=status_fields):
+                    # COUNTER16-CLR readback: this register HALF reads one
+                    # 16-bit sub-slot out of a wider struct field packing
+                    # several independent saturating counts (ARCH-002's own
+                    # "N packed 16-bit ... in ascending slices" text, e.g.
+                    # the RTL-021 ROUTE_INGRESS_LOSS_COUNT_*/
+                    # ROUTE_DESTINATION_DROP_COUNT_* registers' 80-bit
+                    # route_ingress_loss_count__count/
+                    # route_destination_drop_count__count fields) -- the
+                    # normal "this register's bit range equals the whole
+                    # struct field's bit range" assumption below does not
+                    # hold here by construction, same reasoning as the
+                    # COUNTER16-CLR control-side bypass above. The field-
+                    # map's own "bit" key (0-based from the field's own
+                    # LSB) says which fixed-width slot this register half
+                    # reads.
+                    reg_hi, reg_lo = f["reg_hi"], f["reg_lo"]
+                    st_hi, st_lo = status_fields[f["struct_field"]]
+                    width = reg_hi - reg_lo + 1
+                    slot_lo = st_lo + f["bit"] * width
+                    slot_hi = slot_lo + width - 1
+                    assert slot_hi <= st_hi, (
+                        f"{r['name']}.{f['struct_field']}: bit {f['bit']} slot "
+                        f"[{slot_hi}:{slot_lo}] exceeds struct field [{st_hi}:{st_lo}]")
+                    return f"{consumer}_status_i[{slot_hi}:{slot_lo}]"
                 for f in status_entry["fields"]:
+                    if "bit" in f:
+                        continue  # width-equality assert inapplicable, see _counter16_status_slice
                     reg_hi, reg_lo = f["reg_hi"], f["reg_lo"]
                     st_hi, st_lo = status_fields[f["struct_field"]]
                     assert (reg_hi - reg_lo) == (st_hi - st_lo), (
@@ -347,7 +408,8 @@ def emit_regbank(module, regs, fieldmaps, types_path, out_module_name):
                         f"reg[{reg_hi}:{reg_lo}] vs struct[{st_hi}:{st_lo}]")
                 concat_expr = build_32bit_concat(
                     status_entry["fields"], "reg_hi", "reg_lo",
-                    lambda f: f"{consumer}_status_i[{status_fields[f['struct_field']][0]}:"
+                    lambda f: _counter16_status_slice(f) if "bit" in f else
+                              f"{consumer}_status_i[{status_fields[f['struct_field']][0]}:"
                               f"{status_fields[f['struct_field']][1]}]")
                 lines.append(f"  wire [31:0] {nm}_q = {concat_expr};")
                 lines.append("")
@@ -374,6 +436,32 @@ def emit_regbank(module, regs, fieldmaps, types_path, out_module_name):
             for f in ctrl_entry["fields"]:
                 reg_hi, reg_lo = f["reg_hi"], f["reg_lo"]
                 st_hi, st_lo = control_fields[f["struct_field"]]
+                if f["class"] == "COUNTER16-CLR":
+                    # One register HALF (16 bits) drives exactly ONE bit of a
+                    # wider struct clear-field (e.g. a 5-bit per-source/per-
+                    # dest clear vector) -- the normal "this register's bit
+                    # range equals the struct field's bit range" assumption
+                    # does not hold here by construction (16 bits -> 1 bit),
+                    # so the width-equality assert is genuinely inapplicable,
+                    # not bypassed to paper over a real mismatch. The
+                    # field-map's own "bit" key says which single bit of the
+                    # struct field (0-based from its own LSB, st_lo) this
+                    # register-half targets; two different registers'
+                    # halves must never target the same bit (duplicate-
+                    # target is exactly the kind of mistake this mechanism
+                    # exists to prevent), checked below.
+                    assert "bit" in f, (
+                        f"{r['name']}.{f['struct_field']}: COUNTER16-CLR field-map entry "
+                        f"requires a 'bit' key (which single struct bit this halfword drives)")
+                    target_bit = st_lo + f["bit"]
+                    assert st_lo <= target_bit <= st_hi, (
+                        f"{r['name']}.{f['struct_field']}: bit {f['bit']} is out of range for "
+                        f"struct field [{st_hi}:{st_lo}]")
+                    half = "lo" if reg_lo == 0 else "hi"
+                    driver = f"{nm}_{half}_clr_q"
+                    ctrl_ctx["control_o_drivers"].append(
+                        (target_bit, target_bit, driver, r["name"], f["struct_field"]))
+                    continue
                 assert (reg_hi - reg_lo) == (st_hi - st_lo), (
                     f"width mismatch {r['name']}.{f['struct_field']}: "
                     f"reg[{reg_hi}:{reg_lo}] vs struct[{st_hi}:{st_lo}]")

@@ -8134,8 +8134,8 @@
     },
     {
       "name": "dfc_rtl021_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl021_control_t (135 bits, rich format)",
-      "width": 135,
+      "trace": "ARCH-002 Appendix B dfc_rtl021_control_t (136 bits, rich format)",
+      "width": 136,
       "fields": [
         {
           "name": "route_control__enable",
@@ -8316,13 +8316,22 @@
           "signed": false,
           "reset": "0",
           "semantic": "one whole-counter-clear pulse per destination"
+        },
+        {
+          "name": "rtl021_evt_overflow_status__event_overflow",
+          "hi": 135,
+          "lo": 135,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },
     {
       "name": "dfc_rtl021_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl021_status_t (336 bits, rich format)",
-      "width": 336,
+      "trace": "ARCH-002 Appendix B dfc_rtl021_status_t (338 bits, rich format)",
+      "width": 338,
       "fields": [
         {
           "name": "ready",
@@ -8521,6 +8530,24 @@
           "signed": false,
           "reset": "0",
           "semantic": "five packed 16-bit saturating counts, destination IDs 0 through 4 in ascending slices"
+        },
+        {
+          "name": "route_active_control__enable",
+          "hi": 336,
+          "lo": 336,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "route_active_control__drop_on_full",
+          "hi": 337,
+          "lo": 337,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
         }
       ]
     },

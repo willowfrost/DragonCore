@@ -261,6 +261,13 @@ module dfc_rtl001 (
   output logic [dfc_types_pkg::DFC_RTL020_CONTROL_WIDTH-1:0] rtl020_control_o,
   input  logic [dfc_types_pkg::DFC_RTL020_STATUS_WIDTH-1:0]  rtl020_status_i,
 
+  // REAL cross-module register bus for RTL-021 (tools/reggen/
+  // rtl021_field_map.json, 18 control regs/15 status regs) -- replaces
+  // the individual per-register status_i stub ties below for every
+  // register that field-map covers.
+  output logic [dfc_types_pkg::DFC_RTL021_CONTROL_WIDTH-1:0] rtl021_control_o,
+  input  logic [dfc_types_pkg::DFC_RTL021_STATUS_WIDTH-1:0]  rtl021_status_i,
+
   // REAL cross-module register bus for RTL-024's own ARINC RX digital
   // receive adapter (ARCH-BUS-001) -- an internal RTL-024 subblock, not a
   // separate RTL-0NN module (same "internal subblock" status as the
@@ -347,7 +354,25 @@ module dfc_rtl001 (
   // there is no real consumer for any of the three yet.
   input  logic [63:0]  timestamp_i,
   input  logic [dfc_types_pkg::DFC_OPERATING_STATE_WIDTH-1:0] operating_state_i,
-  input  logic         observational_mode_i
+  input  logic         observational_mode_i,
+
+  // REAL ports per ARCH-002 Appendix A (RTL-001's own real row, Host
+  // ingress/egress -- ARCH-MSG-004, module ID 0x03, RTL-021.source_
+  // valid_i[3]/dest_valid_o[3]). Found missing entirely during RTL-021's
+  // own session (confirmed absent via direct grep of this file before
+  // this edit) -- a REAL, CONFIRMED GAP, not a forward reference that
+  // will resolve soon: REG-002 defines NO register-level mechanism
+  // anywhere for the host to stage an outgoing routed message or read
+  // back a delivered one for this channel, so there is no real content to
+  // wire these ports to yet, and none is invented here. Same unused-
+  // port-sink treatment as timestamp_i/operating_state_i/
+  // observational_mode_i above (RTLSTD-MOD-009).
+  output logic         route_tx_msg_valid_o,
+  input  logic         route_tx_msg_ready_i,
+  output logic [dfc_types_pkg::DFC_MESSAGE_RECORD_WIDTH-1:0] route_tx_msg_record_o,
+  input  logic         route_rx_msg_valid_i,
+  output logic         route_rx_msg_ready_o,
+  input  logic [dfc_types_pkg::DFC_MESSAGE_RECORD_WIDTH-1:0] route_rx_msg_record_i
 );
 
   // RTLSTD-LANG-008 prohibits wildcard imports; confirmed via real Yosys
@@ -613,6 +638,11 @@ module dfc_rtl001 (
     .rtl020_status_i  (rtl020_status_i),
     .rtl020_control_o (rtl020_control_o),
 
+    // REAL cross-module register bus for RTL-021 -- see the port-list
+    // comment above.
+    .rtl021_status_i  (rtl021_status_i),
+    .rtl021_control_o (rtl021_control_o),
+
     // REAL cross-module register bus for RTL-024's ARINC RX adapter --
     // see the port-list comment above.
     .rtl024arxadapter_status_i  (rtl024arxadapter_status_i),
@@ -631,10 +661,6 @@ module dfc_rtl001 (
     .host_abort_count_status_i('0), .host_timeout_count_status_i('0),
     .host_access_error_count_status_i('0), .rtl024_evt_overflow_status_status_i('0),
     .buffer_status_status_i(buffer_status_status_i), .host_last_sequence_status_i('0), .test_status_status_i('0),
-    .route_status_status_i('0), .route_active_source_status_i('0), .route_active_dest_status_i('0),
-    .route_active_type_mask_status_i('0), .route_active_filter_value_status_i('0),
-    .route_active_filter_mask_status_i('0), .route_entry_status_status_i('0),
-    .rtl021_evt_overflow_status_status_i('0),
 
  .uli_status_status_i('0), .uli_in_level_status_i('0), .uli_out_level_status_i('0),
     .uli_out_data_status_i('0), .uli_io_input_status_i('0), .rtl022_evt_overflow_status_status_i('0),
@@ -644,9 +670,6 @@ module dfc_rtl001 (
     .buffer_client_error_count_2_3_status_i(buffer_client_error_count_2_3_status_i), .buffer_client_error_count_4_5_status_i(buffer_client_error_count_4_5_status_i), .buffer_client_error_count_6_status_i(buffer_client_error_count_6_status_i),
     .buffer_internal_error_count_status_i(buffer_internal_error_count_status_i),
     .clock_reset_status_status_i('0),
-    .route_active_control_status_i('0),
-    .route_destination_drop_count_0_1_status_i('0), .route_destination_drop_count_2_3_status_i('0), .route_destination_drop_count_4_status_i('0),
-    .route_ingress_loss_count_0_1_status_i('0), .route_ingress_loss_count_2_3_status_i('0), .route_ingress_loss_count_4_status_i('0),
     .test_rejection_abort_count_status_i('0),
     .uli_mailbox_loss_count_0_1_status_i('0), .uli_mailbox_loss_count_2_3_status_i('0),
     .uli_mailbox_status_status_i('0), .uroute_active_control_status_i('0)
@@ -660,6 +683,15 @@ module dfc_rtl001 (
   // dropped. ----
   logic unused_stub_sink;
   assign unused_stub_sink = (^timestamp_i) ^ (^operating_state_i) ^
-                            observational_mode_i;
+                            observational_mode_i ^ route_tx_msg_ready_i ^
+                            route_rx_msg_valid_i ^ (^route_rx_msg_record_i);
+
+  // ---- Host route channel, permanently disclosed-stub (see the port
+  // declarations' own comment): never originates an outgoing routed
+  // message, and never accepts a delivered one (there is nowhere for it
+  // to go yet). ----
+  assign route_tx_msg_valid_o  = 1'b0;
+  assign route_tx_msg_record_o = '0;
+  assign route_rx_msg_ready_o  = 1'b0;
 
 endmodule : dfc_rtl001

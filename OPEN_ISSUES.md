@@ -4252,3 +4252,416 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
        "compiled, synthesized, verified," not "built" or "complete" -- the
        project continues holding at the RTL-016 FPGA baseline (item 112)
        for any real hardware target.
+
+## RTL-021 (Databus Routing Engine) integration — the central routing hub every other Databus module's route ports finally connect through
+
+148. **RESOLVED (2026-10-22): `RTL-021_RevA.md` has a stale port count
+     (same class as RTL-017/018/019/020's own 20/18/19/17-vs-33/28/33/32)
+     AND two separately-stated stale register counts.** SS2's own claim of
+     "16 total" ports is wrong -- ARCH-002 Appendix A's real header reads
+     "RTL-021 - Databus Routing Engine (30 ports)" and the real table
+     lists exactly 30 rows, confirmed by direct count (not assumed from
+     the header alone, the same discipline every prior module's own
+     session applied). SS1/SS5's own claim of "17 registers" (stated
+     twice) is also wrong: REG-002 §18's own block header says "Register
+     count: 24," and the real listed rows confirm exactly 24 by direct
+     count -- the entire 5-register `ROUTE_ACTIVE_*` readback group and
+     the two independently-clearable `ROUTE_INGRESS_LOSS_COUNT_*`/
+     `ROUTE_DESTINATION_DROP_COUNT_*` counter groups RevA's own prose never
+     enumerates at all, not a single off-by-one. Implemented against the
+     real 30-port/24-register set via `tools/reggen/rtl021_field_map.json`;
+     disclosed here, not followed.
+
+149. **RESOLVED (2026-10-22): the 13th real instance of the exact
+     `EVT_OVERFLOW_STATUS` clear-forwarding gap already fixed for RTL-002
+     through RTL-020, approved before this session's edit.**
+     `dfc_rtl021_control_t` had no clear-forwarding field for
+     `RTL021_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-1440 bit 0, a real
+     W1C field). Fixed the same way as every prior instance: ARCH-002 grew
+     the struct 135->136 bits, adding `rtl021_evt_overflow_status__
+     event_overflow` as a new `clear_mask` field at the new highest bit
+     (135) -- every pre-existing field's bit position confirmed unchanged
+     via a real `regenerate.ps1` run (a clean, isolated diff against
+     `include/dfc_types_pkg.sv`, touching only `dfc_rtl021_control_t`'s own
+     declaration).
+
+150. **RESOLVED (2026-10-22): a NEW gap class this session, the same
+     undershoot pattern as item 149 but on the STATUS side instead of the
+     CONTROL side.** `dfc_rtl021_status_t` had no field anywhere for
+     `ROUTE_ACTIVE_CONTROL`'s `ENABLE`/`DROP_ON_FULL` (REG-145C, a real
+     `external`-readback register with specific REG-002 text: "Reads
+     selected entry's active enable"/"active drop-on-full policy") --
+     confirmed by summing the struct's own documented bit ranges end to
+     end (0 through 335 inclusive, exactly 336 bits, fully tiled, no gap
+     anywhere for this). Judged to be the SAME gap class as item 149
+     (ARCH-002 undershooting a REG-002-specified real forwarding need by a
+     small, unambiguous number of bits), just on the read side, with
+     equally unambiguous semantics (two single RO mirror bits, nothing to
+     invent) -- fixed the identical way: ARCH-002 grew the struct 336->338
+     bits, adding `route_active_control__enable`/`__drop_on_full` at the
+     new highest bits (336/337). Confirmed via a real `regenerate.ps1` run
+     (isolated diff, every other struct unaffected).
+
+151. **`reggen.py` extended to v6: a brand-new "COUNTER16-CLR" register
+     access class, the first real need for it anywhere in this project.**
+     REG-002's own text for the six `ROUTE_INGRESS_LOSS_COUNT_*`/
+     `ROUTE_DESTINATION_DROP_COUNT_*` registers ("Independent halfword
+     whole-counter clears"; "Any other halfword rejects the complete
+     word") packs TWO independent 16-bit saturating counters per 32-bit
+     register (or one real counter + one RSV0 halfword for the two
+     `_4` registers, source/destination ID 4 ULI), each independently
+     host-clearable -- a shape neither `COUNTER-CLR` (RTL-020's own
+     `UART_*_COUNT` precedent: whole-32-bit raw-value-forward, consumer
+     does its own edge detection) nor plain `RW`/`W1C` (whole-32-bit pulse
+     or stored value) can produce. `reggen.py` now generates, per register
+     HALF: on the CONTROL side, a genuine one-cycle clear-pulse (write
+     0xFFFF to that 16-bit half, same halfword-isolation discipline as the
+     32-bit `COUNTER-CLR` precedent but per-halfword) driving one specific
+     bit of the wider 5-bit `dfc_rtl021_control_t` clear vector named by a
+     new field-map `"bit"` key; on the STATUS side, a sub-slice read (one
+     16-bit window out of the wider 80-bit packed `dfc_rtl021_status_t`
+     count vector, "five packed 16-bit saturating counts ... in ascending
+     slices" per ARCH-002's own text) using the same `"bit"` key. Verified
+     via a real `regenerate.ps1` run producing "real cross-module
+     forwarding wired for RTL-021: 18 control regs, 15 status regs" with
+     no assertion failures -- the pre-existing, unmodified
+     `mapped_bits==control_width` whole-struct tiling check still passed,
+     confirming no overlap/gap was introduced across all 24 registers. See
+     `tools/reggen/rtl021_field_map.json`'s own `_source` note and
+     `reggen.py`'s own inline comments at both edit points for the full
+     reasoning. A genuine, scoped generator extension, not a hand-authored
+     workaround (RTLSTD-ORG-003/004/010).
+
+152. **The master shared-resource-index table (item 140) was checked
+     BEFORE wiring `activity_o`, exactly as every Databus session since
+     item 140 has required, and it correctly ruled out RTL-021 as well --
+     the SIXTH instance of the exact item-83 conflict class, but the FIRST
+     one with no real destination anywhere for this module's own activity.**
+     RTL-021's own Appendix A `activity_o` row literally reads
+     "RTL-015.activity_i[5]" -- but the master table (RTL-015's own
+     consumer-side row + ARCH-SAFE-007's own fixed ID-order text: 0 host,
+     1 ARINC RX, 2 CAN RX, 3 UART RX, 4 GPIO, 5 health, 6 user diagnostic,
+     7 watchdog) assigns bit 5 to "health qualified transition" (RTL-011,
+     already real and correctly wired there) -- RTL-021's own row is the
+     same already-identified-and-overruled conflict class as RTL-012/017/
+     019/020's own rows (item 83: five conflicting individual producer
+     rows, each overruled in favor of RTL-015's own row), EXCEPT that,
+     unlike those five, RTL-015's own canonical order has no OTHER slot
+     anywhere that legitimately belongs to RTL-021 either -- there simply
+     is no legal `activity_i` destination for "routing engine activity" in
+     this design. `activity_o` is implemented as a real, correctly-pulsing
+     port (one CORE_CLK pulse per qualified accepted unit of work,
+     dfc_rtl021.sv's own finding, matching Appendix A's own generic
+     description) but left genuinely unconsumed at `dfc_rtl024.sv`
+     integration -- a disclosed structural consequence of this conflict
+     class, not a bug in this module, and not something this session has
+     authority to resolve unilaterally (it would require either revising
+     RTL-015's own fixed 8-condition order, or accepting that one more
+     Appendix-A-claimed `activity_i` destination is permanently
+     unreachable).
+
+153. **REAL, CONFIRMED GAP found and fixed: RTL-001's own
+     `route_tx_msg_*`/`route_rx_msg_*` ports (ARCH-002 Appendix A's real
+     RTL-001 row, Host ingress/egress, ARCH-MSG-004 module ID 0x03) did
+     not exist on `dfc_rtl001.sv` at all before this session** -- confirmed
+     absent via direct grep of the file before this edit, not assumed.
+     Added this session with a permanent RTLSTD-MOD-009 disclosed-stub tie
+     (`route_tx_msg_valid_o=1'b0`, `route_tx_msg_record_o='0`,
+     `route_rx_msg_ready_o=1'b0`): REG-002 defines NO register-level
+     mechanism anywhere for the host to stage an outgoing routed message
+     or read back a delivered one for this channel, so there is no real
+     content to wire these ports to yet, and none is invented here. This
+     is a genuine, OPEN gap -- not a forward reference expected to resolve
+     soon the way RTL-022/ULI (item 156) is -- since closing it for real
+     would require REG-002 itself to define a host-visible staging
+     mechanism for this channel, which is this session's finding to
+     surface, not to invent.
+
+154. **REAL, CONFIRMED BUG found and fixed, pre-existing from RTL-020's own
+     session, not introduced this session: `dfc_rtl001.sv`'s own
+     `rtl020_control_o`/`rtl020_status_i` ports were never connected to
+     the matching `rtl020_control`/`rtl020_status` top-level wires inside
+     `dfc_rtl024.sv`.** Both individual modules' own sides of this
+     cross-module register bus were wired correctly (`dfc_rtl001.sv`
+     itself forwards these ports to its internal generated regbank;
+     `u_rtl020`'s own instantiation correctly uses `rtl020_control`/
+     `rtl020_status`) but the two were never actually joined to each other
+     at the one integration point that connects them -- `u_rtl001`'s own
+     instantiation in `dfc_rtl024.sv` simply omitted both port
+     connections, leaving `rtl020_control_o` genuinely floating and
+     `rtl020_status_i` reading X in simulation. A real, user-visible
+     consequence: every RTL-020 (UART) register the host believes it
+     configured through the real DRI/SPI path was never actually reaching
+     `dfc_rtl020.sv` at all, and RTL-020's own real status never reached
+     the host's own readable registers either, in the full chip
+     integration specifically (not in `rtl020_integration_tb.sv`, which
+     instantiates `dfc_rtl020` directly and never exercises this path).
+     Not caught by RTL-020's own session because a named-connection
+     instantiation silently omitting a port is not an Icarus elaboration
+     error (a dangling port, not a syntax failure) -- found here only
+     because this session's own `lint.ps1` run surfaced a *different*,
+     unrelated compile failure (the regenerated regbank no longer exposing
+     the old individual `route_*_status_i` ports once RTL-021's own
+     field-map existed), which led to inspecting `dfc_rtl001.sv`'s own
+     instantiation closely enough to notice the RTL-020 omission sitting
+     right next to where the RTL-021 connection needed to be added. Fixed
+     by adding `.rtl020_control_o(rtl020_control)`/
+     `.rtl020_status_i(rtl020_status)` alongside the new RTL-021
+     connections.
+
+155. **REAL, CONFIRMED BUG found and fixed via `rtl024_skeleton_tb.sv`,
+     this session's own new wiring, not pre-existing: `rtl017_msg_ready`
+     was declared and connected at `u_rtl017`'s own instantiation but the
+     one `assign` actually driving it from `rtl021_source_ready[0]` was
+     never written**, leaving it a genuinely undriven (X in simulation)
+     dangling net -- RTL-017's own queue never drained (`count_q` read X,
+     not a clean 0/1) even with `ROUTE_CONTROL.ENABLE` real and correctly
+     set. Every other newly-wired route-port signal this session used
+     either a direct read-slice of one of RTL-021's own output vectors
+     (`source_ready_o`/`dest_valid_o`/`dest_record_o`, safe with no
+     dedicated signal needed) or a dedicated signal actually driven by
+     the OTHER module's own output port (`rtl018_msg_ready` et al.,
+     correctly driven since it's an output of `u_rtl018`) -- this one slot
+     used a dedicated signal name for what should have been a direct
+     read-slice, and the corresponding `assign` was simply never added.
+     Caught by the whole-chip skeleton test, not by inspection; the
+     per-module `rtl021_integration_tb.sv` could not have caught this
+     class of bug at all, since it drives RTL-021 standalone with no
+     RTL-017 in the loop.
+
+156. **DESIGN REFINEMENT, found via `rtl024_skeleton_tb.sv`'s own real
+     system state, not by inspection: `effective_operational_enable_i` was
+     originally read to gate BOTH ingress acceptance and replication,
+     which turned out to be broader than every other module's own
+     established convention and genuinely blocked RTL-017's queue from
+     ever draining while the system had not yet reached NORMAL/DEGRADED
+     (OPEN_ISSUES.md item 98's own mandatory-init gate, under which
+     `EFFECTIVE_OPERATIONAL_ENABLE` is real and legitimately low).**
+     Every other module's own `effective_operational_enable_i` gates only
+     its OWN outward/TX-equivalent action (e.g. RTL-020's own gate applies
+     only to `dequeue_start`, never to its own RX acceptance path) --
+     accepting a message into RTL-021's own internal ingress slot has no
+     effect outside this module yet, so it is not itself "externally
+     effective action" the way delivering a copy to ANOTHER module is.
+     Refined to match: `source_ready_o` (ingress acceptance) is now gated
+     only by `ROUTE_CONTROL.ENABLE`; `effective_operational_enable_i`
+     gates only the decision to START a REPLICATE (the real delivery
+     action) -- drops (pure internal bookkeeping, no external effect) and
+     head-refreshes/dequeues remain ungated either way. Re-verified against
+     both `rtl021_integration_tb.sv` (63/63, no regression, since that
+     testbench always drives this signal `1'b1`) and the full whole-chip
+     skeleton test (which exercises the real, low-during-bring-up case).
+
+157. **Two real RTL-021 defects found via its own `rtl021_integration_tb.sv`
+     simulation (not by inspection), both in the destination-queue
+     head-snapshot mechanism, both fixed:**
+     - **Premature `dest_head_valid_q` assertion (a genuine data hazard).**
+       The original centralized per-destination queue-bookkeeping block set
+       `dest_head_valid_q<=1'b1` immediately at the SAME cycle a replicate-
+       write landed into a previously-empty queue, rather than waiting for
+       the dedicated `OP_HEAD_REFRESH` read that actually brings the real
+       head data into `dest_head_snap_q` to complete. This let
+       `dest_valid_o`/`dest_record_o` assert ONE head-refresh-latency early,
+       with `dest_record_o` still showing stale/reset-zero content -- the
+       testbench's own "duplicate-route dedup produces exactly one copy"
+       check caught a consumer popping this premature snapshot (read as a
+       second, spurious delivery). Fixed: `dest_head_valid_q` is now set
+       ONLY by `OP_HEAD_REFRESH`'s own completion, never pre-emptively in
+       the write-completion path.
+     - **`OP_HEAD_REFRESH`'s own completion did not re-check queue
+       emptiness.** A head-refresh queued while the destination queue still
+       held one item could complete AFTER that same item was, in the
+       meantime, popped by an intervening dequeue (the read itself takes
+       six real CORE_CLK cycles) -- the original code unconditionally set
+       `dest_head_valid_q<=1'b1` at completion regardless, re-asserting
+       `dest_valid_o` with a stale snapshot of an entry that was never
+       really written. Fixed: the completion now gates on
+       `dest_count_q[op_dst_q] != 0`, the exact live count at that cycle
+       (already reflecting every write/pop that happened during the
+       refresh's own multi-cycle read).
+     Both found and fixed BEFORE moving on to the remaining required test
+     cases, each confirmed via a small, isolated, hierarchically-
+     instrumented debug testbench (not the full 25-pair/backpressure/
+     epoch-capture suite) before being re-verified against the complete
+     `rtl021_integration_tb.sv` run.
+
+158. **Real, disclosed design choices and genuine gaps, logged per
+     CHTR-DOC-006 rather than silently assumed or invented:**
+     - **ARCH-RTL021-001's "commit replaces all sixteen entries
+       atomically" vs. REG-1424's own literal per-entry
+       `VALIDATE_COMMIT`/`ENTRY_SELECT` mechanism (which can only ever
+       commit ONE entry per pulse) is a real, confirmed ARCH-002-internal
+       tension** -- REG-002 gives no "commit all sixteen simultaneously"
+       register mechanism anywhere. Reconciled (disclosed, not silently
+       picked) by reading "atomically" as "each single-entry commit is
+       itself all-or-nothing" (no torn partial-field update), and treating
+       the genuinely load-bearing half of ARCH-RTL021-001 as its own
+       explicit epoch-capture sentence: "an in-flight record completes
+       under the configuration epoch captured at ingress acceptance."
+       Implemented literally: a record's full routing decision is resolved
+       combinationally and registered once, at the exact cycle it is
+       accepted, against the active table as it existed at that instant --
+       never re-evaluated even if a later commit changes the table while
+       that record is still being replicated. Has its own dedicated test
+       (VP-BUS-009's own named highest-risk case).
+     - **Three ARCH-ROUTE-007 commit codes are structurally unreachable,
+       one is disclosed-ambiguous and never generated, not silently
+       skipped.** `01` invalid entry: `ENTRY_SELECT` is a real 4-bit field,
+       0-15 all legal, so there is no encoding of "invalid entry" to
+       detect. `06` reserved flag/field: every `ROUTE_STAGE_*` register's
+       own RSV0 bits are already rejected whole-write by RTL-001's generic
+       bus-decode layer before ever reaching `control_i`. `08` busy: this
+       module commits in a single CORE_CLK cycle, pure internal register
+       update, with no shared-buffer or multi-cycle dependency -- there is
+       no busy state a commit could ever observe. `07` duplicate conflict
+       is different in kind: REG-002 names the code but gives no
+       definition of what "duplicate" means at COMMIT time
+       (ARCH-ROUTE-003's own "duplicate selections... produce one copy"
+       text is an INGRESS-TIME replication rule, not a commit-time
+       validation rule) -- inventing a specific definition would be
+       inventing behavior this module has no authority to impose
+       unilaterally, so this code is never generated. A genuine, open
+       architecture ambiguity, not resolved here.
+     - **`VALIDATE_COMMIT`+`DISABLE_ENTRY` asserted the same cycle (REG-1424's
+       own "undefined encoding... rejects with no command pulse") is a
+       real case this module must itself defensively reject** -- RTL-001's
+       generic WO-CMD pulse-capture forwards `wdata_i` verbatim with no
+       per-encoding exactly-one-hot validation (the same already-disclosed,
+       pre-existing RTL-001 gap its own header names, "no per-field
+       legal-value range checks"), so both pulses would otherwise arrive
+       simultaneously. This module checks for exactly that collision and
+       executes NEITHER command when it occurs, with its own dedicated
+       test case.
+     - **Status-bit interpretations where REG-002 gives behavior text but
+       not a unique internal trigger:** `ROUTE_STATUS.ACTIVE` reads as a
+       direct mirror of the global `ROUTE_CONTROL.ENABLE` bit (this
+       register's own text groups it with "commit/runtime errors" and its
+       name is otherwise generic). `ROUTE_STATUS.LAST_ERROR` is ONE shared
+       8-bit field for both ARCH-ROUTE-007 commit codes (00-08) and
+       ARCH-ROUTE-008 runtime codes (10-15) -- the two spaces are disjoint
+       and tested independently (own dedicated test cases confirming codes
+       02/03/05 and 10/11/12/13 each independently, never conflated), but
+       they share one storage field, overwritten by whichever class of
+       event happens most recently -- a storage-sharing fact, not a
+       conflation of meaning. When multiple distinct `LAST_ERROR`-writing
+       events genuinely collide in the identical cycle (e.g. a destination
+       drop and an ingress-loss classification both firing together), the
+       textually-last assignment in the generated `always_ff` wins, a
+       disclosed, deterministic-but-arbitrary resolution of a
+       simultaneous-event ambiguity REG-002 itself does not address,
+       matching the project's own established "first-failure priority
+       order" disclosure precedent. `ROUTE_ENTRY_STATUS` (selected by
+       `ENTRY_SELECT`): `VALID` = this entry index has been committed at
+       least once; `ACTIVE` = `VALID` AND the entry's own current `ENABLE`
+       bit (a convenience derived-AND flag, not literally redundant with
+       `ROUTE_ACTIVE_CONTROL.ENABLE`); `ERROR` (W1C) = sticky evidence that
+       the LAST `VALIDATE_COMMIT` pulse while this entry was selected was
+       rejected (per-entry granularity alongside the global
+       `COMMIT_REJECTED` bit); `FORWARDED_COUNT` = saturating count of
+       destination copies successfully written attributable to this entry.
+     - **Duplicate-route entry-order tie-break** (ARCH-ROUTE-003): for each
+       destination, the LOWEST-INDEXED matching entry wins (first-match,
+       "evaluated in entry order"); that entry's own `DROP_ON_FULL` policy
+       is the one captured for that copy, and that entry is the one
+       credited in `FORWARDED_COUNT`. REG-002/ARCH-002 do not say which
+       matching entry "owns" a duplicate-selected destination's policy/
+       credit, only that exactly one copy results -- a disclosed choice,
+       with its own dedicated dedup test (VP-BUS-008).
+     - **Destination round-robin + the real no-head-of-line-blocking
+       mechanism** (VP-BUS-009's second named risk): each destination's
+       per-cycle candidate scan continues PAST a required-but-currently-
+       full candidate (`DROP_ON_FULL=0`) to find the next eligible one in
+       rotation, rather than fixating on the first-found index -- the one
+       real design decision that prevents a currently-blocked required
+       copy from one source starving a SIMULTANEOUS drop-eligible copy
+       from a different source at the same, physically full destination.
+       Drops are pure internal bookkeeping (no shared-buffer transaction),
+       so they resolve the same cycle regardless of whether the single
+       shared buffer channel is simultaneously busy servicing a DIFFERENT
+       destination's write -- confirmed via its own dedicated
+       simultaneous-backpressure-and-drop test, both outcomes in the same
+       cycle window.
+     - **Buffer arbiter priority**: INGRESS-WRITE > DEST-HEAD-REFRESH >
+       REPLICATE, fixed dest-index order (0 highest) when multiple
+       destinations are simultaneously write-ready -- a disclosed,
+       uncontested fixed order for an orthogonal question ARCH-ROUTE-006's
+       own round-robin requirement does not reach (that requirement is
+       about which INGRESS SOURCE a destination services next, not which
+       DESTINATION gets the shared buffer first), same class of choice as
+       every prior module's own fixed internal arbiter priority.
+     - **RTL-022 (ULI, source/destination index 4) is a genuine forward
+       reference**, same structural shape as RTL-017/018's own earlier
+       forward references to RTL-021 before it existed -- tied off
+       identically (disclosed stub: `source_valid_i[4]`/`dest_ready_i[4]`
+       never asserted by this integration) but expected to resolve soon,
+       per this session's own task briefing, since RTL-022 is explicitly
+       planned as a near-term module.
+     - **`fault_req_o` is a permanent, disclosed stub (tied `1'b0`)** --
+       routing/queue errors (drops, rejected commits, shared-buffer
+       errors) are ordinary operational conditions already visible via
+       their own sticky bits and counters, not systemic faults, the same
+       severity judgment every prior Databus module's own fault_req_o
+       documentation already applies.
+     - **`rtl024_skeleton_tb.sv` extension judged NOT done this session,
+       disclosed as real future work, not silently skipped**: RTL-021 is
+       plausibly the first module that could route a genuine message
+       end-to-end between two already-real Databus modules (e.g. a real
+       committed ARINC->CAN route, verified by driving a real ARINC word
+       and observing it land in CAN's own real TX queue through RTL-021),
+       a meaningfully stronger whole-chip integration test than RTL-018/
+       019/020's own individual sessions could offer. Only the minimal fix
+       needed to keep the EXISTING skeleton test passing (a real
+       `ROUTE_CONTROL.ENABLE` SPI write, plus widening its own queue-drain
+       wait margin to reflect RTL-021's own real, multi-stage buffer
+       latency) was made this session; a real end-to-end route-and-deliver
+       extension is judged meaningful but out of scope for this already-
+       large session, not attempted hastily.
+     - **`nextpnr-ecp5` was not invoked this session** -- no place-and-
+       route, no timing closure, no bitstream. RTL-021's status is
+       "compiled, synthesized, verified," not "built" or "complete" -- the
+       project continues holding at the RTL-016 FPGA baseline (item 112)
+       for any real hardware target.
+
+159. **REAL, CONFIRMED BUG found and fixed via `build_ecp5.ps1 -SynthOnly`
+     itself, not by simulation or inspection: a genuine Yosys synthesis-
+     tool latch-inference false positive, the first of its own specific
+     kind this project has hit.** `dfc_rtl021.sv`'s own route-resolution
+     `always_comb` block wrapped its 16-entry scan `for` loop inside an
+     outer `if (!rslv_malformed[rs])` conditional -- a shape no other
+     `always_comb`/`always_ff` block in this file (or, as far as this
+     session confirmed, anywhere else in the project) uses: every other
+     loop in this module runs unconditionally, with any gating folded into
+     the loop BODY's own conditions instead of around the loop itself.
+     Yosys's own latch-inference check misread the loop's own index
+     variable `re` (pure loop-unrolling scratch state, never read outside
+     this process) as a real signal needing a latch purely because the
+     whole `for` statement -- including `re`'s own loop-control assignment
+     -- was reachable only through that outer conditional:
+     `ERROR: Latch inferred for signal \`re[3:0]\` from always_comb process`.
+     A real, reproducible toolchain limitation around this specific
+     "conditional wrapping an entire for-loop, including its own index"
+     shape, not a functional RTL defect -- `rtl021_integration_tb.sv`'s own
+     63/63 passing run, both before and after this fix, confirms the
+     module's real behavior is unchanged (the malformed guard was moved
+     into `r_entry_match_src_type`'s own condition, functionally
+     identical, just restructured so the `for` loop itself is always
+     entered). Caught at `build_ecp5.ps1 -SynthOnly` time specifically --
+     neither `lint.ps1`'s own per-file Icarus elaborate check nor the full
+     `gate.ps1` run (lint+sim+formal+coverage, all of which passed clean
+     before this fix) exercises Yosys's own synth_ecp5 flow at all, so this
+     class of defect is only ever caught by a real synthesis attempt, the
+     same reason this project's own standing discipline never treats
+     `gate.ps1 PASSED` as a substitute for a real `build_ecp5.ps1` run.
+     Real, confirmed final cell-count/utilization stats after the fix
+     (Build ID `20261022_104724`, `-SynthOnly`, 0 CHECK-pass problems,
+     `nextpnr-ecp5` never invoked): CCU2C 3997, L6MUX21 805, LUT4 41313,
+     PFUMX 4431, TRELLIS_FF 27574, MULT18X18D 44, PDPW16KD 1. Real
+     cumulative delta against the last explicitly-recorded baseline in
+     `PROJECT_CONTINUITY.md` (RTL-019's own post-build figures, Build ID
+     `20261020_180031`, since no RTL-020-specific synthesis entry was ever
+     separately recorded there): CCU2C +278 (3719->3997), L6MUX21 +590
+     (215->805), LUT4 +11027 (30286->41313), PFUMX +1715 (2716->4431),
+     TRELLIS_FF +4137 (23437->27574), MULT18X18D +31 (13->44), PDPW16KD
+     unchanged at 1 -- disclosed honestly as covering BOTH RTL-020's own
+     and RTL-021's own real additions together, not RTL-021 alone, since
+     no intermediate RTL-020-only checkpoint exists to isolate the split.

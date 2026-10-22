@@ -630,8 +630,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl019_status_i | input | dfc_rtl019_status_t / 326 | RTL-019.status_o | RTL-001.rtl019_status_i; RTL-002.module_ready_i[18]; RTL-002.module_fault_i[18] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl020_control_o | output | dfc_rtl020_control_t / 216 | RTL-001.rtl020_control_o | RTL-020.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl020_status_i | input | dfc_rtl020_status_t / 217 | RTL-020.status_o | RTL-001.rtl020_status_i; RTL-002.module_ready_i[19]; RTL-002.module_fault_i[19] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl021_control_o | output | dfc_rtl021_control_t / 135 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
-| rtl021_status_i | input | dfc_rtl021_status_t / 336 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
+| rtl021_control_o | output | dfc_rtl021_control_t / 136 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl021_status_i | input | dfc_rtl021_status_t / 338 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl022_control_o | output | dfc_rtl022_control_t / 308 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl022_status_i | input | dfc_rtl022_status_t / 137 | RTL-022.status_o | RTL-001.rtl022_status_i; RTL-002.module_ready_i[21]; RTL-002.module_fault_i[21] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl023_control_o | output | dfc_rtl023_control_t / 34 | RTL-001.rtl023_control_o | RTL-023.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
@@ -1154,8 +1154,8 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-021.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-021.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[20] | RTL-021.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl021_control_t / 135 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
-| status_o | output | dfc_rtl021_status_t / 336 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
+| control_i | input | dfc_rtl021_control_t / 136 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| status_o | output | dfc_rtl021_status_t / 338 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-021.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-021.evt_valid_o | RTL-005.evt_valid_i[20] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
 | evt_ready_i | input | logic / 1 | RTL-005.evt_ready_o[20] | RTL-021.evt_ready_i | CORE_CLK / core_rst_n | valid/ready / 0 | same-domain |
@@ -2399,7 +2399,7 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 184:153 | uart_tx_rejected_count__count | 32 | unsigned | 0 | saturating full or invalid TX PUSH count |
 | 216:185 | uart_tx_underflow_count__count | 32 | unsigned | 0 | saturating TX underflow count |
 
-### dfc_rtl021_control_t — 135 bits
+### dfc_rtl021_control_t — 136 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2423,8 +2423,9 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 124 | route_entry_status__error | 1 | unsigned | 0 | clear_mask |
 | 129:125 | route_ingress_loss_count__clear | 5 | unsigned | 0 | one whole-counter-clear pulse per ingress source |
 | 134:130 | route_destination_drop_count__clear | 5 | unsigned | 0 | one whole-counter-clear pulse per destination |
+| 135 | rtl021_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
 
-### `dfc_rtl021_status_t` — 336 bits
+### `dfc_rtl021_status_t` — 338 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2450,6 +2451,8 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 175:160 | event_drop_count | 16 | unsigned | 0 | saturating count of records lost while this producer pending slot was occupied |
 | 255:176 | route_ingress_loss_count__count | 80 | unsigned | 0 | five packed 16-bit saturating counts, source IDs 0 through 4 in ascending slices |
 | 335:256 | route_destination_drop_count__count | 80 | unsigned | 0 | five packed 16-bit saturating counts, destination IDs 0 through 4 in ascending slices |
+| 336 | route_active_control__enable | 1 | unsigned | 0 | readback_value |
+| 337 | route_active_control__drop_on_full | 1 | unsigned | 0 | readback_value |
 
 ### dfc_rtl022_control_t — 308 bits
 

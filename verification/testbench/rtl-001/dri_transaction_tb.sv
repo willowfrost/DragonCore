@@ -121,6 +121,17 @@ module dri_transaction_tb;
   logic [dfc_types_pkg::DFC_RTL019_STATUS_WIDTH-1:0]  rtl019_status_i = '0;
   logic [dfc_types_pkg::DFC_RTL020_CONTROL_WIDTH-1:0] rtl020_control_o;
   logic [dfc_types_pkg::DFC_RTL020_STATUS_WIDTH-1:0]  rtl020_status_i = '0;
+  logic [dfc_types_pkg::DFC_RTL021_CONTROL_WIDTH-1:0] rtl021_control_o;
+  logic [dfc_types_pkg::DFC_RTL021_STATUS_WIDTH-1:0]  rtl021_status_i = '0;
+  // RTL-001's own new Host route channel (added this session) -- this
+  // testbench does not model RTL-021 either, same isolation choice as
+  // every other not-modeled module above.
+  logic route_tx_msg_valid_o;
+  logic route_tx_msg_ready_i = 1'b0;
+  logic [dfc_types_pkg::DFC_MESSAGE_RECORD_WIDTH-1:0] route_tx_msg_record_o;
+  logic route_rx_msg_valid_i = 1'b0;
+  logic route_rx_msg_ready_o;
+  logic [dfc_types_pkg::DFC_MESSAGE_RECORD_WIDTH-1:0] route_rx_msg_record_i = '0;
   logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_CONTROL_WIDTH-1:0] rtl024arxadapter_control_o;
   logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_STATUS_WIDTH-1:0]  rtl024arxadapter_status_i = '0;
   // Same isolation choice for the shared-buffer service, added this

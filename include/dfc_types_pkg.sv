@@ -2943,8 +2943,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL020_STATUS__UART_TX_UNDERFLOW_COUNT__COUNT_HI = 216;
   localparam int unsigned DFC_RTL020_STATUS__UART_TX_UNDERFLOW_COUNT__COUNT_LO = 185;
 
-  // ARCH-002 Appendix B dfc_rtl021_control_t (135 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl021_control_t (136 bits, rich format)
   typedef struct packed {
+    logic rtl021_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic [4:0] route_destination_drop_count__clear;  //  reset=0 :: one whole-counter-clear pulse per destination
     logic [4:0] route_ingress_loss_count__clear;  //  reset=0 :: one whole-counter-clear pulse per ingress source
     logic route_entry_status__error;  //  reset=0 :: clear_mask
@@ -2966,9 +2967,9 @@ package dfc_types_pkg;
     logic route_control__event_enable;  //  reset=0 :: control_value
     logic route_control__enable;  //  reset=0 :: control_value
   } dfc_rtl021_control_t;
-  // total width: 135 bits
+  // total width: 136 bits
 
-  localparam int unsigned DFC_RTL021_CONTROL_WIDTH = 135;
+  localparam int unsigned DFC_RTL021_CONTROL_WIDTH = 136;
   localparam int unsigned DFC_RTL021_CONTROL__ROUTE_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL021_CONTROL__ROUTE_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL021_CONTROL__ROUTE_CONTROL__EVENT_ENABLE_HI = 1;
@@ -3009,9 +3010,13 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL021_CONTROL__ROUTE_INGRESS_LOSS_COUNT__CLEAR_LO = 125;
   localparam int unsigned DFC_RTL021_CONTROL__ROUTE_DESTINATION_DROP_COUNT__CLEAR_HI = 134;
   localparam int unsigned DFC_RTL021_CONTROL__ROUTE_DESTINATION_DROP_COUNT__CLEAR_LO = 130;
+  localparam int unsigned DFC_RTL021_CONTROL__RTL021_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 135;
+  localparam int unsigned DFC_RTL021_CONTROL__RTL021_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 135;
 
-  // ARCH-002 Appendix B dfc_rtl021_status_t (336 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl021_status_t (338 bits, rich format)
   typedef struct packed {
+    logic route_active_control__drop_on_full;  //  reset=0 :: readback_value
+    logic route_active_control__enable;  //  reset=0 :: readback_value
     logic [79:0] route_destination_drop_count__count;  //  reset=0 :: five packed 16-bit saturating counts, destination IDs 0 through 4 in ascending slices
     logic [79:0] route_ingress_loss_count__count;  //  reset=0 :: five packed 16-bit saturating counts, source IDs 0 through 4 in ascending slices
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
@@ -3035,9 +3040,9 @@ package dfc_types_pkg;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl021_status_t;
-  // total width: 336 bits
+  // total width: 338 bits
 
-  localparam int unsigned DFC_RTL021_STATUS_WIDTH = 336;
+  localparam int unsigned DFC_RTL021_STATUS_WIDTH = 338;
   localparam int unsigned DFC_RTL021_STATUS__READY_HI = 0;
   localparam int unsigned DFC_RTL021_STATUS__READY_LO = 0;
   localparam int unsigned DFC_RTL021_STATUS__FAULT_HI = 1;
@@ -3082,6 +3087,10 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL021_STATUS__ROUTE_INGRESS_LOSS_COUNT__COUNT_LO = 176;
   localparam int unsigned DFC_RTL021_STATUS__ROUTE_DESTINATION_DROP_COUNT__COUNT_HI = 335;
   localparam int unsigned DFC_RTL021_STATUS__ROUTE_DESTINATION_DROP_COUNT__COUNT_LO = 256;
+  localparam int unsigned DFC_RTL021_STATUS__ROUTE_ACTIVE_CONTROL__ENABLE_HI = 336;
+  localparam int unsigned DFC_RTL021_STATUS__ROUTE_ACTIVE_CONTROL__ENABLE_LO = 336;
+  localparam int unsigned DFC_RTL021_STATUS__ROUTE_ACTIVE_CONTROL__DROP_ON_FULL_HI = 337;
+  localparam int unsigned DFC_RTL021_STATUS__ROUTE_ACTIVE_CONTROL__DROP_ON_FULL_LO = 337;
 
   // ARCH-002 Appendix B dfc_rtl022_control_t (308 bits, rich format)
   typedef struct packed {
