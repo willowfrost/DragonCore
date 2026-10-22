@@ -535,6 +535,58 @@ module dfc_rtl020 (
   wire read_word_ok  = (phase_q == PH_WAIT) && buf_rsp_valid_i && rsp_ok;
   wire read_word_err = (phase_q == PH_WAIT) && buf_rsp_valid_i && !rsp_ok;
 
+  // ---- RX frame-classification conditions (moved up from their original
+  // position just above the old, now-removed second error_count_q driver
+  // block -- needed here, declared before use, so the unified arbiter
+  // always_ff below can fold them into error_count_q's own single real
+  // update site; see OPEN_ISSUES.md item 172 for the full real-bug
+  // writeup this move is part of). rx_frame_done_q/rx_commit_flags_q are
+  // registers driven by the RX sampler FSM further down in this file --
+  // referencing a register here, before its own driving always_ff block,
+  // is fine (only WIRE declarations need to textually precede their own
+  // use on this toolchain, per this project's own established
+  // declare-before-use discipline).
+  wire rx_frame_framing_err = rx_frame_done_q && rx_commit_flags_q[0];
+  wire rx_frame_parity_err  = rx_frame_done_q && rx_commit_flags_q[1];
+  wire rx_frame_break       = rx_frame_done_q && rx_commit_flags_q[3];
+
+  // ---- error_count_q's own single, consolidated increment source (REG-
+  // 1324: "Saturating aggregate UART error count"). FIXED (real, confirmed
+  // bug, OPEN_ISSUES.md item 172): this used to be split across TWO
+  // independent always_ff processes (this arbiter block's own PH_WAIT
+  // read_word_err branch, and a second, separate "RX classification"
+  // block's own framing/parity/break branches) -- a genuine multi-driver
+  // hazard, not a cosmetic one: Yosys's own CHECK pass correctly flagged
+  // 32 "multiple conflicting drivers" warnings (one per bit), each
+  // resolving to two literal TRELLIS_FF cells per bit, because each
+  // process's own self-referential "count == max ? count : count+1"
+  // expression closes its OWN independent feedback loop -- unlike this
+  // module's several simple (non-self-referential) sticky sticky-bit
+  // set/clear signals split the same way across the same two blocks,
+  // which Yosys's `proc` pass DOES successfully fold into one shared FF
+  // (confirmed: none of those triggered the same warning), a
+  // self-referential counter's update apparently cannot be. Separately,
+  // and even ignoring the cross-block hazard, the ORIGINAL code's own
+  // same-block handling of simultaneous framing+parity errors on one byte
+  // was ALSO a real undercount: two separate `error_count_q <= old+1;`
+  // statements in the same process, each computing "+1" off the SAME
+  // stale old value, meaning only the textually-last one survived (the
+  // same undercounting-class bug this project's own RTL-021 session
+  // already found and fixed for its own drop_count_this_cycle, item 157)
+  // -- a simultaneous framing+parity error on one byte would have only
+  // ever counted once, not twice. Fixed by consolidating every real
+  // increment source into ONE combinational sum, added (saturating) in
+  // ONE place in this module's own single unified always_ff below.
+  // rx_frame_break is structurally mutually exclusive with
+  // rx_frame_framing_err/rx_frame_parity_err (rx_flags_comb's own ternary
+  // forces bits 0/1 to zero whenever the break bit is set), so the real
+  // maximum simultaneous count is 3 (read_word_err + framing + parity),
+  // not 4 -- sized generously at 3 bits regardless, so correctness never
+  // depends on that invariant holding.
+  logic [2:0] error_incr_count;
+  assign error_incr_count = {2'b00, read_word_err} + {2'b00, rx_frame_framing_err} +
+                            {2'b00, rx_frame_parity_err} + {2'b00, rx_frame_break};
+
   assign buf_req_valid_o = (phase_q == PH_REQ);
   assign buf_rsp_ready_o = (phase_q == PH_WAIT);
 
@@ -591,7 +643,19 @@ module dfc_rtl020 (
       rx_underflow_count_wr_q <= ctl_rx_underflow_count_wr;
       tx_rejected_count_wr_q  <= ctl_tx_rejected_count_wr;
       tx_underflow_count_wr_q <= ctl_tx_underflow_count_wr;
-      if (clr_error_count_now)        error_count_q         <= 32'h0;
+      // error_count_q's own single, consolidated update (REG-1324's own
+      // stated priority -- "reset, then increment/saturation, then
+      // clear" -- a same-cycle new error always dominates a same-cycle
+      // clear request): this is now the ONLY place in this file that
+      // writes error_count_q (see error_incr_count's own declaration
+      // above for the real multi-driver bug this consolidation fixes,
+      // OPEN_ISSUES.md item 172).
+      if (error_incr_count != 3'd0) begin
+        error_count_q <= (error_count_q > (32'hFFFFFFFF - {29'h0, error_incr_count})) ?
+                         32'hFFFFFFFF : error_count_q + {29'h0, error_incr_count};
+      end else if (clr_error_count_now) begin
+        error_count_q <= 32'h0;
+      end
       if (clr_rx_overflow_count_now)  rx_overflow_count_q   <= 32'h0;
       if (clr_rx_underflow_count_now) rx_underflow_count_q  <= 32'h0;
       if (clr_tx_rejected_count_now)  tx_rejected_count_q   <= 32'h0;
@@ -700,7 +764,10 @@ module dfc_rtl020 (
 
         PH_WAIT: begin
           if (read_word_err) begin
-            error_count_q <= (error_count_q == 32'hFFFFFFFF) ? error_count_q : error_count_q + 32'd1;
+            // error_count_q's own increment for this condition is now
+            // handled once, combinationally, via error_incr_count above --
+            // not here (see that wire's own declaration for the real bug
+            // this consolidation fixes, OPEN_ISSUES.md item 172).
             op_q <= OP_NONE; phase_q <= PH_IDLE;
           end else if (read_word_ok) begin
             case (op_q)
@@ -937,39 +1004,31 @@ module dfc_rtl020 (
   end
 
   // ==========================================================================
-  // RX classification sticky/counter update (fires once, at the exact
-  // cycle rx_frame_done_q pulses -- i.e. STOP1/STOP2's own bit_done --
+  // RX classification sticky update (fires once, at the exact cycle
+  // rx_frame_done_q pulses -- i.e. STOP1/STOP2's own bit_done --
   // UNCONDITIONALLY, including on a break, where rx_commit_want_q itself
   // is deliberately suppressed (finding 9: no byte is queued for a break,
-  // but it is still real, reportable evidence).
+  // but it is still real, reportable evidence). error_count_q's own
+  // increment for these same conditions is handled once, combinationally,
+  // by error_incr_count above, consumed by the main arbiter always_ff's
+  // own single real error_count_q update site -- NOT here (see
+  // error_incr_count's own declaration for the real multi-driver bug this
+  // split used to cause, OPEN_ISSUES.md item 172. The three sticky bits
+  // below are untouched by that fix: each is driven from exactly this one
+  // process (their own clears live in the main arbiter block), a shape
+  // Yosys's own `proc` pass already folds cleanly into one shared FF per
+  // bit -- confirmed by direct observation, none of them ever triggered
+  // the CHECK-pass warning the counter's own self-referential update did.
   // ==========================================================================
-  wire rx_frame_framing_err = rx_frame_done_q && rx_commit_flags_q[0];
-  wire rx_frame_parity_err  = rx_frame_done_q && rx_commit_flags_q[1];
-  wire rx_frame_break       = rx_frame_done_q && rx_commit_flags_q[3];
-
   always_ff @(posedge core_clk_i or negedge core_rst_n_i) begin
     if (!core_rst_n_i) begin
-      // covered by the main reset block above for the sticky/count regs
+      // covered by the main reset block above for the sticky regs
     end else if (!module_reset_i) begin
       if (rx_frame_break) begin
         break_detected_sticky_q <= 1'b1;
       end else begin
-        if (rx_frame_framing_err) begin
-          framing_error_sticky_q <= 1'b1;
-          error_count_q <= (error_count_q == 32'hFFFFFFFF) ? error_count_q : error_count_q + 32'd1;
-        end
-        if (rx_frame_parity_err) begin
-          parity_error_sticky_q <= 1'b1;
-          error_count_q <= (error_count_q == 32'hFFFFFFFF) ? error_count_q : error_count_q + 32'd1;
-        end
-      end
-      if (rx_frame_break) begin
-        error_count_q <= (error_count_q == 32'hFFFFFFFF) ? error_count_q : error_count_q + 32'd1;
-      end
-      if (read_word_err) begin
-        // (handled in the main arbiter block's own error_count_q increment;
-        // this block only adds the RX-frame-level contributions above, so
-        // no double-count here.)
+        if (rx_frame_framing_err) framing_error_sticky_q <= 1'b1;
+        if (rx_frame_parity_err)  parity_error_sticky_q  <= 1'b1;
       end
     end
   end

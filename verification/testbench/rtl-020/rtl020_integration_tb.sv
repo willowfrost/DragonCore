@@ -388,6 +388,35 @@ module rtl020_integration_tb;
     set_field(dfc_types_pkg::DFC_RTL020_CONTROL__UART_ERROR_COUNT__COUNT_HI,
               dfc_types_pkg::DFC_RTL020_CONTROL__UART_ERROR_COUNT__COUNT_LO, 32'h0);
 
+    // ---- Case 7b: REAL BUG REGRESSION (OPEN_ISSUES.md item 172) --
+    // simultaneous framing+parity errors on ONE byte must count as TWO
+    // aggregate errors, not one. The original bug (error_count_q's own
+    // increment split across two independent always_ff processes, with
+    // the SAME-process framing/parity branches each computing "+1" off
+    // the same stale old value) silently dropped one of the two
+    // same-cycle increments -- this exact scenario is the direct proof
+    // that bug is gone. ----
+    control_i[dfc_types_pkg::DFC_RTL020_CONTROL__UART_CONTROL__PARITY_HI:dfc_types_pkg::DFC_RTL020_CONTROL__UART_CONTROL__PARITY_LO] = 2'b01; // even parity required
+    // 8'h0F has four 1-bits -> correct EVEN parity bit is 0; drive 1
+    // (wrong, real PARITY_ERROR) AND stop bit 0 (real FRAMING_ERROR) on
+    // the very same byte.
+    drive_rx_frame(8'h0F, 1'b1, 1'b1, 1'b0, 1'b0);
+    wait_rx_level(1, 600);
+    check_bit("Case7b simultaneous-error byte: real FRAMING_ERROR sticky set", status_o[dfc_types_pkg::DFC_RTL020_STATUS__UART_STATUS__FRAMING_ERROR_HI], 1'b1);
+    check_bit("Case7b simultaneous-error byte: real PARITY_ERROR sticky set", status_o[dfc_types_pkg::DFC_RTL020_STATUS__UART_STATUS__PARITY_ERROR_HI], 1'b1);
+    check("Case7b UART_ERROR_COUNT incremented by 2 for one byte with BOTH framing+parity errors simultaneously (the real multi-driver/undercount bug this session fixed -- OPEN_ISSUES.md item 172 -- previously only counted 1)",
+          status_o[dfc_types_pkg::DFC_RTL020_STATUS__UART_ERROR_COUNT__COUNT_HI:dfc_types_pkg::DFC_RTL020_STATUS__UART_ERROR_COUNT__COUNT_LO], 32'd2);
+    pulse_ctrl_bit(dfc_types_pkg::DFC_RTL020_CONTROL__UART_STATUS__FRAMING_ERROR_HI);
+    pulse_ctrl_bit(dfc_types_pkg::DFC_RTL020_CONTROL__UART_STATUS__PARITY_ERROR_HI);
+    pulse_ctrl_bit(dfc_types_pkg::DFC_RTL020_CONTROL__UART_RX_POP__POP_HI);
+    wait_rx_level(0, 600);
+    set_field(dfc_types_pkg::DFC_RTL020_CONTROL__UART_ERROR_COUNT__COUNT_HI,
+              dfc_types_pkg::DFC_RTL020_CONTROL__UART_ERROR_COUNT__COUNT_LO, 32'hFFFFFFFF);
+    @(posedge core_clk_i); #1;
+    set_field(dfc_types_pkg::DFC_RTL020_CONTROL__UART_ERROR_COUNT__COUNT_HI,
+              dfc_types_pkg::DFC_RTL020_CONTROL__UART_ERROR_COUNT__COUNT_LO, 32'h0);
+    control_i[dfc_types_pkg::DFC_RTL020_CONTROL__UART_CONTROL__PARITY_HI:dfc_types_pkg::DFC_RTL020_CONTROL__UART_CONTROL__PARITY_LO] = 2'b00;
+
     // ---- Case 8: real BREAK_DETECTED (entire frame held low) --
     // OVERRIDES framing/parity reporting, and (this module's own disclosed
     // choice) no byte is queued for a break. ----

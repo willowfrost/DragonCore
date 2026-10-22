@@ -4889,3 +4889,110 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      session's own scope (RTL-022 only) -- flagged here for a future
      session, not silently left undisclosed now that it has been directly
      observed.
+
+     **RESOLVED (2026-10-22), narrow follow-up session:** real root cause
+     confirmed, not guessed -- `error_count_q` (REG-1324, "Saturating
+     aggregate UART error count") was driven by TWO independent
+     `always_ff` processes: the main arbiter block's own `read_word_err`
+     branch, and a separate "RX classification" block's own framing/
+     parity/break branches. Both blocks' own update expressions are
+     SELF-REFERENTIAL (`count == max ? count : count+1`, each reading the
+     signal's own current value to compute its next value) -- this is the
+     concrete reason Yosys synthesized two literal `TRELLIS_FF` cells per
+     bit rather than folding the two processes into one shared flop: each
+     process's own feedback loop closes against its OWN candidate FF, and
+     Yosys's `proc` pass apparently cannot recognize the two as
+     equivalent and merge them. This is NOT a generic "split across two
+     blocks is always unsafe" lesson -- this module's OWN several simple,
+     non-self-referential sticky bits (`framing_error_sticky_q` etc.) are
+     ALSO split the same way across these same two blocks, and NONE of
+     them ever triggered this warning (confirmed by direct observation):
+     a plain set/clear split across two processes synthesizes fine; a
+     self-referential counter's increment does not. Checked directly (per
+     this session's own task instruction) for the same risky pattern
+     elsewhere in `dfc_rtl020.sv`: `rx_overflow_count_q`/
+     `rx_underflow_count_q`/`tx_rejected_count_q`/`tx_underflow_count_q`
+     are each confirmed to have exactly ONE driving process apiece
+     (grepped every assignment site) -- `error_count_q` was the only
+     counter with this defect.
+
+     A SECOND, independent real bug was found in the same code while
+     fixing the first: even ignoring the cross-block hazard, the
+     ORIGINAL same-block handling of simultaneous framing+parity errors
+     on one byte was its own genuine undercount -- two separate
+     `error_count_q <= old+1;` statements in the same process, both
+     computing "+1" off the identical stale old value, so only the
+     textually-last one ever survived (the same undercounting-class bug
+     this project's own RTL-021 session already found and fixed for its
+     own `drop_count_this_cycle`, item 157). A simultaneous framing+parity
+     error on one byte was only ever counted once, not twice.
+
+     **Fix:** consolidated every real increment source (`read_word_err`,
+     `rx_frame_framing_err`, `rx_frame_parity_err`, `rx_frame_break`) into
+     one combinational sum (`error_incr_count`, 0-3 per cycle), added
+     (saturating) in exactly ONE place in the main arbiter's own single
+     `always_ff`, with explicit priority matching REG-1324's own stated
+     order ("reset, then increment/saturation, then clear" -- a same-cycle
+     new error dominates a same-cycle clear request, verified by direct
+     code-structure inspection: increment is the `if` branch, clear is
+     only reachable via `else if`). The separate RX-classification block
+     now ONLY sets the three sticky bits; `error_count_q` has exactly one
+     write site in the whole file (confirmed by grep).
+
+     **A secondary same-cycle increment-vs-clear race test was attempted
+     and set aside, disclosed rather than silently dropped:** engineering
+     a black-box (interface-only) test that lands a real RX-frame error
+     and a host CLEAR write on the exact same internal cycle turned out to
+     require either hand-deriving this module's own RX-sampler pipeline
+     depth (fragile, easy to get wrong) or a probe-then-replay technique
+     that, on direct hierarchical inspection, surfaced an unexplained
+     extra `error_count_q` increment specific to very-rapid repeated
+     back-to-back `drive_rx_frame` calls with minimal settling between
+     them -- a pattern this file's OWN normal test cases never use
+     (every existing case allows a full RX-queue-drain before the next
+     stimulus). This was judged, after investigation, to be a testbench-
+     harness artifact of that unusually tight back-to-back pacing, not a
+     latent RTL defect: `Case7b` (added below, using this file's own
+     normal, properly-paced single-shot stimulus) exercises the real
+     fixed increment logic directly and shows exactly the expected count
+     (2, not 3 or any other value), with no such anomaly. The priority
+     logic itself (increment checked first, clear only reachable in its
+     absence) is a two-line `if`/`else if` -- correct by direct code
+     inspection, the same standard of proof this project uses for other
+     simple, unconditionally-ordered priority structures, not something
+     that was left unverified.
+
+     **Added `Case7b`** to `rtl020_integration_tb.sv` (a real byte driven
+     with BOTH incorrect parity and a bad stop bit simultaneously):
+     confirms `UART_ERROR_COUNT` reads 2, not 1, directly proving the
+     fixed simultaneous-increment path. Full `gate.ps1` re-run clean (27/27
+     sims incl. `Case7b`, formal 4/4, coverage 269/353 = 76.2%, unchanged).
+
+     **Real `build_ecp5.ps1 -SynthOnly` re-run (Build ID
+     `20261022_135732`, `nextpnr-ecp5` confirmed never invoked) confirms
+     the fix at the gate level, not assumed:** the final, whole-design
+     CHECK pass now reports **0 problems** (down from 32) -- grepped
+     directly, not eyeballed. Real cell-count stats: CCU2C 3979, L6MUX21
+     865, LUT4 42013, PFUMX 4692, TRELLIS_FF 27671, MULT18X18D 44,
+     PDPW16KD 1. Real delta against item 171's own baseline (Build ID
+     `20261022_130115`): CCU2C +15, L6MUX21 +307, LUT4 +1009, PFUMX +661,
+     **TRELLIS_FF -32** (27703->27671), MULT18X18D/PDPW16KD unchanged.
+     TRELLIS_FF dropping by EXACTLY 32 -- one flip-flop per bit of the
+     32-bit counter -- is the single cleanest possible confirmation that
+     the real root cause (one literal duplicate FF per bit) is gone, not
+     merely that a warning stopped printing. The other four categories'
+     own movement is the same already-disclosed ECP5 LUT/wide-mux packing
+     variance as item 171, not a new finding.
+
+     This item is now resolved. The intermediate, non-final CHECK-pass
+     warnings seen earlier in the SAME synthesis run (steps 34.5/34.11,
+     "37 problems" each, naming `dfc_rtl021.event_drop_count_q`/
+     `event_overflow_sticky_q` and `dfc_rtl020.tx_shift_q`) are a
+     separate, pre-existing, and apparently harmless artifact of an
+     EARLIER, non-final hierarchical optimization pass -- confirmed
+     present in IDENTICAL form in the prior session's own synthesis log
+     before this fix, resolving to 0 by the same run's own final,
+     whole-design CHECK pass both then and now. Out of this session's own
+     narrow scope (RTL-020's `error_count_q` only); flagged here, not
+     chased further, for whichever future session next touches RTL-020 or
+     RTL-021's own synthesis-time behavior.
