@@ -7697,8 +7697,8 @@
     },
     {
       "name": "dfc_rtl020_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl020_control_t (215 bits, rich format)",
-      "width": 215,
+      "trace": "ARCH-002 Appendix B dfc_rtl020_control_t (216 bits, rich format)",
+      "width": 216,
       "fields": [
         {
           "name": "uart_control__enable",
@@ -7888,6 +7888,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "whole-counter clear"
+        },
+        {
+          "name": "rtl020_evt_overflow_status__event_overflow",
+          "hi": 215,
+          "lo": 215,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },

@@ -712,3 +712,65 @@ confirmed via a direct fetch of the real raw `emard/ulx3s`
 `"gn21"`, and `"gn11"` `LOCATE COMP` lines (and their real comments), not
 recalled from memory or accepted from a single partial match — same
 provenance discipline as every earlier section in this table.
+
+---
+
+## 14. UART Interface (RTL-020) — J1 gp11/gn12 (both WiFi-shared), 2 real pads
+
+RTL-020 is the simplest Databus-domain module's pin budget so far — just
+`uart_rx_i`/`uart_tx_o`, 2 pads, no transceiver-error-equivalent pin (ARCH-002's
+real 32-port RTL-020 table has no such input, unlike ARINC/CAN's own adapter-
+/transceiver-error pins). Per Section 13's own closing note, the unshared
+`gn14`-`gn21` range is already fully exhausted (zero positions left after
+RTL-019) — these 2 pads come entirely from the remaining WiFi-shared
+`gp11`-`gp13`/`gn12`-`gn13` conductors (5 remained; this module leaves 3).
+This session's own scope is compile/synthesize/verify only (no place-and-route,
+no bitstream) — the pin assignment and `.lpf`/`ulx3s_dfc_top.sv` wiring below
+are still real and complete, since synthesis needs real top-level connectivity
+to elaborate correctly, but this session does not itself confirm these SITEs
+route or time on real hardware.
+
+| Port | Pin | J1/J2 position | FPGA site (real `.lpf`) | Direction |
+|---|---|---|---|---|
+| `uart_rx_i` | `gp11` | J1-11 (`gp` conductor, WiFi-shared) | F4 | Input |
+| `uart_tx_o` | `gn12` | J1-12 (`gn` conductor, WiFi-shared) | F3 | Output |
+
+**Choice rationale:** same "exhaust unshared, lowest-numbered first" rule as
+every earlier section, extended into the WiFi-shared range per Section 13's
+own precedent (the unshared range having been genuinely exhausted there).
+Of the 5 WiFi-shared conductors Section 13 left untouched
+(`gp11`/`gp12`/`gn12`/`gp13`/`gn13` — `gn11` itself was already consumed by
+RTL-019's own `can_transceiver_error_i`), `gp11` is the single lowest-numbered
+position still free (position 11's other half), used for `uart_rx_i`;
+`gn12` is next (position 12, confirmed free, no prior session has touched
+either half of position 12), used for `uart_tx_o`. `uart_rx_i` is a pure
+input, pulled up (`PULLMODE=UP`, same convention as every other input pin in
+this table) so an unconnected/not-yet-wired external driver reads idle-high
+(a UART idle line is logic-1, matching this choice for the same reason, not
+coincidentally the same polarity CAN's own idle-recessive convention used);
+`uart_tx_o` is a pure output (`PULLMODE=NONE`, same convention as every other
+ECP5-driven output pin in this table).
+
+**Real, disclosed consequence of both WiFi-shared pins:** per this project's
+own established disclosure (Sections 9/12/13), `gp11`/`gn12` sharing the
+onboard WiFi module's own `wifi_gpio26`/`wifi_gpio32` pins means neither pad
+is genuinely available for standalone UART use while the WiFi module is
+active on real hardware. Acceptable for this session's own compile/
+synthesize/verify-only scope (no real board bring-up performed), but a real
+constraint for any future bring-up session to resolve (e.g. disabling the
+onboard WiFi module, or re-routing these signals once a different pin source
+becomes available). `gn12`'s own real board-file comment additionally marks
+it `PCLK`-capable (used as a clock input in some reference designs) — not a
+concern here, since this module uses it purely as an ordinary single-ended
+GPIO, not a clock.
+
+**This leaves 3 WiFi-shared conductors** (`gp12`/`gp13`/`gn13`) for any future
+module; the differential-capable pin budget this project has been tracking
+since Section 10 is very nearly exhausted.
+
+**Provenance:** the `gp11`/`gn12` SITE assignments (F4/F3) were confirmed via
+a direct fetch of the real raw `emard/ulx3s` `doc/constraints/ulx3s_v20.lpf`
+content against the exact `"gp11"` and `"gn12"` `LOCATE COMP` lines (and
+their real `# DIFF wifi_gpio26` / `# DIFF wifi_gpio32 PCLK` comments), not
+recalled from memory or accepted from a single partial match — same
+provenance discipline as every earlier section in this table.

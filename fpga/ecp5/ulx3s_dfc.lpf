@@ -234,6 +234,34 @@ IOBUF PORT "gn20" PULLMODE=UP IO_TYPE=LVCMOS33;
 IOBUF PORT "gn21" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
 IOBUF PORT "gn11" PULLMODE=UP IO_TYPE=LVCMOS33;
 
+# ---- UART Interface (RTL-020): gp11/gn12, 2 real pads, both WiFi-shared --
+# the simplest Databus-domain pin budget so far (no transceiver-error-
+# equivalent pin -- ARCH-002's real 32-port RTL-020 table has none). Per
+# this file's own RTL-019 section above, the unshared gn14-gn21 range is
+# already fully exhausted -- both pads come from the remaining WiFi-shared
+# gp11-gp13/gn12-gn13 conductors (gn11 itself already consumed above).
+# gp11 (SITE F4, real board file comment "DIFF wifi_gpio26") is the single
+# lowest-numbered WiFi-shared position still free, used for uart_rx_i;
+# gn12 (SITE F3, real board file comment "DIFF wifi_gpio32 PCLK") is next,
+# used for uart_tx_o -- confirmed via a direct fetch of the real raw
+# emard/ulx3s doc/constraints/ulx3s_v20.lpf content against the exact
+# "gp11"/"gn12" LOCATE lines, same provenance discipline as every earlier
+# section. Real consequence of sharing pins with the onboard WiFi module:
+# per this project's own established disclosure (ULX3S_CONNECTION_MAP.md
+# Sections 9/12/13), neither pad is available for standalone UART use
+# while the WiFi module is active on real hardware -- acceptable for this
+# session's own compile/synthesize/verify-only scope, a real constraint
+# for any future bring-up session. gn12's own PCLK capability is unused
+# here (plain GPIO use only). uart_rx_i is a pure input, pulled up (UART
+# idle line is logic-1, same PULLMODE=UP convention as every other input
+# pin in this file) so an unconnected/not-yet-wired external driver reads
+# idle-high rather than floating; uart_tx_o is a pure output (no
+# PULLMODE, matching this file's own established output convention).
+LOCATE COMP "gp11" SITE "F4";
+LOCATE COMP "gn12" SITE "F3";
+IOBUF PORT "gp11" PULLMODE=UP IO_TYPE=LVCMOS33;
+IOBUF PORT "gn12" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+
 # ---- Debug LEDs (real board file, "blinkey"/"gpio" sheet) ----
 # led[0]/led[1] are meaningfully driven (pll_locked/por_n) by this design;
 # led[2:7] are tied zero in ulx3s_dfc_top.sv but still need pin constraints

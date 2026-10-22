@@ -4076,3 +4076,179 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
        already-disclosed Appendix A width staleness (confirmed, not new);
        19/19 ports including the deliberate `evt_valid_i[4]` self-loop,
        and REG-002 §10's 15 registers, all confirmed correct.
+
+## RTL-020 (UART Interface) integration — compile/synthesize/verify scope only, most protocol-complex module to date
+
+143. **RESOLVED (2026-10-20): `RTL-020_RevA.md` has a stale port count
+     (same class as RTL-017/018/019's own 20/18/19-vs-33/28/33) AND, for
+     the first time, a stale REGISTER count too.** SS2's own claim of "17
+     total" ports is wrong -- ARCH-002 Appendix A's real header reads
+     "RTL-020 - UART Interface (32 ports)" and the real table lists exactly
+     32 rows, confirmed by direct count. SS1/SS5's own claim of "11
+     registers, all offsets confirmed" is wrong too, and stated with more
+     confidence than any prior module spec's own port-count error: REG-002
+     §17's own block header says "Register count: 15," and the real listed
+     rows confirm it -- `RTL-020_RevA.md`'s own list is missing
+     `UART_RX_OVERFLOW_COUNT` (0x132C), `UART_RX_UNDERFLOW_COUNT` (0x1330),
+     `UART_TX_REJECTED_COUNT` (0x1334), and `UART_TX_UNDERFLOW_COUNT`
+     (0x1338) entirely -- an entire group of four real diagnostic counters,
+     not a single off-by-one. Implemented against the real 32-port/
+     15-register set via `tools/reggen/rtl020_field_map.json`; disclosed
+     here, not followed.
+
+144. **RESOLVED (2026-10-20): the 12th real instance of the exact
+     `EVT_OVERFLOW_STATUS` clear-forwarding gap already fixed for RTL-002
+     through RTL-019, approved before this session's edit.**
+     `dfc_rtl020_control_t` had no clear-forwarding field for
+     `RTL020_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-1328 bit 0, a real
+     W1C field). Fixed the same way as every prior instance: ARCH-002 grew
+     the struct 215->216 bits, adding `rtl020_evt_overflow_status__
+     event_overflow` as a new `clear_mask` field at the new highest bit
+     (215) -- every pre-existing field's bit position confirmed unchanged
+     via the real `regenerate.ps1` run this session (a clean, isolated
+     diff against `include/dfc_types_pkg.sv`, touching only
+     `dfc_rtl020_control_t`'s own declaration).
+
+145. **The master shared-resource-index table (item 140) was checked
+     BEFORE wiring `activity_o`, exactly as this session's own task
+     briefing required, and it caught a real collision before it shipped
+     -- not after, the way items 83/125/140 each had to.** RTL-020's own
+     Appendix A `activity_o` row literally reads "RTL-015.activity_i[4]" --
+     identical in kind to RTL-012/017/019/021's own already-identified-
+     and-overruled rows (item 83: five conflicting individual rows, each
+     resolved in favor of RTL-015's own row instead). Bit 4 is already,
+     correctly occupied by RTL-006 (GPIO qualified transition, per
+     ARCH-SAFE-007's own ID order and item 83/140's resolution); RTL-020's
+     real ID is 3 ("UART RX byte"), which item 140's own master table
+     already identified as free. Wired to `RTL-015.activity_i[3]` in
+     `dfc_rtl024.sv`, NOT this module's own row's literal `[4]` -- this
+     session's own task briefing was itself wrong on this specific point
+     (it asserted "RTL-020 has no `activity_o` port per the real Appendix
+     A row," when the real row both exists and names a bit already
+     occupied by a different, correct, real module) -- the master-table
+     check this session's own briefing itself mandated is exactly what
+     caught that assertion before it was trusted uncritically. `activity_o`
+     pulses specifically on a byte genuinely committed into the RX queue,
+     matching ID 3's own "UART RX byte" description, not on any TX event.
+
+146. **Three real, genuine RTL bugs found and fixed while implementing and
+     testing this module, all caught by this module's own dedicated
+     testbench or by a direct design review before first test run, none
+     left unfixed:**
+     - **A real BREAK condition did not actually suppress the queued
+       commit**, despite this module's own header already asserting "no
+       byte is queued for a break" as a disclosed design choice -- the
+       assertion was written, but the RTL never implemented it:
+       `rx_commit_want_q` pulsed unconditionally on every completed frame,
+       break or not. Found by this module's own testbench (Case 8: "no
+       byte queued for a break" failed with a real queued byte present).
+       Fixed by splitting the single completion pulse into two: a
+       break-suppressed `rx_commit_want_q` (queues the byte) and an
+       unconditional `rx_frame_done_q` (drives classification/evidence --
+       `BREAK_DETECTED` sticky and the aggregate error count must still
+       fire on a break, only the queue commit itself is suppressed).
+     - **The real RX-queue-full overflow sub-case was never actually
+       checked.** REG-1324's own text names two distinct causes under one
+       counter ("overflow OR dropped-byte"); this module's header already
+       disclosed both, but only sub-case (a) (the one-deep staging
+       register already occupied) was ever implemented -- sub-case (b)
+       (the arbiter ready to commit a staged byte, but the 16-entry queue
+       itself already full) was asserted in the header and never coded,
+       silently overflowing `rx_count_q` past 16 and corrupting the real
+       16-entry client-3 segment. Found by this module's own testbench
+       (Case 10: a 17th byte was accepted into a supposedly-full queue).
+       Fixed: the arbiter's own `PH_IDLE` dispatch now checks
+       `rx_queue_full` before ever issuing the commit write, dropping the
+       staged byte with the same overflow sticky/count instead.
+     - **Majority-vote polarity was inverted** (`>=2 of 3 samples HIGH`
+       was mapped to a sampled bit of `0`, the exact opposite of what a
+       majority-HIGH vote means) -- found via direct design review before
+       this module's first real simulation run, not by a failed test
+       (the error would have manifested as every real frame being
+       misread, likely surfacing as a false start-bit glitch-rejection on
+       nearly every real byte). Also found and fixed the same way, before
+       first run: the even/odd parity formulas were swapped (`PARITY=01`
+       even is the XOR-reduce, not the XNOR-reduce) in both the RX
+       classifier and the TX serializer; and the TX serializer's own
+       bit-index advance used a blind `+1` increment that would walk
+       through the real `TXB_PARITY` state as an actual extra bit-time
+       even when parity was disabled, corrupting the frame length --
+       replaced with an explicit next-state table mirroring the RX side's
+       own already-correct `want_parity ? RXS_PARITY : RXS_STOP1`
+       transition.
+     A real `gate.ps1` run after all three fixes passed clean (lint;
+     sim 25/25 testbenches including this module's own new 65-check
+     `rtl020_integration_tb.sv`, 0 failures; formal 4/4; coverage
+     239/353, up from 225/353 -- a genuine +14-register jump from this
+     module's own 15 new registers, most now exercised for real).
+
+147. **Real, disclosed design choices and genuine gaps, logged per
+     CHTR-DOC-006 rather than silently assumed or invented:**
+     - **BREAK-detection heuristic** (neither ARCH-002 nor REG-002 states
+       a bit-exact algorithm): a break is classified when the stop-bit
+       framing check fails AND every sampled data bit AND the parity bit
+       (if checked) were all 0 -- the entire frame held low, the standard
+       real-world break signature, distinct from an ordinary single-bit
+       framing glitch.
+     - **`PARITY==2'b11` defensive clamp** (REG-ENC-007: "parity 3 is
+       rejected," and RTL-001 does not yet implement per-field legal-value
+       range checks at all -- the same already-disclosed, pre-existing gap
+       RTL-001's own header names as its single biggest conformance gap):
+       treated identically to `PARITY==2'b00` (no parity) by both RX and
+       TX, the same defensive-clamp-for-an-illegal-2-bit-encoding
+       precedent RTL-019's own CAN `LOOPBACK`/`LISTEN_ONLY` `11` handling
+       already established (item 131).
+     - **The second stop bit's own value is not separately validated**
+       when `TWO_STOP_BITS=1` -- only the first stop bit's framing check
+       is real; the second is timed but not re-checked, a disclosed
+       simplification common to many real UART implementations.
+     - **UART's own "underflow" event/irq condition bit (Appendix F.3 bit
+       5) is shared by two real, independently-counted conditions**
+       (`RX_UNDERFLOW` and `TX_UNDERFLOW`) -- REG-002/Appendix F.3 give
+       this module only one condition-enable bit for both, the same
+       "two real conditions, one condition-enable bit" disclosed-
+       interpretation precedent RTL-018's own bits 1/2 and RTL-019's own
+       bit 4 already established.
+     - **A route-drained RX byte's own message-record timestamp is read
+       LIVE at drain time, not the real original receive time** --
+       `ARCH-BUF-025`'s own 1-word RX entry layout has no stored timestamp
+       field at all (unlike ARINC's 4-word/CAN's 6-word entries, which
+       both carry one), so there is nothing to replay. A disclosed
+       information loss, same class as finding 6's own sequence
+       truncation in RTL-017, just total rather than partial, and
+       inherited directly from REG-002's own entry-layout choice, not
+       invented here.
+     - **`fault_req_o` is a permanent, disclosed stub (tied `1'b0`)** --
+       ARCH-002's real 32-port RTL-020 table defines no adapter-error- or
+       transceiver-error-equivalent input for UART at all (unlike ARINC/
+       CAN), so there is no real hardware-fault condition for this module
+       to escalate; every RX/TX error condition is already visible via its
+       own sticky bit and counter, the same severity judgment RTL-017/
+       018's own fault_req_o documentation already applies to their own
+       non-adapter-error conditions.
+     - **Genuine, newly-found ARCH-002-internal tension (not a defect,
+       disclosed not resolved)**: SS11.1's own generic per-type text says
+       UART's `dfc_message_record_t` data lives in "metadata bits 7:0...
+       with payload length zero" -- but RTL-017/018/019's own already-
+       shipped, already-verified implementations all put their own data in
+       PAYLOAD (length nonzero) and classification/status info in
+       METADATA, the opposite convention. This module follows the
+       already-shipped sibling convention for project-wide consistency
+       (payload=data, metadata=`{sequence,error_flags,data}` verbatim)
+       rather than SS11.1's own literal text, since this entire path is
+       unreachable either way until RTL-021 (Message Router) exists to
+       actually consume it. Not something this module can resolve
+       unilaterally; flagged for a future ARCH-002 reconciliation pass.
+     - **Pin budget**: `uart_rx_i`/`uart_tx_o` are the simplest Databus
+       pin budget so far (2 pads, no transceiver-error-equivalent input).
+       Both come from the WiFi-shared range (`gp11`/`gn12`, SITEs F4/F3) --
+       the unshared `gn14`-`gn21` range was already fully exhausted by
+       RTL-019 (item set for that module). Real consequence disclosed in
+       `ULX3S_CONNECTION_MAP.md` Section 14 and `fpga/ecp5/ulx3s_dfc.lpf`'s
+       own comments: neither pad is genuinely available while the onboard
+       WiFi module is active on real hardware.
+     - **`nextpnr-ecp5` was not invoked this session** -- no place-and-
+       route, no timing closure, no bitstream. RTL-020's status is
+       "compiled, synthesized, verified," not "built" or "complete" -- the
+       project continues holding at the RTL-016 FPGA baseline (item 112)
+       for any real hardware target.

@@ -2788,8 +2788,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL019_STATUS__CAN_TX_REJECTED_COUNT__COUNT_HI = 325;
   localparam int unsigned DFC_RTL019_STATUS__CAN_TX_REJECTED_COUNT__COUNT_LO = 294;
 
-  // ARCH-002 Appendix B dfc_rtl020_control_t (215 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl020_control_t (216 bits, rich format)
   typedef struct packed {
+    logic rtl020_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic [31:0] uart_tx_underflow_count__count;  //  reset=0 :: whole-counter clear
     logic [31:0] uart_tx_rejected_count__count;  //  reset=0 :: whole-counter clear
     logic [31:0] uart_rx_underflow_count__count;  //  reset=0 :: whole-counter clear
@@ -2812,9 +2813,9 @@ package dfc_types_pkg;
     logic [1:0] uart_control__parity;  //  reset=0 :: control_value
     logic uart_control__enable;  //  reset=0 :: control_value
   } dfc_rtl020_control_t;
-  // total width: 215 bits
+  // total width: 216 bits
 
-  localparam int unsigned DFC_RTL020_CONTROL_WIDTH = 215;
+  localparam int unsigned DFC_RTL020_CONTROL_WIDTH = 216;
   localparam int unsigned DFC_RTL020_CONTROL__UART_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL020_CONTROL__UART_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL020_CONTROL__UART_CONTROL__PARITY_HI = 2;
@@ -2857,6 +2858,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL020_CONTROL__UART_TX_REJECTED_COUNT__COUNT_LO = 151;
   localparam int unsigned DFC_RTL020_CONTROL__UART_TX_UNDERFLOW_COUNT__COUNT_HI = 214;
   localparam int unsigned DFC_RTL020_CONTROL__UART_TX_UNDERFLOW_COUNT__COUNT_LO = 183;
+  localparam int unsigned DFC_RTL020_CONTROL__RTL020_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 215;
+  localparam int unsigned DFC_RTL020_CONTROL__RTL020_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 215;
 
   // ARCH-002 Appendix B dfc_rtl020_status_t (217 bits, rich format)
   typedef struct packed {

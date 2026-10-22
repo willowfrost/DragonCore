@@ -1,0 +1,187 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md Section 17 (0x1300-0x1338) per-field bit tables, cited by contract ID, and RCA-DFC-ARCH-002.md's dfc_rtl020_control_t/status_t Appendix B tables. Covers all 15 real UART registers -- REG-002's own block header (Section 17) and Section 6 Address-Map Summary both say 15, and the block lists exactly 15 rows (confirmed by direct count); RTL-020_RevA.md's own stale '11 registers' claim is wrong (missing UART_RX_OVERFLOW_COUNT/UART_RX_UNDERFLOW_COUNT/UART_TX_REJECTED_COUNT/UART_TX_UNDERFLOW_COUNT entirely), disclosed in OPEN_ISSUES.md, not followed. One real gap found and fixed while building this field map (the 12th real instance of the exact gap class already fixed for RTL-002 through RTL-019, approved before this session's edit): RTL020_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW had no clear-forwarding control field at all in dfc_rtl020_control_t as ARCH-002 originally defined it. Fixed the same way as every prior instance: ARCH-002 grew dfc_rtl020_control_t 215->216 bits, adding rtl020_evt_overflow_status__event_overflow as a new clear_mask field at the new highest bit (215) -- every pre-existing field's bit position confirmed unchanged by direct comparison against the already-generated include/dfc_types_pkg.sv before this edit. See OPEN_ISSUES.md for the full disclosure. UART_RX_LEVEL/UART_RX_DATA/UART_TX_LEVEL are pure-RO registers (readback class 'internal_reg'/'zero' not needed -- status_registers entries only, no control_registers entry, same precedent as CAN_RX_LEVEL/CAN_RX_ID/etc. in rtl019_field_map.json). UART_BAUD_DIV/UART_TX_DATA are plain RW staging registers (status_registers entry not needed -- the generic regbank already stores and returns their written value directly, same precedent as CAN_BIT_TIMING/CAN_TX_DATA_LO_STAGE/etc.).",
+  "consumer_module": "RTL-020",
+  "control_struct": "dfc_rtl020_control_t",
+  "status_struct": "dfc_rtl020_status_t",
+  "control_registers": [
+    {
+      "register": "UART_CONTROL",
+      "contract_id": "REG-1300",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "uart_control__enable" },
+        { "reg_hi": 2, "reg_lo": 1, "class": "RW", "struct_field": "uart_control__parity" },
+        { "reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "uart_control__two_stop_bits" },
+        { "reg_hi": 4, "reg_lo": 4, "class": "RW", "struct_field": "uart_control__event_enable" },
+        { "reg_hi": 5, "reg_lo": 5, "class": "RW", "struct_field": "uart_control__irq_enable" }
+      ]
+    },
+    {
+      "register": "UART_STATUS",
+      "contract_id": "REG-1304",
+      "fields": [
+        { "reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "uart_status__framing_error" },
+        { "reg_hi": 5, "reg_lo": 5, "class": "W1C", "struct_field": "uart_status__parity_error" },
+        { "reg_hi": 6, "reg_lo": 6, "class": "W1C", "struct_field": "uart_status__rx_overflow" },
+        { "reg_hi": 7, "reg_lo": 7, "class": "W1C", "struct_field": "uart_status__tx_underflow" },
+        { "reg_hi": 8, "reg_lo": 8, "class": "W1C", "struct_field": "uart_status__break_detected" },
+        { "reg_hi": 9, "reg_lo": 9, "class": "W1C", "struct_field": "uart_status__rx_underflow" },
+        { "reg_hi": 10, "reg_lo": 10, "class": "W1C", "struct_field": "uart_status__tx_rejected" }
+      ]
+    },
+    {
+      "register": "UART_BAUD_DIV",
+      "contract_id": "REG-1308",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uart_baud_div__divisor" }
+      ]
+    },
+    {
+      "register": "UART_RX_POP",
+      "contract_id": "REG-1314",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "uart_rx_pop__pop" }
+      ]
+    },
+    {
+      "register": "UART_TX_DATA",
+      "contract_id": "REG-131C",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "uart_tx_data__data" }
+      ]
+    },
+    {
+      "register": "UART_TX_PUSH",
+      "contract_id": "REG-1320",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "uart_tx_push__push" }
+      ]
+    },
+    {
+      "register": "UART_ERROR_COUNT",
+      "contract_id": "REG-1324",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "uart_error_count__count" }
+      ]
+    },
+    {
+      "register": "RTL020_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-1328",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl020_evt_overflow_status__event_overflow" }
+      ]
+    },
+    {
+      "register": "UART_RX_OVERFLOW_COUNT",
+      "contract_id": "REG-132C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "uart_rx_overflow_count__count" }
+      ]
+    },
+    {
+      "register": "UART_RX_UNDERFLOW_COUNT",
+      "contract_id": "REG-1330",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "uart_rx_underflow_count__count" }
+      ]
+    },
+    {
+      "register": "UART_TX_REJECTED_COUNT",
+      "contract_id": "REG-1334",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "uart_tx_rejected_count__count" }
+      ]
+    },
+    {
+      "register": "UART_TX_UNDERFLOW_COUNT",
+      "contract_id": "REG-1338",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "COUNTER-CLR", "struct_field": "uart_tx_underflow_count__count" }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "UART_STATUS",
+      "contract_id": "REG-1304",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "uart_status__enabled" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "uart_status__rx_not_empty" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "uart_status__tx_not_full" },
+        { "reg_hi": 3, "reg_lo": 3, "struct_field": "uart_status__tx_busy" },
+        { "reg_hi": 4, "reg_lo": 4, "struct_field": "uart_status__framing_error" },
+        { "reg_hi": 5, "reg_lo": 5, "struct_field": "uart_status__parity_error" },
+        { "reg_hi": 6, "reg_lo": 6, "struct_field": "uart_status__rx_overflow" },
+        { "reg_hi": 7, "reg_lo": 7, "struct_field": "uart_status__tx_underflow" },
+        { "reg_hi": 8, "reg_lo": 8, "struct_field": "uart_status__break_detected" },
+        { "reg_hi": 9, "reg_lo": 9, "struct_field": "uart_status__rx_underflow" },
+        { "reg_hi": 10, "reg_lo": 10, "struct_field": "uart_status__tx_rejected" }
+      ]
+    },
+    {
+      "register": "UART_RX_LEVEL",
+      "contract_id": "REG-130C",
+      "fields": [
+        { "reg_hi": 4, "reg_lo": 0, "struct_field": "uart_rx_level__level" }
+      ]
+    },
+    {
+      "register": "UART_RX_DATA",
+      "contract_id": "REG-1310",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "struct_field": "uart_rx_data__data" },
+        { "reg_hi": 15, "reg_lo": 8, "struct_field": "uart_rx_data__error_flags" },
+        { "reg_hi": 16, "reg_lo": 16, "struct_field": "uart_rx_data__valid" }
+      ]
+    },
+    {
+      "register": "UART_TX_LEVEL",
+      "contract_id": "REG-1318",
+      "fields": [
+        { "reg_hi": 4, "reg_lo": 0, "struct_field": "uart_tx_level__level" }
+      ]
+    },
+    {
+      "register": "UART_ERROR_COUNT",
+      "contract_id": "REG-1324",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "uart_error_count__count" }
+      ]
+    },
+    {
+      "register": "RTL020_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-1328",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow" },
+        { "reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count" }
+      ]
+    },
+    {
+      "register": "UART_RX_OVERFLOW_COUNT",
+      "contract_id": "REG-132C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "uart_rx_overflow_count__count" }
+      ]
+    },
+    {
+      "register": "UART_RX_UNDERFLOW_COUNT",
+      "contract_id": "REG-1330",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "uart_rx_underflow_count__count" }
+      ]
+    },
+    {
+      "register": "UART_TX_REJECTED_COUNT",
+      "contract_id": "REG-1334",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "uart_tx_rejected_count__count" }
+      ]
+    },
+    {
+      "register": "UART_TX_UNDERFLOW_COUNT",
+      "contract_id": "REG-1338",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "uart_tx_underflow_count__count" }
+      ]
+    }
+  ]
+}

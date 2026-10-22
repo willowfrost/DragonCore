@@ -18,6 +18,7 @@
 // Cross-module forwarding: RTL-017 (see tools/reggen/rtl017_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-018 (see tools/reggen/rtl018_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-019 (see tools/reggen/rtl019_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-020 (see tools/reggen/rtl020_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL024-ARX-ADAPTER (see tools/reggen/rtl024arxadapter_field_map.json's own _source note for exact scope/citations)
 
 
@@ -57,6 +58,8 @@
   // Aggregated real RTL-018 control, replacing the prior disconnected placeholder for: ATX_CONTROL, ATX_DATA_STAGE, ATX_ERROR_COUNT, ATX_INTERWORD_GAP_BITS, ATX_META_STAGE, ATX_PUSH, ATX_REJECTED_PUSH_COUNT, ATX_STATUS, ATX_UNDERRUN_COUNT, RTL018_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-019 status, replacing individual ports for: CAN_ERROR_COUNT, CAN_RX_DATA_HI, CAN_RX_DATA_LO, CAN_RX_ID, CAN_RX_LEVEL, CAN_RX_META, CAN_RX_OVERFLOW_COUNT, CAN_RX_TIME_HI, CAN_RX_TIME_LO, CAN_STATUS, CAN_TX_LEVEL, CAN_TX_REJECTED_COUNT, RTL019_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-019 control, replacing the prior disconnected placeholder for: CAN_BIT_TIMING, CAN_CONTROL, CAN_RECOVERY, CAN_RX_OVERFLOW_COUNT, CAN_RX_POP, CAN_RX_SNAPSHOT, CAN_STATUS, CAN_TX_DATA_HI_STAGE, CAN_TX_DATA_LO_STAGE, CAN_TX_ID_STAGE, CAN_TX_META_STAGE, CAN_TX_PUSH, CAN_TX_REJECTED_COUNT, RTL019_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-020 status, replacing individual ports for: RTL020_EVT_OVERFLOW_STATUS, UART_ERROR_COUNT, UART_RX_DATA, UART_RX_LEVEL, UART_RX_OVERFLOW_COUNT, UART_RX_UNDERFLOW_COUNT, UART_STATUS, UART_TX_LEVEL, UART_TX_REJECTED_COUNT, UART_TX_UNDERFLOW_COUNT
+  // Aggregated real RTL-020 control, replacing the prior disconnected placeholder for: RTL020_EVT_OVERFLOW_STATUS, UART_BAUD_DIV, UART_CONTROL, UART_ERROR_COUNT, UART_RX_OVERFLOW_COUNT, UART_RX_POP, UART_RX_UNDERFLOW_COUNT, UART_STATUS, UART_TX_DATA, UART_TX_PUSH, UART_TX_REJECTED_COUNT, UART_TX_UNDERFLOW_COUNT
   // Aggregated real RTL024-ARX-ADAPTER status, replacing individual ports for: 
   // Aggregated real RTL024-ARX-ADAPTER control, replacing the prior disconnected placeholder for: ARX_CONTROL
 module dfc_config_regbank_regs (
@@ -90,16 +93,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  buffer_internal_error_count_status_i,
   input  logic [31:0]  test_status_status_i,
   input  logic [31:0]  test_rejection_abort_count_status_i,
-  input  logic [31:0]  uart_status_status_i,
-  input  logic [31:0]  uart_rx_level_status_i,
-  input  logic [31:0]  uart_rx_data_status_i,
-  input  logic [31:0]  uart_tx_level_status_i,
-  input  logic [31:0]  uart_error_count_status_i,
-  input  logic [31:0]  rtl020_evt_overflow_status_status_i,
-  input  logic [31:0]  uart_rx_overflow_count_status_i,
-  input  logic [31:0]  uart_rx_underflow_count_status_i,
-  input  logic [31:0]  uart_tx_rejected_count_status_i,
-  input  logic [31:0]  uart_tx_underflow_count_status_i,
   input  logic [31:0]  route_status_status_i,
   input  logic [31:0]  route_active_source_status_i,
   input  logic [31:0]  route_active_dest_status_i,
@@ -166,6 +159,8 @@ module dfc_config_regbank_regs (
   output logic [162:0] rtl018_control_o,
   input  logic [325:0]  rtl019_status_i,
   output logic [203:0] rtl019_control_o,
+  input  logic [216:0]  rtl020_status_i,
+  output logic [215:0] rtl020_control_o,
   input  logic [0:0]  rtl024arxadapter_status_i,
   output logic [4:0] rtl024arxadapter_control_o
 );
@@ -1022,8 +1017,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) uart_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UART_CONTROL)) uart_control_q <= wdata_i;
 
-  // UART_STATUS (0x1304) -- external passthrough, owner RTL-020
-  wire [31:0] uart_status_q = uart_status_status_i;
+  // UART_STATUS (0x1304) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-020, real
+  //   generation per contract REG-1304, not a permanent tie.
+  logic [31:0] uart_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uart_status_pulse_q <= 32'h0;
+    else uart_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UART_STATUS)) ? wdata_i : 32'h0;
+
+  // UART_STATUS (0x1304) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-1304), not an individual per-register port.
+  wire [31:0] uart_status_q = {21'h0, rtl020_status_i[88:88], rtl020_status_i[87:87], rtl020_status_i[11:11], rtl020_status_i[10:10], rtl020_status_i[9:9], rtl020_status_i[8:8], rtl020_status_i[7:7], rtl020_status_i[6:6], rtl020_status_i[5:5], rtl020_status_i[4:4], rtl020_status_i[3:3]};
 
   // UART_BAUD_DIV (0x1308) -- RW, owner RTL-020
   logic [31:0] uart_baud_div_q;
@@ -1031,17 +1034,25 @@ module dfc_config_regbank_regs (
     if (!rst_ni) uart_baud_div_q <= 32'h000001B2;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UART_BAUD_DIV)) uart_baud_div_q <= wdata_i;
 
-  // UART_RX_LEVEL (0x130C) -- external passthrough, owner RTL-020
-  wire [31:0] uart_rx_level_q = uart_rx_level_status_i;
+  // UART_RX_LEVEL (0x130C) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-130C), not an individual per-register port.
+  wire [31:0] uart_rx_level_q = {27'h0, rtl020_status_i[16:12]};
 
-  // UART_RX_DATA (0x1310) -- external passthrough, owner RTL-020
-  wire [31:0] uart_rx_data_q = uart_rx_data_status_i;
+  // UART_RX_DATA (0x1310) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-1310), not an individual per-register port.
+  wire [31:0] uart_rx_data_q = {15'h0, rtl020_status_i[33:33], rtl020_status_i[32:25], rtl020_status_i[24:17]};
 
-  // UART_RX_POP (0x1314) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UART_RX_POP)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // UART_RX_POP (0x1314) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-020, real
+  //   generation per contract REG-1314, not a permanent tie.
+  logic [31:0] uart_rx_pop_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uart_rx_pop_pulse_q <= 32'h0;
+    else uart_rx_pop_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UART_RX_POP)) ? wdata_i : 32'h0;
+
+  // UART_RX_POP (0x1314) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-020 via uart_rx_pop_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] uart_rx_pop_q = 32'h00000000;
 
-  // UART_TX_LEVEL (0x1318) -- external passthrough, owner RTL-020
-  wire [31:0] uart_tx_level_q = uart_tx_level_status_i;
+  // UART_TX_LEVEL (0x1318) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-1318), not an individual per-register port.
+  wire [31:0] uart_tx_level_q = {27'h0, rtl020_status_i[38:34]};
 
   // UART_TX_DATA (0x131C) -- Mixed: RW, RSV0, owner RTL-001 / RTL-020
   logic [31:0] uart_tx_data_q;
@@ -1049,26 +1060,42 @@ module dfc_config_regbank_regs (
     if (!rst_ni) uart_tx_data_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UART_TX_DATA)) uart_tx_data_q <= wdata_i;
 
-  // UART_TX_PUSH (0x1320) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UART_TX_PUSH)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // UART_TX_PUSH (0x1320) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-020, real
+  //   generation per contract REG-1320, not a permanent tie.
+  logic [31:0] uart_tx_push_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uart_tx_push_pulse_q <= 32'h0;
+    else uart_tx_push_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UART_TX_PUSH)) ? wdata_i : 32'h0;
+
+  // UART_TX_PUSH (0x1320) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-020 via uart_tx_push_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] uart_tx_push_q = 32'h00000000;
 
-  // UART_ERROR_COUNT (0x1324) -- external passthrough, owner RTL-020
-  wire [31:0] uart_error_count_q = uart_error_count_status_i;
+  // UART_ERROR_COUNT (0x1324) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-1324), not an individual per-register port.
+  wire [31:0] uart_error_count_q = {rtl020_status_i[70:39]};
 
-  // RTL020_EVT_OVERFLOW_STATUS (0x1328) -- external passthrough, owner RTL-020
-  wire [31:0] rtl020_evt_overflow_status_q = rtl020_evt_overflow_status_status_i;
+  // RTL020_EVT_OVERFLOW_STATUS (0x1328) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-020, real
+  //   generation per contract REG-1328, not a permanent tie.
+  logic [31:0] rtl020_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl020_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl020_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL020_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // UART_RX_OVERFLOW_COUNT (0x132C) -- external passthrough, owner RTL-020
-  wire [31:0] uart_rx_overflow_count_q = uart_rx_overflow_count_status_i;
+  // RTL020_EVT_OVERFLOW_STATUS (0x1328) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-1328), not an individual per-register port.
+  wire [31:0] rtl020_evt_overflow_status_q = {8'h0, rtl020_status_i[86:71], 7'h0, rtl020_status_i[2:2]};
 
-  // UART_RX_UNDERFLOW_COUNT (0x1330) -- external passthrough, owner RTL-020
-  wire [31:0] uart_rx_underflow_count_q = uart_rx_underflow_count_status_i;
+  // UART_RX_OVERFLOW_COUNT (0x132C) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-132C), not an individual per-register port.
+  wire [31:0] uart_rx_overflow_count_q = {rtl020_status_i[120:89]};
 
-  // UART_TX_REJECTED_COUNT (0x1334) -- external passthrough, owner RTL-020
-  wire [31:0] uart_tx_rejected_count_q = uart_tx_rejected_count_status_i;
+  // UART_RX_UNDERFLOW_COUNT (0x1330) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-1330), not an individual per-register port.
+  wire [31:0] uart_rx_underflow_count_q = {rtl020_status_i[152:121]};
 
-  // UART_TX_UNDERFLOW_COUNT (0x1338) -- external passthrough, owner RTL-020
-  wire [31:0] uart_tx_underflow_count_q = uart_tx_underflow_count_status_i;
+  // UART_TX_REJECTED_COUNT (0x1334) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-1334), not an individual per-register port.
+  wire [31:0] uart_tx_rejected_count_q = {rtl020_status_i[184:153]};
+
+  // UART_TX_UNDERFLOW_COUNT (0x1338) -- external passthrough, owner RTL-020. Reconstructed from the aggregated rtl020_status_i input (contract REG-1338), not an individual per-register port.
+  wire [31:0] uart_tx_underflow_count_q = {rtl020_status_i[216:185]};
 
   // ROUTE_CONTROL (0x1400) -- Mixed: RW, RSV0, owner RTL-021
   logic [31:0] route_control_q;
@@ -3251,6 +3278,36 @@ module dfc_config_regbank_regs (
   assign rtl019_control_o[0] = can_control_q[0:0];  // CAN_CONTROL.can_control__enable
 
   // ==========================================================================
+  // Aggregated rtl020_control_o -- real forwarding to RTL-020, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl020_control_t defines --
+  // cross-checked at generation time (216/216 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl020_control_o[215] = rtl020_evt_overflow_status_pulse_q[0:0];  // RTL020_EVT_OVERFLOW_STATUS.rtl020_evt_overflow_status__event_overflow
+  assign rtl020_control_o[214:183] = uart_tx_underflow_count_q[31:0];  // UART_TX_UNDERFLOW_COUNT.uart_tx_underflow_count__count
+  assign rtl020_control_o[182:151] = uart_tx_rejected_count_q[31:0];  // UART_TX_REJECTED_COUNT.uart_tx_rejected_count__count
+  assign rtl020_control_o[150:119] = uart_rx_underflow_count_q[31:0];  // UART_RX_UNDERFLOW_COUNT.uart_rx_underflow_count__count
+  assign rtl020_control_o[118:87] = uart_rx_overflow_count_q[31:0];  // UART_RX_OVERFLOW_COUNT.uart_rx_overflow_count__count
+  assign rtl020_control_o[86] = uart_status_pulse_q[10:10];  // UART_STATUS.uart_status__tx_rejected
+  assign rtl020_control_o[85] = uart_status_pulse_q[9:9];  // UART_STATUS.uart_status__rx_underflow
+  assign rtl020_control_o[84:53] = uart_error_count_q[31:0];  // UART_ERROR_COUNT.uart_error_count__count
+  assign rtl020_control_o[52] = uart_tx_push_pulse_q[0:0];  // UART_TX_PUSH.uart_tx_push__push
+  assign rtl020_control_o[51:44] = uart_tx_data_q[7:0];  // UART_TX_DATA.uart_tx_data__data
+  assign rtl020_control_o[43] = uart_rx_pop_pulse_q[0:0];  // UART_RX_POP.uart_rx_pop__pop
+  assign rtl020_control_o[42:11] = uart_baud_div_q[31:0];  // UART_BAUD_DIV.uart_baud_div__divisor
+  assign rtl020_control_o[10] = uart_status_pulse_q[8:8];  // UART_STATUS.uart_status__break_detected
+  assign rtl020_control_o[9] = uart_status_pulse_q[7:7];  // UART_STATUS.uart_status__tx_underflow
+  assign rtl020_control_o[8] = uart_status_pulse_q[6:6];  // UART_STATUS.uart_status__rx_overflow
+  assign rtl020_control_o[7] = uart_status_pulse_q[5:5];  // UART_STATUS.uart_status__parity_error
+  assign rtl020_control_o[6] = uart_status_pulse_q[4:4];  // UART_STATUS.uart_status__framing_error
+  assign rtl020_control_o[5] = uart_control_q[5:5];  // UART_CONTROL.uart_control__irq_enable
+  assign rtl020_control_o[4] = uart_control_q[4:4];  // UART_CONTROL.uart_control__event_enable
+  assign rtl020_control_o[3] = uart_control_q[3:3];  // UART_CONTROL.uart_control__two_stop_bits
+  assign rtl020_control_o[2:1] = uart_control_q[2:1];  // UART_CONTROL.uart_control__parity
+  assign rtl020_control_o[0] = uart_control_q[0:0];  // UART_CONTROL.uart_control__enable
+
+  // ==========================================================================
   // Aggregated rtl024arxadapter_control_o -- real forwarding to RTL024-ARX-ADAPTER, replacing the disconnected placeholder.
   // Every assignment below is sourced from a real stored register or a real
   // one-cycle pulse-capture register above, at the exact bit position the
@@ -3421,7 +3478,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_CAN_RX_OVERFLOW_COUNT: begin rdata_o = can_rx_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_CAN_TX_REJECTED_COUNT: begin rdata_o = can_tx_rejected_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UART_CONTROL: begin rdata_o = uart_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_UART_STATUS: begin rdata_o = uart_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_UART_STATUS: begin rdata_o = uart_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UART_BAUD_DIV: begin rdata_o = uart_baud_div_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_UART_RX_LEVEL: begin rdata_o = uart_rx_level_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UART_RX_DATA: begin rdata_o = uart_rx_data_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
@@ -3429,12 +3486,12 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_UART_TX_LEVEL: begin rdata_o = uart_tx_level_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UART_TX_DATA: begin rdata_o = uart_tx_data_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UART_TX_PUSH: begin rdata_o = uart_tx_push_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_UART_ERROR_COUNT: begin rdata_o = uart_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL020_EVT_OVERFLOW_STATUS: begin rdata_o = rtl020_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_UART_RX_OVERFLOW_COUNT: begin rdata_o = uart_rx_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_UART_RX_UNDERFLOW_COUNT: begin rdata_o = uart_rx_underflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_UART_TX_REJECTED_COUNT: begin rdata_o = uart_tx_rejected_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_UART_TX_UNDERFLOW_COUNT: begin rdata_o = uart_tx_underflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_UART_ERROR_COUNT: begin rdata_o = uart_error_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL020_EVT_OVERFLOW_STATUS: begin rdata_o = rtl020_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_UART_RX_OVERFLOW_COUNT: begin rdata_o = uart_rx_overflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_UART_RX_UNDERFLOW_COUNT: begin rdata_o = uart_rx_underflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_UART_TX_REJECTED_COUNT: begin rdata_o = uart_tx_rejected_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_UART_TX_UNDERFLOW_COUNT: begin rdata_o = uart_tx_underflow_count_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_CONTROL: begin rdata_o = route_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_STATUS: begin rdata_o = route_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ROUTE_ENTRY_SELECT: begin rdata_o = route_entry_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

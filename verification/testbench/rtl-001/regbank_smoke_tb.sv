@@ -182,12 +182,8 @@ module regbank_smoke_tb;
   // rtl019_evt_overflow_status_status_i stub ports.
   logic [dfc_types_pkg::DFC_RTL019_STATUS_WIDTH-1:0]  rtl019_status_i;
   logic [dfc_types_pkg::DFC_RTL019_CONTROL_WIDTH-1:0] rtl019_control_o;
-  logic [31:0] uart_status_status_i;
-  logic [31:0] uart_rx_level_status_i;
-  logic [31:0] uart_rx_data_status_i;
-  logic [31:0] uart_tx_level_status_i;
-  logic [31:0] uart_error_count_status_i;
-  logic [31:0] rtl020_evt_overflow_status_status_i;
+  logic [dfc_types_pkg::DFC_RTL020_STATUS_WIDTH-1:0]  rtl020_status_i;
+  logic [dfc_types_pkg::DFC_RTL020_CONTROL_WIDTH-1:0] rtl020_control_o;
   logic [31:0] route_status_status_i;
   logic [31:0] route_active_source_status_i;
   logic [31:0] route_active_dest_status_i;
@@ -274,12 +270,8 @@ module regbank_smoke_tb;
     .rtl024arxadapter_control_o(rtl024arxadapter_control_o),
     .rtl019_status_i(rtl019_status_i),
     .rtl019_control_o(rtl019_control_o),
-    .uart_status_status_i(uart_status_status_i),
-    .uart_rx_level_status_i(uart_rx_level_status_i),
-    .uart_rx_data_status_i(uart_rx_data_status_i),
-    .uart_tx_level_status_i(uart_tx_level_status_i),
-    .uart_error_count_status_i(uart_error_count_status_i),
-    .rtl020_evt_overflow_status_status_i(rtl020_evt_overflow_status_status_i),
+    .rtl020_status_i(rtl020_status_i),
+    .rtl020_control_o(rtl020_control_o),
     .route_status_status_i(route_status_status_i),
     .route_active_source_status_i(route_active_source_status_i),
     .route_active_dest_status_i(route_active_dest_status_i),
@@ -348,12 +340,7 @@ module regbank_smoke_tb;
     rtl018_status_i = '0;
     rtl024arxadapter_status_i = '0;
     rtl019_status_i = '0;
-    uart_status_status_i = 32'h0;
-    uart_rx_level_status_i = 32'h0;
-    uart_rx_data_status_i = 32'h0;
-    uart_tx_level_status_i = 32'h0;
-    uart_error_count_status_i = 32'h0;
-    rtl020_evt_overflow_status_status_i = 32'h0;
+    rtl020_status_i = '0;
     route_status_status_i = 32'h0;
     route_active_source_status_i = 32'h0;
     route_active_dest_status_i = 32'h0;

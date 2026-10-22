@@ -119,6 +119,8 @@ module dri_transaction_tb;
   logic [dfc_types_pkg::DFC_RTL018_STATUS_WIDTH-1:0]  rtl018_status_i = '0;
   logic [dfc_types_pkg::DFC_RTL019_CONTROL_WIDTH-1:0] rtl019_control_o;
   logic [dfc_types_pkg::DFC_RTL019_STATUS_WIDTH-1:0]  rtl019_status_i = '0;
+  logic [dfc_types_pkg::DFC_RTL020_CONTROL_WIDTH-1:0] rtl020_control_o;
+  logic [dfc_types_pkg::DFC_RTL020_STATUS_WIDTH-1:0]  rtl020_status_i = '0;
   logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_CONTROL_WIDTH-1:0] rtl024arxadapter_control_o;
   logic [dfc_types_pkg::DFC_RTL024_ARINC_RX_ADAPTER_STATUS_WIDTH-1:0]  rtl024arxadapter_status_i = '0;
   // Same isolation choice for the shared-buffer service, added this

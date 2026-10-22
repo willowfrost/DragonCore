@@ -115,6 +115,8 @@ module ulx3s_dfc_top (
   input  logic gn20,  // CAN receive line data (RTL-019)
   output logic gn21,  // CAN transmit line data (RTL-019)
   input  logic gn11,  // CAN transceiver fault (RTL-019, WiFi-shared position)
+  input  logic gp11,  // UART receive line data (RTL-020 this session, WiFi-shared position)
+  output logic gn12,  // UART transmit line data (RTL-020 this session, WiFi-shared position)
   output logic [7:0] led
 );
 
@@ -204,8 +206,8 @@ module ulx3s_dfc_top (
     .can_tx_o                (gn21),  // real pin, RTL-019 this session
     .can_transceiver_error_i (gn11),  // real pin (WiFi-shared position), RTL-019 this session
 
-    .uart_rx_i (1'b1),  // idle high
-    .uart_tx_o (),
+    .uart_rx_i (gp11),  // real pin (WiFi-shared position), RTL-020 this session
+    .uart_tx_o (gn12),  // real pin (WiFi-shared position), RTL-020 this session
 
     .rotor_i   (gp27),
     .engine_i  (gp8),

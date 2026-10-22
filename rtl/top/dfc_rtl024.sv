@@ -475,6 +475,27 @@ module dfc_rtl024 (
   // yet) and tied directly at u_rtl019's own instantiation below, same
   // precedent as u_rtl017/u_rtl018's own msg_* ports -- no intermediate
   // signal needed here.
+  // RTL-020 (UART Interface) -- real this session. Shared-buffer client 3
+  // (RX+TX combined, 32 words), same declaration-before-use discipline as
+  // RTL-017/018/019's own clients above.
+  logic [dfc_types_pkg::DFC_RTL020_CONTROL_WIDTH-1:0] rtl020_control;
+  logic [dfc_types_pkg::DFC_RTL020_STATUS_WIDTH-1:0]  rtl020_status;
+  logic rtl020_irq_req;
+  logic rtl020_fault_req;    // RTL-013.fault_source_i[13]
+  logic rtl020_activity;     // RTL-015.activity_i[3] (ID 3, UART RX byte --
+                              // see OPEN_ISSUES.md item 140; NOT [4], which
+                              // this module's own Appendix A row literally
+                              // claims and which RTL-006 (GPIO) already,
+                              // correctly occupies)
+  logic rtl020_evt_valid, rtl020_evt_ready;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl020_evt_record;
+  logic        rtl020_buf_req_valid, rtl020_buf_req_ready;
+  logic        rtl020_buf_rsp_valid, rtl020_buf_rsp_ready;
+  logic [dfc_types_pkg::DFC_BUFFER_REQ_WIDTH-1:0] rtl020_buf_req;
+  logic [dfc_types_pkg::DFC_BUFFER_RSP_WIDTH-1:0] rtl020_buf_rsp;
+  // rx_msg_*/tx_msg_* are genuinely unconsumed (RTL-021 does not exist
+  // yet) and tied directly at u_rtl020's own instantiation below, same
+  // precedent as u_rtl017/018/019's own msg_* ports.
   // CDC-CAN / CDC-CANERR (ARCH-002 Appendix E): the external can_rx_i/
   // can_transceiver_error_i pads are asynchronous -- synchronized here with
   // the same two-stage idiom as atx_adapter_error_sync_q above.
@@ -482,6 +503,12 @@ module dfc_rtl024 (
   logic [1:0] can_transceiver_error_sync_q;
   wire        can_rx_sync = can_rx_sync_q[1];
   wire        can_transceiver_error_sync = can_transceiver_error_sync_q[1];
+  // CDC-UART (ARCH-002 Appendix A: uart_rx_i row states "CDC-UART"):
+  // same two-stage idiom, idle-high reset (UART idle line is 1, not
+  // CAN's idle-recessive-as-1 coincidence -- same reset value, different
+  // real reason).
+  logic [1:0] uart_rx_sync_q;
+  wire        uart_rx_sync = uart_rx_sync_q[1];
   // Real RTL-004 timestamp broadcast -- declared here, before u_rtl002's own
   // use of it below, per this file's own established declaration-before-use
   // discipline (see the comment block just above this one). Driven by
@@ -547,7 +574,8 @@ module dfc_rtl024 (
   logic [31:0] rtl013_fault_source_comb;
   assign rtl013_fault_source_comb = {
     15'h0,              // [31:17] permanently reserved (matrix's own constant-zero range)
-    4'h0,               // [16:13] RTL-020..RTL-023 -- not real yet
+    3'h0,               // [16:14] RTL-021..RTL-023 -- not real yet
+    rtl020_fault_req,   // [13] RTL-020 (UART, real this session)
     rtl019_fault_req,   // [12] RTL-019 (Classical CAN, real this session)
     rtl018_fault_req,   // [11] RTL-018 (ARINC TX, real this session)
     rtl017_fault_req,   // [10] RTL-017 (ARINC RX, real this session)
@@ -942,7 +970,7 @@ module dfc_rtl024 (
   // Bit 3 (ARINC 429 Receive) is now REAL: RTL-017's own irq_req_o, per
   // ARCH-002's own port catalog (RTL-003.irq_source_i[3]). Bits 7:4
   // (Timestamp through SPI Host Transaction) remain stub-zero.
-  assign rtl003_irq_source = {14'h0, rtl016_irq_req, rtl015_irq_req, rtl014_irq_req, rtl013_irq_req, rtl012_irq_req, rtl011_irq_req, rtl010_irq_req, rtl009_irq_req, rtl008_irq_req, rtl007_irq_req, 2'h0, rtl019_irq_req, rtl018_irq_req, rtl017_irq_req, rtl006_irq_req, rtl005_irq_req, rtl002_irq_req};
+  assign rtl003_irq_source = {14'h0, rtl016_irq_req, rtl015_irq_req, rtl014_irq_req, rtl013_irq_req, rtl012_irq_req, rtl011_irq_req, rtl010_irq_req, rtl009_irq_req, rtl008_irq_req, rtl007_irq_req, 1'b0, rtl020_irq_req, rtl019_irq_req, rtl018_irq_req, rtl017_irq_req, rtl006_irq_req, rtl005_irq_req, rtl002_irq_req};
 
   dfc_rtl003 u_rtl003 (
     .core_clk_i               (core_clk_i),
@@ -1059,7 +1087,8 @@ module dfc_rtl024 (
   // unconnected below rather than stubbed.
   // ==========================================================================
   assign rtl005_evt_valid_i = {1'b0,                    // [23] RTL-024 (no self-event)
-                               4'h0,                     // [22:19] RTL-020..023 (not real)
+                               3'h0,                     // [22:20] RTL-021..023 (not real)
+                               rtl020_evt_valid,          // [19] RTL-020 (real this session)
                                rtl019_evt_valid,          // [18] RTL-019 (real this session)
                                rtl018_evt_valid,          // [17] RTL-018 (real this session)
                                rtl017_evt_valid,          // [16] RTL-017 (real this session)
@@ -1097,6 +1126,7 @@ module dfc_rtl024 (
   assign rtl017_evt_ready = rtl005_evt_ready_o[16];
   assign rtl018_evt_ready = rtl005_evt_ready_o[17];
   assign rtl019_evt_ready = rtl005_evt_ready_o[18];
+  assign rtl020_evt_ready = rtl005_evt_ready_o[19];
   // NOTE: this concatenation is now written to sum EXACTLY to
   // rtl005_evt_record_i's real declared width (24*128=3072 bits) --
   // confirmed by direct arithmetic, not assumed. A real, pre-existing,
@@ -1111,7 +1141,8 @@ module dfc_rtl024 (
   // block is being edited for real.
   assign rtl005_evt_record_i =
     {128'h0,              // [23] RTL-024 (no self-event)
-     512'h0,              // [22:19] RTL-020..023 (4 x 128 zero -- not real)
+     384'h0,              // [22:20] RTL-021..023 (3 x 128 zero -- not real)
+     rtl020_evt_record,   // [19] RTL-020 (real this session)
      rtl019_evt_record,   // [18] RTL-019 (real this session)
      rtl018_evt_record,   // [17] RTL-018 (real this session)
      rtl017_evt_record,   // [16] RTL-017 (real this session)
@@ -1554,6 +1585,7 @@ module dfc_rtl024 (
     // both are disclosed stub zeros here, not silently invented.
     rtl015_activity_vector_comb[1] = rtl017_activity;   // ID 1: ARINC RX word
     rtl015_activity_vector_comb[2] = rtl019_activity;   // ID 2: CAN RX frame
+    rtl015_activity_vector_comb[3] = rtl020_activity;   // ID 3: UART RX byte (item 140 -- NOT this module's own row's literal [4])
     rtl015_activity_vector_comb[4] = rtl006_gpio_activity_pulse;   // ID 4: GPIO
     rtl015_activity_vector_comb[5] = rtl011_health_activity_pulse; // ID 5: health
     rtl015_activity_vector_comb[7] = rtl012_service_activity;      // ID 7: watchdog
@@ -1833,6 +1865,13 @@ module dfc_rtl024 (
     else             can_transceiver_error_sync_q <= {can_transceiver_error_sync_q[0], can_transceiver_error_i};
   end
 
+  // CDC-UART: real two-stage synchronizer for the external, asynchronous
+  // uart_rx_i pad, same idiom as can_rx_sync_q above.
+  always_ff @(posedge core_clk_i or negedge core_rst_n) begin
+    if (!core_rst_n) uart_rx_sync_q <= 2'b11;  // idle line is high
+    else             uart_rx_sync_q <= {uart_rx_sync_q[0], uart_rx_i};
+  end
+
   // ==========================================================================
   // RTL-018 (ARINC 429 Transmit Interface) -- compile/synthesize/verify
   // scope this session (see this file's own RTL-018 declaration-block
@@ -1913,6 +1952,48 @@ module dfc_rtl024 (
     .buf_rsp_valid_i          (rtl019_buf_rsp_valid),
     .buf_rsp_ready_o          (rtl019_buf_rsp_ready),
     .buf_rsp_i                (rtl019_buf_rsp),
+    .event_condition_enable_i (64'h0),
+    .irq_condition_enable_i   (64'h0)
+  );
+
+  // ==========================================================================
+  // RTL-020 (UART Interface) -- real this session, identical pattern to
+  // RTL-017/018/019's own above. rx_msg_ready_i/tx_msg_valid_i tie to
+  // disclosed stubs -- RTL-021 (Message Router) does not exist yet.
+  // event_condition_enable_i/irq_condition_enable_i tie to the same
+  // disclosed 64'h0 stub every other module uses.
+  // ==========================================================================
+  dfc_rtl020 u_rtl020 (
+    .core_clk_i               (core_clk_i),
+    .core_rst_n_i             (core_rst_n),
+    .module_reset_i           (module_reset[19]),
+    .control_i                (rtl020_control),
+    .status_o                 (rtl020_status),
+    .timestamp_i              (rtl004_timestamp),
+    .evt_valid_o              (rtl020_evt_valid),
+    .evt_ready_i              (rtl020_evt_ready),
+    .evt_record_o             (rtl020_evt_record),
+    .irq_req_o                (rtl020_irq_req),
+    .fault_req_o              (rtl020_fault_req),
+    .uart_rx_i                (uart_rx_sync),
+    .uart_tx_o                (uart_tx_o),
+    .rx_msg_valid_o           (),      // genuinely unconsumed -- RTL-021 does not exist yet
+    .rx_msg_ready_i           (1'b0),  // disclosed stub -- RTL-021 does not exist yet
+    .rx_msg_record_o          (),
+    .tx_msg_valid_i           (1'b0),  // disclosed stub -- RTL-021 does not exist yet
+    .tx_msg_ready_o           (),      // genuinely unconsumed while tx_msg_valid_i is tied low
+    .tx_msg_record_i          (192'h0),
+    .operating_state_i        (rtl002_operating_state),
+    .observational_mode_i     (rtl002_observational_mode),
+    .activity_o               (rtl020_activity),
+    .module_enable_i          (rtl002_module_enable[19]),
+    .effective_operational_enable_i (rtl002_effective_operational_enable),
+    .buf_req_valid_o          (rtl020_buf_req_valid),
+    .buf_req_ready_i          (rtl020_buf_req_ready),
+    .buf_req_o                (rtl020_buf_req),
+    .buf_rsp_valid_i          (rtl020_buf_rsp_valid),
+    .buf_rsp_ready_o          (rtl020_buf_rsp_ready),
+    .buf_rsp_i                (rtl020_buf_rsp),
     .event_condition_enable_i (64'h0),
     .irq_condition_enable_i   (64'h0)
   );
@@ -2089,13 +2170,13 @@ module dfc_rtl024 (
   // client 0 (RTL-017) above (required on this toolchain, see that block's
   // own comment for why a direct bit-sliced port connection into the
   // aggregate doesn't elaborate).
-  // Client 2 (RTL-019) is REAL as of this session -- see u_rtl019's own
-  // instantiation above, same idiom. Clients 3-5 (RTL-020..022) and client
-  // 6 (RTL-024 SPI, permanently idle per OPEN_ISSUES.md item 101) remain
-  // disclosed stub-idle.
-  assign buf_req_valid = {4'b0000, rtl019_buf_req_valid, rtl018_buf_req_valid, rtl017_buf_req_valid};
-  assign buf_req = {{4*dfc_types_pkg::DFC_BUFFER_REQ_WIDTH{1'b0}}, rtl019_buf_req, rtl018_buf_req, rtl017_buf_req};
-  assign buf_rsp_ready = {4'b1111, rtl019_buf_rsp_ready, rtl018_buf_rsp_ready, rtl017_buf_rsp_ready};
+  // Client 2 (RTL-019) is REAL, same idiom. Client 3 (RTL-020) is REAL as
+  // of this session -- see u_rtl020's own instantiation above, same idiom.
+  // Clients 4-5 (RTL-021..022) and client 6 (RTL-024 SPI, permanently idle
+  // per OPEN_ISSUES.md item 101) remain disclosed stub-idle.
+  assign buf_req_valid = {3'b000, rtl020_buf_req_valid, rtl019_buf_req_valid, rtl018_buf_req_valid, rtl017_buf_req_valid};
+  assign buf_req = {{3*dfc_types_pkg::DFC_BUFFER_REQ_WIDTH{1'b0}}, rtl020_buf_req, rtl019_buf_req, rtl018_buf_req, rtl017_buf_req};
+  assign buf_rsp_ready = {3'b111, rtl020_buf_rsp_ready, rtl019_buf_rsp_ready, rtl018_buf_rsp_ready, rtl017_buf_rsp_ready};
   assign rtl017_buf_req_ready = buf_req_ready[0];
   assign rtl017_buf_rsp_valid = buf_rsp_valid[0];
   assign rtl017_buf_rsp       = buf_rsp[dfc_types_pkg::DFC_BUFFER_RSP_WIDTH-1:0];
@@ -2105,6 +2186,9 @@ module dfc_rtl024 (
   assign rtl019_buf_req_ready = buf_req_ready[2];
   assign rtl019_buf_rsp_valid = buf_rsp_valid[2];
   assign rtl019_buf_rsp       = buf_rsp[3*dfc_types_pkg::DFC_BUFFER_RSP_WIDTH-1:2*dfc_types_pkg::DFC_BUFFER_RSP_WIDTH];
+  assign rtl020_buf_req_ready = buf_req_ready[3];
+  assign rtl020_buf_rsp_valid = buf_rsp_valid[3];
+  assign rtl020_buf_rsp       = buf_rsp[4*dfc_types_pkg::DFC_BUFFER_RSP_WIDTH-1:3*dfc_types_pkg::DFC_BUFFER_RSP_WIDTH];
 
   // Whole-chip synthesis reachability note -- see
   // dfc_rtl024_shared_buffer.sv's own header for the full, real, disclosed
@@ -2192,8 +2276,8 @@ module dfc_rtl024 (
   // itself internally gated by bus-off/listen-only) output above, same
   // precedent as ARINC TX's own direct wiring just above.
 
-  // UART TX (RTL-020 not instantiated): idle high per Appendix A.
-  assign uart_tx_o = 1'b1;
+  // UART TX: REAL as of this session -- uart_tx_o is wired directly to
+  // u_rtl020's own registered output above.
 
   // Safety outputs: REAL as of this session -- safety_out_o is wired
   // directly to u_rtl016's own registered, polarity-applied output below.
@@ -2218,7 +2302,6 @@ module dfc_rtl024 (
   // "intentionally consumed as a placeholder" case, disclosed, not silent).
   logic unused_stub_sink;
   assign unused_stub_sink = spi_sclk_i ^ spi_cs_n_i ^ spi_mosi_i ^
-                            uart_rx_i ^
                             user_i[0] ^
                             test_enable_i ^ test_clock_i ^ test_data_i ^
                             (^rtl002_operating_state) ^ rtl002_observational_mode ^
