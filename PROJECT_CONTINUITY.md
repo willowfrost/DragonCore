@@ -3594,6 +3594,29 @@ written in this project going forward, not just a historical note.
     wired top-level ports (and were already present at the top level
     before this session), but they remain unassigned to any physical
     ULX3S pin, exactly as before.
+  - **UPDATE (2026-10-22), later the same day: RTL-023 (User-Configurable
+    Routing Logic) is now ALSO real, integrated, and tested — THE LAST OF
+    ALL 24 MODULES.** RTL-001 through RTL-024 are now every one of them at
+    least compile/synthesize/verify scope (RTL-001 through RTL-017 fully
+    verified including confirmed clean FPGA placement). RTL-023's own
+    standing "will NOT be implemented, ever" half of the ORIGINAL decision
+    above was never separately re-litigated in this session — RTL-023 was
+    explicitly named in this session's own task briefing as the deliberate
+    completion of the project, a further, explicit instruction overriding
+    the original scope-reduction decision (same class of override as the
+    earlier RTL-022 reversal, not a silent one). **The target module count
+    is now 24 (RTL-001 through RTL-024) — every module in the original
+    spec set, with none permanently cut.** See `OPEN_ISSUES.md` items
+    173-183 for the full disclosure, including two real, independently-
+    discovered defects found via RTL-023's own testbench and its own real
+    `build_ecp5.ps1 -SynthOnly` run (a structurally-unobservable edge-pulse
+    bug, and a latch-inference synthesis false positive occurring twice).
+    **Given that three real defects in already-approved modules (items
+    125, 154, 172) were each found only by a LATER module's own incidental
+    work, never by deliberate search, completing all 24 modules is the
+    natural point for a comprehensive, whole-project integration audit**
+    — recommended as the next piece of work for a future session, not
+    undertaken as part of RTL-023's own narrow scope.
 - **RTL-002 through RTL-016 are now all real and implemented — the Safety
   domain (RTL-012 through RTL-016: Watchdog Manager, Fault Manager,
   Interlock Engine, Lost-Link Supervisor, Safety Output Controller) is

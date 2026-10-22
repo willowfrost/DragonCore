@@ -1,0 +1,134 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md Section 30 (0x4100-0x412C) per-field bit tables, cited by contract ID, and RCA-DFC-ARCH-002.md's dfc_rtl023_control_t/status_t Appendix B tables. Covers all 12 real RTL-023 registers -- both RTL-023_RevA.md's own prose AND REG-002's own Section 30 block header say 'Register count: 11', but the block's own listed rows (UROUTE_CONTROL through UROUTE_ACTIVE_CONTROL) count to 12 by direct row count -- a genuinely new variant of the usual stale-count finding (RTL-017 through RTL-022, six for six): here BOTH stated counts agree with each other and are BOTH wrong against the real table, not one stale module-spec claim corrected by an accurate REG-002 header (RTL-018's own precedent). UROUTE_ACTIVE_CONTROL (0x412C) is the row neither stated count accounts for, confirmed by direct count and implemented here. UROUTE_ACTIVE_SOURCE/UROUTE_ACTIVE_DEST/UROUTE_ACTIVE_CONTROL are pure-RO registers (status_registers entries only, no control_registers entry, same precedent as every prior module's own 'ACTIVE_*' readback registers) -- all three read back the entry SELECTED by UROUTE_ENTRY_SELECT, the same entry-indexed-mux mechanism as RTL-021's own ROUTE_ACTIVE_*/ROUTE_ENTRY_STATUS, handled generically in dfc_rtl023.sv via a plain array-index mux, no reggen.py indexed_registers machinery needed (RTL-023's own 16 entries are its own internal state, not RTL-001-held). UROUTE_STATUS.VIOLATION_COUNT and UROUTE_ENTRY_STATUS.ACTIVITY_COUNT are plain RO 16-bit counters with NO described clear mechanism anywhere in REG-002's own text for either field (unlike the COUNTER16-CLR-class mailbox/loss counters elsewhere in this project) -- no control_registers entry for either, consistent with their own literal 'Pure-RO... Reads current hardware value'/'Reads the coherent selected/snapshot value' text. A genuine ARCH-002-internal gap (the 15th/16th real instances of this exact gap class, already found and fixed for RTL-002 through RTL-022) was found and fixed this session: dfc_rtl023_control_t had no clear-forwarding field for RTL023_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW (REG-4128 bit 0, a real W1C field) -- fixed by growing the struct 34->35 bits, appending rtl023_evt_overflow_status__event_overflow at the new highest bit (34); and dfc_rtl023_status_t had NO field anywhere for UROUTE_ACTIVE_CONTROL's own real REG-002-specified readback (REG-412C, 'Reads the committed value for the selected entry' -- ENABLE/INVERT/MODE) -- fixed by growing the struct 75->79 bits, appending uroute_active_control__enable/__invert/__mode (4 bits) at the new highest bits (75-78). Both fixes regenerated via extract_types.py/pkggen.py with an isolated, confirmed diff (every other struct's bit positions unchanged), same precedent and same session-class fix as RTL-021 item 148 and RTL-022 item 161.",
+  "consumer_module": "RTL-023",
+  "control_struct": "dfc_rtl023_control_t",
+  "status_struct": "dfc_rtl023_status_t",
+  "control_registers": [
+    {
+      "register": "UROUTE_CONTROL",
+      "contract_id": "REG-4100",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "uroute_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "uroute_control__event_enable" },
+        { "reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "uroute_control__irq_enable" }
+      ]
+    },
+    {
+      "register": "UROUTE_STATUS",
+      "contract_id": "REG-4104",
+      "fields": [
+        { "reg_hi": 1, "reg_lo": 1, "class": "W1C", "struct_field": "uroute_status__commit_complete" },
+        { "reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "uroute_status__commit_rejected" },
+        { "reg_hi": 3, "reg_lo": 3, "class": "W1C", "struct_field": "uroute_status__forbidden_dest" },
+        { "reg_hi": 4, "reg_lo": 4, "class": "W1C", "struct_field": "uroute_status__conflict" }
+      ]
+    },
+    {
+      "register": "UROUTE_ENTRY_SELECT",
+      "contract_id": "REG-4108",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "class": "RW", "struct_field": "uroute_entry_select__entry" }
+      ]
+    },
+    {
+      "register": "UROUTE_STAGE_SOURCE",
+      "contract_id": "REG-410C",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "uroute_stage_source__source_id" }
+      ]
+    },
+    {
+      "register": "UROUTE_STAGE_DEST",
+      "contract_id": "REG-4110",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "class": "RW", "struct_field": "uroute_stage_dest__dest_id" }
+      ]
+    },
+    {
+      "register": "UROUTE_STAGE_CONTROL",
+      "contract_id": "REG-4114",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "uroute_stage_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "RW", "struct_field": "uroute_stage_control__invert" },
+        { "reg_hi": 3, "reg_lo": 2, "class": "RW", "struct_field": "uroute_stage_control__mode" }
+      ]
+    },
+    {
+      "register": "UROUTE_VALIDATE_COMMIT",
+      "contract_id": "REG-4118",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "uroute_validate_commit__validate_commit" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "WO-CMD", "struct_field": "uroute_validate_commit__disable_entry" }
+      ]
+    },
+    {
+      "register": "UROUTE_ENTRY_STATUS",
+      "contract_id": "REG-4124",
+      "fields": [
+        { "reg_hi": 2, "reg_lo": 2, "class": "W1C", "struct_field": "uroute_entry_status__error" }
+      ]
+    },
+    {
+      "register": "RTL023_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-4128",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl023_evt_overflow_status__event_overflow" }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "UROUTE_STATUS",
+      "contract_id": "REG-4104",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "uroute_status__active" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "uroute_status__commit_complete" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "uroute_status__commit_rejected" },
+        { "reg_hi": 3, "reg_lo": 3, "struct_field": "uroute_status__forbidden_dest" },
+        { "reg_hi": 4, "reg_lo": 4, "struct_field": "uroute_status__conflict" },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "uroute_status__violation_count" }
+      ]
+    },
+    {
+      "register": "UROUTE_ACTIVE_SOURCE",
+      "contract_id": "REG-411C",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "struct_field": "uroute_active_source__source_id" }
+      ]
+    },
+    {
+      "register": "UROUTE_ACTIVE_DEST",
+      "contract_id": "REG-4120",
+      "fields": [
+        { "reg_hi": 7, "reg_lo": 0, "struct_field": "uroute_active_dest__dest_id" }
+      ]
+    },
+    {
+      "register": "UROUTE_ENTRY_STATUS",
+      "contract_id": "REG-4124",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "uroute_entry_status__active" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "uroute_entry_status__valid" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "uroute_entry_status__error" },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "uroute_entry_status__activity_count" }
+      ]
+    },
+    {
+      "register": "RTL023_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-4128",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow" },
+        { "reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count" }
+      ]
+    },
+    {
+      "register": "UROUTE_ACTIVE_CONTROL",
+      "contract_id": "REG-412C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "uroute_active_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "uroute_active_control__invert" },
+        { "reg_hi": 3, "reg_lo": 2, "struct_field": "uroute_active_control__mode" }
+      ]
+    }
+  ]
+}

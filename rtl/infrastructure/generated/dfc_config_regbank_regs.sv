@@ -21,6 +21,7 @@
 // Cross-module forwarding: RTL-020 (see tools/reggen/rtl020_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-021 (see tools/reggen/rtl021_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-022 (see tools/reggen/rtl022_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-023 (see tools/reggen/rtl023_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL024-ARX-ADAPTER (see tools/reggen/rtl024arxadapter_field_map.json's own _source note for exact scope/citations)
 
 
@@ -66,6 +67,8 @@
   // Aggregated real RTL-021 control, replacing the prior disconnected placeholder for: ROUTE_CONTROL, ROUTE_DESTINATION_DROP_COUNT_0_1, ROUTE_DESTINATION_DROP_COUNT_2_3, ROUTE_DESTINATION_DROP_COUNT_4, ROUTE_ENTRY_SELECT, ROUTE_ENTRY_STATUS, ROUTE_INGRESS_LOSS_COUNT_0_1, ROUTE_INGRESS_LOSS_COUNT_2_3, ROUTE_INGRESS_LOSS_COUNT_4, ROUTE_STAGE_CONTROL, ROUTE_STAGE_DEST, ROUTE_STAGE_FILTER_MASK, ROUTE_STAGE_FILTER_VALUE, ROUTE_STAGE_SOURCE, ROUTE_STAGE_TYPE_MASK, ROUTE_STATUS, ROUTE_VALIDATE_COMMIT, RTL021_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-022 status, replacing individual ports for: RTL022_EVT_OVERFLOW_STATUS, ULI_IN_LEVEL, ULI_IO_INPUT, ULI_MAILBOX_LOSS_COUNT_0_1, ULI_MAILBOX_LOSS_COUNT_2_3, ULI_MAILBOX_STATUS, ULI_OUT_DATA, ULI_OUT_LEVEL, ULI_STATUS
   // Aggregated real RTL-022 control, replacing the prior disconnected placeholder for: RTL022_EVT_OVERFLOW_STATUS, ULI_CONTROL, ULI_IN_DATA, ULI_IN_PUSH, ULI_IO_OUTPUT, ULI_MAILBOX_LOSS_COUNT_0_1, ULI_MAILBOX_LOSS_COUNT_2_3, ULI_MAILBOX_STATUS, ULI_OUT_POP, ULI_PARAM0, ULI_PARAM1, ULI_PARAM2, ULI_PARAM3, ULI_PARAM4, ULI_PARAM5, ULI_PARAM6, ULI_PARAM7, ULI_STATUS
+  // Aggregated real RTL-023 status, replacing individual ports for: RTL023_EVT_OVERFLOW_STATUS, UROUTE_ACTIVE_CONTROL, UROUTE_ACTIVE_DEST, UROUTE_ACTIVE_SOURCE, UROUTE_ENTRY_STATUS, UROUTE_STATUS
+  // Aggregated real RTL-023 control, replacing the prior disconnected placeholder for: RTL023_EVT_OVERFLOW_STATUS, UROUTE_CONTROL, UROUTE_ENTRY_SELECT, UROUTE_ENTRY_STATUS, UROUTE_STAGE_CONTROL, UROUTE_STAGE_DEST, UROUTE_STAGE_SOURCE, UROUTE_STATUS, UROUTE_VALIDATE_COMMIT
   // Aggregated real RTL024-ARX-ADAPTER status, replacing individual ports for: 
   // Aggregated real RTL024-ARX-ADAPTER control, replacing the prior disconnected placeholder for: ARX_CONTROL
 module dfc_config_regbank_regs (
@@ -99,12 +102,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  buffer_internal_error_count_status_i,
   input  logic [31:0]  test_status_status_i,
   input  logic [31:0]  test_rejection_abort_count_status_i,
-  input  logic [31:0]  uroute_status_status_i,
-  input  logic [31:0]  uroute_active_source_status_i,
-  input  logic [31:0]  uroute_active_dest_status_i,
-  input  logic [31:0]  uroute_entry_status_status_i,
-  input  logic [31:0]  rtl023_evt_overflow_status_status_i,
-  input  logic [31:0]  uroute_active_control_status_i,
   input  logic [111:0]  rtl002_status_i,
   output logic [59:0] rtl002_control_o,
   input  logic [152:0]  rtl003_status_i,
@@ -147,6 +144,8 @@ module dfc_config_regbank_regs (
   output logic [135:0] rtl021_control_o,
   input  logic [136:0]  rtl022_status_i,
   output logic [308:0] rtl022_control_o,
+  input  logic [78:0]  rtl023_status_i,
+  output logic [34:0] rtl023_control_o,
   input  logic [0:0]  rtl024arxadapter_status_i,
   output logic [4:0] rtl024arxadapter_control_o
 );
@@ -2757,8 +2756,16 @@ module dfc_config_regbank_regs (
     if (!rst_ni) uroute_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UROUTE_CONTROL)) uroute_control_q <= wdata_i;
 
-  // UROUTE_STATUS (0x4104) -- external passthrough, owner RTL-023
-  wire [31:0] uroute_status_q = uroute_status_status_i;
+  // UROUTE_STATUS (0x4104) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-023, real
+  //   generation per contract REG-4104, not a permanent tie.
+  logic [31:0] uroute_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uroute_status_pulse_q <= 32'h0;
+    else uroute_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UROUTE_STATUS)) ? wdata_i : 32'h0;
+
+  // UROUTE_STATUS (0x4104) -- external passthrough, owner RTL-023. Reconstructed from the aggregated rtl023_status_i input (contract REG-4104), not an individual per-register port.
+  wire [31:0] uroute_status_q = {rtl023_status_i[23:8], 11'h0, rtl023_status_i[7:7], rtl023_status_i[6:6], rtl023_status_i[5:5], rtl023_status_i[4:4], rtl023_status_i[3:3]};
 
   // UROUTE_ENTRY_SELECT (0x4108) -- Mixed: RW, RSV0, owner RTL-001 / RTL-023
   logic [31:0] uroute_entry_select_q;
@@ -2784,23 +2791,47 @@ module dfc_config_regbank_regs (
     if (!rst_ni) uroute_stage_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UROUTE_STAGE_CONTROL)) uroute_stage_control_q <= wdata_i;
 
-  // UROUTE_VALIDATE_COMMIT (0x4118) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UROUTE_VALIDATE_COMMIT)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // UROUTE_VALIDATE_COMMIT (0x4118) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-023, real
+  //   generation per contract REG-4118, not a permanent tie.
+  logic [31:0] uroute_validate_commit_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uroute_validate_commit_pulse_q <= 32'h0;
+    else uroute_validate_commit_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UROUTE_VALIDATE_COMMIT)) ? wdata_i : 32'h0;
+
+  // UROUTE_VALIDATE_COMMIT (0x4118) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-023 via uroute_validate_commit_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] uroute_validate_commit_q = 32'h00000000;
 
-  // UROUTE_ACTIVE_SOURCE (0x411C) -- external passthrough, owner RTL-023
-  wire [31:0] uroute_active_source_q = uroute_active_source_status_i;
+  // UROUTE_ACTIVE_SOURCE (0x411C) -- external passthrough, owner RTL-023. Reconstructed from the aggregated rtl023_status_i input (contract REG-411C), not an individual per-register port.
+  wire [31:0] uroute_active_source_q = {24'h0, rtl023_status_i[31:24]};
 
-  // UROUTE_ACTIVE_DEST (0x4120) -- external passthrough, owner RTL-023
-  wire [31:0] uroute_active_dest_q = uroute_active_dest_status_i;
+  // UROUTE_ACTIVE_DEST (0x4120) -- external passthrough, owner RTL-023. Reconstructed from the aggregated rtl023_status_i input (contract REG-4120), not an individual per-register port.
+  wire [31:0] uroute_active_dest_q = {24'h0, rtl023_status_i[39:32]};
 
-  // UROUTE_ENTRY_STATUS (0x4124) -- external passthrough, owner RTL-023
-  wire [31:0] uroute_entry_status_q = uroute_entry_status_status_i;
+  // UROUTE_ENTRY_STATUS (0x4124) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-023, real
+  //   generation per contract REG-4124, not a permanent tie.
+  logic [31:0] uroute_entry_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uroute_entry_status_pulse_q <= 32'h0;
+    else uroute_entry_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_UROUTE_ENTRY_STATUS)) ? wdata_i : 32'h0;
 
-  // RTL023_EVT_OVERFLOW_STATUS (0x4128) -- external passthrough, owner RTL-023
-  wire [31:0] rtl023_evt_overflow_status_q = rtl023_evt_overflow_status_status_i;
+  // UROUTE_ENTRY_STATUS (0x4124) -- external passthrough, owner RTL-023. Reconstructed from the aggregated rtl023_status_i input (contract REG-4124), not an individual per-register port.
+  wire [31:0] uroute_entry_status_q = {rtl023_status_i[58:43], 13'h0, rtl023_status_i[42:42], rtl023_status_i[41:41], rtl023_status_i[40:40]};
 
-  // UROUTE_ACTIVE_CONTROL (0x412C) -- external passthrough, owner RTL-001 / RTL-023
-  wire [31:0] uroute_active_control_q = uroute_active_control_status_i;
+  // RTL023_EVT_OVERFLOW_STATUS (0x4128) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-023, real
+  //   generation per contract REG-4128, not a permanent tie.
+  logic [31:0] rtl023_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl023_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl023_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL023_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
+
+  // RTL023_EVT_OVERFLOW_STATUS (0x4128) -- external passthrough, owner RTL-023. Reconstructed from the aggregated rtl023_status_i input (contract REG-4128), not an individual per-register port.
+  wire [31:0] rtl023_evt_overflow_status_q = {8'h0, rtl023_status_i[74:59], 7'h0, rtl023_status_i[2:2]};
+
+  // UROUTE_ACTIVE_CONTROL (0x412C) -- external passthrough, owner RTL-001 / RTL-023. Reconstructed from the aggregated rtl023_status_i input (contract REG-412C), not an individual per-register port.
+  wire [31:0] uroute_active_control_q = {28'h0, rtl023_status_i[78:77], rtl023_status_i[76:76], rtl023_status_i[75:75]};
 
   // ==========================================================================
   // Aggregated rtl002_control_o -- real forwarding to RTL-002, replacing the disconnected placeholder.
@@ -3523,6 +3554,31 @@ module dfc_config_regbank_regs (
   assign rtl022_control_o[0] = uli_control_q[0:0];  // ULI_CONTROL.uli_control__enable
 
   // ==========================================================================
+  // Aggregated rtl023_control_o -- real forwarding to RTL-023, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl023_control_t defines --
+  // cross-checked at generation time (35/35 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl023_control_o[34] = rtl023_evt_overflow_status_pulse_q[0:0];  // RTL023_EVT_OVERFLOW_STATUS.rtl023_evt_overflow_status__event_overflow
+  assign rtl023_control_o[33] = uroute_entry_status_pulse_q[2:2];  // UROUTE_ENTRY_STATUS.uroute_entry_status__error
+  assign rtl023_control_o[32] = uroute_validate_commit_pulse_q[1:1];  // UROUTE_VALIDATE_COMMIT.uroute_validate_commit__disable_entry
+  assign rtl023_control_o[31] = uroute_validate_commit_pulse_q[0:0];  // UROUTE_VALIDATE_COMMIT.uroute_validate_commit__validate_commit
+  assign rtl023_control_o[30:29] = uroute_stage_control_q[3:2];  // UROUTE_STAGE_CONTROL.uroute_stage_control__mode
+  assign rtl023_control_o[28] = uroute_stage_control_q[1:1];  // UROUTE_STAGE_CONTROL.uroute_stage_control__invert
+  assign rtl023_control_o[27] = uroute_stage_control_q[0:0];  // UROUTE_STAGE_CONTROL.uroute_stage_control__enable
+  assign rtl023_control_o[26:19] = uroute_stage_dest_q[7:0];  // UROUTE_STAGE_DEST.uroute_stage_dest__dest_id
+  assign rtl023_control_o[18:11] = uroute_stage_source_q[7:0];  // UROUTE_STAGE_SOURCE.uroute_stage_source__source_id
+  assign rtl023_control_o[10:7] = uroute_entry_select_q[3:0];  // UROUTE_ENTRY_SELECT.uroute_entry_select__entry
+  assign rtl023_control_o[6] = uroute_status_pulse_q[4:4];  // UROUTE_STATUS.uroute_status__conflict
+  assign rtl023_control_o[5] = uroute_status_pulse_q[3:3];  // UROUTE_STATUS.uroute_status__forbidden_dest
+  assign rtl023_control_o[4] = uroute_status_pulse_q[2:2];  // UROUTE_STATUS.uroute_status__commit_rejected
+  assign rtl023_control_o[3] = uroute_status_pulse_q[1:1];  // UROUTE_STATUS.uroute_status__commit_complete
+  assign rtl023_control_o[2] = uroute_control_q[2:2];  // UROUTE_CONTROL.uroute_control__irq_enable
+  assign rtl023_control_o[1] = uroute_control_q[1:1];  // UROUTE_CONTROL.uroute_control__event_enable
+  assign rtl023_control_o[0] = uroute_control_q[0:0];  // UROUTE_CONTROL.uroute_control__enable
+
+  // ==========================================================================
   // Aggregated rtl024arxadapter_control_o -- real forwarding to RTL024-ARX-ADAPTER, replacing the disconnected placeholder.
   // Every assignment below is sourced from a real stored register or a real
   // one-cycle pulse-capture register above, at the exact bit position the
@@ -3887,7 +3943,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_0_1: begin rdata_o = uli_mailbox_loss_count_0_1_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_2_3: begin rdata_o = uli_mailbox_loss_count_2_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_CONTROL: begin rdata_o = uroute_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_UROUTE_STATUS: begin rdata_o = uroute_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_UROUTE_STATUS: begin rdata_o = uroute_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_ENTRY_SELECT: begin rdata_o = uroute_entry_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_STAGE_SOURCE: begin rdata_o = uroute_stage_source_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_STAGE_DEST: begin rdata_o = uroute_stage_dest_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
@@ -3895,8 +3951,8 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_UROUTE_VALIDATE_COMMIT: begin rdata_o = uroute_validate_commit_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_ACTIVE_SOURCE: begin rdata_o = uroute_active_source_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_ACTIVE_DEST: begin rdata_o = uroute_active_dest_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_UROUTE_ENTRY_STATUS: begin rdata_o = uroute_entry_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL023_EVT_OVERFLOW_STATUS: begin rdata_o = rtl023_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_UROUTE_ENTRY_STATUS: begin rdata_o = uroute_entry_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL023_EVT_OVERFLOW_STATUS: begin rdata_o = rtl023_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_ACTIVE_CONTROL: begin rdata_o = uroute_active_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       default: begin end  // decode_hit_o stays 0 -> DECODE_ERROR upstream
     endcase

@@ -125,6 +125,8 @@ module dri_transaction_tb;
   logic [dfc_types_pkg::DFC_RTL021_STATUS_WIDTH-1:0]  rtl021_status_i = '0;
   logic [dfc_types_pkg::DFC_RTL022_CONTROL_WIDTH-1:0] rtl022_control_o;
   logic [dfc_types_pkg::DFC_RTL022_STATUS_WIDTH-1:0]  rtl022_status_i = '0;
+  logic [dfc_types_pkg::DFC_RTL023_CONTROL_WIDTH-1:0] rtl023_control_o;
+  logic [dfc_types_pkg::DFC_RTL023_STATUS_WIDTH-1:0]  rtl023_status_i = '0;
   // RTL-001's own new Host route channel (added this session) -- this
   // testbench does not model RTL-021 either, same isolation choice as
   // every other not-modeled module above.

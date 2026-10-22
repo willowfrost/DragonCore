@@ -4996,3 +4996,234 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      narrow scope (RTL-020's `error_count_q` only); flagged here, not
      chased further, for whichever future session next touches RTL-020 or
      RTL-021's own synthesis-time behavior.
+
+173. **RTL-023 (User-Configurable Routing Logic), THE LAST OF ALL 24
+     MODULES: port count CONFIRMED CORRECT, breaking the run of six
+     consecutive stale-port-count findings.** `RTL-023_RevA.md`'s own "19
+     ports" claim is directly confirmed by ARCH-002 Appendix A's own real
+     row count (19) -- unlike RTL-017 through RTL-022 (six for six real
+     conflicts), this is the first clean port-count result in the whole
+     Databus/User-Logic family. **Register count is a genuinely new
+     variant of the usual discrepancy:** both `RTL-023_RevA.md`'s own prose
+     AND REG-002's own Section 30 block header say "11 registers" -- unlike
+     RTL-018's own case (module spec stale, REG-002 header correct), here
+     BOTH stated counts agree with each other and are BOTH wrong against
+     the real table, confirmed by direct row count (12: `UROUTE_CONTROL`
+     through `UROUTE_ACTIVE_CONTROL`, the latter accounted for by neither
+     stated count). Implemented against the real 19-port/12-register set.
+
+174. **ARCH-002-internal gaps fixed this session (same gap CLASS already
+     fixed for RTL-002 through RTL-022, the 15th/16th real instances):**
+     (a) `dfc_rtl023_control_t` had no clear-forwarding field for
+     `RTL023_EVT_OVERFLOW_STATUS.EVENT_OVERFLOW` (REG-4128 bit 0) -- fixed,
+     struct grown 34->35 bits, appended at the new highest bit (34). (b)
+     `dfc_rtl023_status_t` had NO field anywhere for `UROUTE_ACTIVE_
+     CONTROL`'s own real REG-002-specified readback (REG-412C, "Reads the
+     committed value for the selected entry" -- ENABLE/INVERT/MODE) --
+     fixed, struct grown 75->79 bits (+4), appended at the new highest bits
+     (75-78). Both regenerated via extract_types.py/pkggen.py with an
+     isolated, confirmed diff; reggen.py then produced "real cross-module
+     forwarding wired for RTL-023: 9 control regs, 6 status regs" with no
+     assertion failures.
+
+175. **Master shared-resource-index table (item 140) checked before wiring
+     irq_source_i[19]/fault_source_i[16]/evt_valid_i & evt_record_i[22] --
+     the SECOND consecutive clean result** (RTL-022's own session was the
+     first; RTL-017 through RTL-021 each found one real conflict). All
+     three indices match ARCH-002's own claimed indices exactly against
+     the master table's own text ("19=RTL-023," "13-16=RTL-020..023" i.e.
+     16=RTL-023, "19-22=RTL-020..023" i.e. 22=RTL-023). No `activity_o`
+     port exists anywhere in RTL-023's own real 19-port Appendix A catalog
+     (confirmed directly), so no `activity_i` master-table entry applies.
+
+176. **Join-verification (this session's own "load-bearing" discipline,
+     citing item 154's RTL-020 bug as the cautionary precedent): the new
+     `rtl023_control_o`/`rtl023_status_i` connection at `u_rtl001`'s own
+     instantiation in `dfc_rtl024.sv` was explicitly grepped and confirmed
+     actually JOINED end-to-end**, not merely declared on both sides --
+     `dfc_rtl001.sv`'s own ports connect to `dfc_rtl024.sv`'s own
+     `rtl023_control`/`rtl023_status` wires at `u_rtl001`'s instantiation,
+     and those SAME wires connect to `u_rtl023`'s own `control_i`/
+     `status_o` ports -- a real, traced, three-point connection.
+
+177. **`route_source_i` reuses the existing, already-real
+     `internal_source_vector_q` instead of independently re-deriving a
+     second copy of the same wide Appendix C.1 fan-in.** `dfc_rtl024.sv`
+     already built this exact 64-bit registered vector for RTL-014's own
+     use; ARCH-002 Appendix A itself names RTL-023.route_source_i as that
+     signal's OTHER real consumer, not a separate one. An initial draft of
+     this session's own work independently re-assembled the same 64 bits
+     from scratch before this reuse opportunity was noticed and the
+     duplicate was removed -- disclosed so a future session doesn't
+     rediscover the same vector a third time. Its own stale "33-36 RTL-022
+     user outputs -- permanently out of scope: constant 0" comment (dating
+     to before RTL-022 existed) is corrected, and bits 36:33 now wire
+     `rtl022_user_o[3:0]` for real (reads zero in practice, per RTL-022's
+     own inert contract, but wired, not hardcoded).
+
+178. **A REAL, SEVERE bug found and fixed via this module's own testbench,
+     not by inspection: pulse modes (rising/falling/either-edge, MODE 1-3)
+     were structurally incapable of EVER producing an observable pulse.**
+     The per-entry routing result was a pure combinational function of
+     `entry_effective_comb[e]` and `prior_effective_q[e]` -- but
+     `prior_effective_q[e]` updates on the EXACT SAME clock edge that
+     changes `entry_effective_comb[e]` (edge history tracks every enabled
+     cycle, ARCH-RTL023-001). By the time anything downstream (`route_
+     dest_o` itself, or any external observer sampling after the edge
+     settles) reads the combinational result, `prior_effective_q[e]` has
+     ALREADY caught up to match the new effective value, so the "edge"
+     condition reads back false -- the pulse existed for zero simulated
+     time, genuinely unobservable in real hardware. Found via this
+     module's own `Case10` (edge-history-while-gated, VP-USER-009): the
+     "a genuinely new edge fires the pulse" check failed (got 0, expected
+     1) even though the RTL's own logic looked correct by inspection:
+     direct hierarchical signal tracing (not guesswork) showed
+     `entry_result_comb` reading `prior_effective_q`'s own already-updated
+     value at the exact moment of observation. **Fixed**: pulse modes now
+     use a REAL registered one-cycle pulse (`entry_pulse_q`), computed
+     SYNCHRONOUSLY in the same `always_ff` that updates `prior_effective_q`,
+     using non-blocking assignment's own same-process old-value-read
+     semantics (the pulse computation and the prior-state update read/write
+     the same register correctly within one clocked process, instead of
+     comparing two independently-settling combinational/registered
+     values). Level mode (0) needed no fix -- it never depends on
+     `prior_effective_q` at all. Re-verified: the exact same `Case10`
+     passes cleanly after the fix, and the gated/no-stale-pulse/new-edge-
+     fires/one-cycle-not-held sequence was independently re-confirmed.
+
+179. **A REAL, synthesis-blocking bug found via a real `build_ecp5.ps1
+     -SynthOnly` run, not by inspection -- the identical latch-inference
+     false-positive class RTL-021's own session already found and fixed
+     (item 159), occurring TWICE in this one module.** `route_dest_comb`'s
+     own destination OR-reduce and `commit_conflict`'s own whole-bank
+     exclusivity check each wrapped a `for` loop (including the loop's own
+     index variable's own assignment) entirely inside an outer `if`
+     conditional -- the same shape Yosys's own latch-inference checker
+     false-positives on (`ERROR: Latch inferred for signal 'dd[0]'
+     .../'ec[...]'... from always_comb process`). Confirmed as the same
+     toolchain limitation, not a functional defect, by re-running this
+     module's own 54/54-passing testbench unchanged before and after the
+     fix. Fixed the identical way as item 159: both loops now run
+     unconditionally, with their own gating condition folded into the
+     loop body's own match condition instead of wrapped around the loop.
+     A full `gate.ps1` re-run after both latch-inference fixes (28/28 sims,
+     formal 4/4, coverage 278/353) confirms no regression.
+
+180. **Design choices, disclosed (see `dfc_rtl023.sv`'s own header for the
+     full reasoning):**
+     - Destination 0 ("no action") while an entry is ENABLED is rejected
+       (generic `COMMIT_REJECTED`, not `FORBIDDEN_DEST`) -- a disclosed
+       interpretation by symmetry with source 0's own explicit "legal only
+       when disabled" text, since SS13.2 names no authorized pair for
+       dest 0 at all; legal to stage for a disabled entry (REG-002's own
+       raw "0-24" legal range for DEST_ID covers it).
+     - `FORBIDDEN_DEST` is reserved exclusively for destinations 9-12 (the
+       one destination-only, source-independent rejection reason); every
+       other authorization failure (bad/illegal source value, narrow-range
+       violation, source-37 misuse, dest 0 while enabled, BUSY) is the
+       generic `COMMIT_REJECTED`. `CONFLICT` is exclusively the whole-bank
+       exclusivity violation. These three are mutually exclusive by
+       construction, matching C.7's own 0x0051 mutually-exclusive subtype
+       list.
+     - `fault_req_o` is REAL, not a disclosed stub (unlike RTL-021's and
+       RTL-022's own permanently-zero fault_req_o): C.6 allocates RTL-023 a
+       real, non-reserved fault class (0x03, recoverable=true).
+       Implemented as the OR-reduction of all 16 entries' own `ERROR`
+       evidence (set on a rejected commit targeting that entry, cleared on
+       that entry's own next successful commit).
+     - Destinations 21-22/23-24 ("RTL-023 internal event/interrupt request
+       channels," Appendix C.2) are the SAME per-destination OR-reduce
+       result every other destination uses, additionally consumed
+       internally: 21-22's OR'd result, rising-edge-detected, drives the
+       "activity" event cause; 23-24's OR'd result drives `irq_req_o`
+       directly as a live level, gated only by `IRQ_ENABLE` (F.3's own
+       6-bit RTL-023 allocation has no separate condition-mask bit for an
+       "interrupt-request channel" condition). A disclosed interpretation
+       -- ARCH-002 names these channels but does not spell out the exact
+       evt/irq generation mechanics beyond their own catalog description.
+     - `VALIDATE_COMMIT`+`DISABLE_ENTRY` commanded simultaneously is
+       implemented as a real, distinct "REJECTED BUSY" outcome (generic
+       `COMMIT_REJECTED`, `VIOLATION_COUNT` incremented, no active
+       change) -- confirmed, by direct comparison, to be a DIFFERENT
+       contract than RTL-021's own same-shaped `ROUTE_VALIDATE_COMMIT`/
+       `DISABLE_ENTRY` pair, whose own simultaneous case is simple mutual
+       exclusion (neither command executes, no evidence of any kind set).
+       RTL-023's own SS13.2 text is explicit that this case gets its own
+       named outcome, so it is NOT copied from RTL-021's own narrower
+       precedent.
+
+181. **VP-USER-008 catalog-level safety-boundary confirmation: the fixed
+     destination catalog itself (Appendix C.2) structurally never includes
+     a safety output, clock, reset, protected-write, host-transport-
+     control, or test-authorization identifier as a legal routable
+     endpoint** -- confirmed by direct enumeration of the real catalog
+     (0 no action; 1-8 GPIO request; 9-12 User-I/O request, RTL-022,
+     structurally rejected; 13-20 user-logic term, RTL-022; 21-22/23-24
+     RTL-023's own internal event/interrupt-request channels; 25-31
+     reserved/invalid), not merely by testing that a handful of forbidden
+     attempts are rejected at runtime -- the catalog is structurally
+     incapable of ever authorizing such a route, independent of any
+     runtime rejection logic. `rtl023_integration_tb.sv`'s own Case 11
+     exercises this directly (every one of destinations 25-31, plus
+     dest 0, confirmed rejected).
+
+182. **No physical pins** (purely internal routing logic, confirmed
+     directly against the real 19-port Appendix A catalog -- no pad-facing
+     port anywhere in RTL-023's own interface), same precedent as RTL-021.
+     `rtl024_skeleton_tb.sv` judged NOT to need extension (passed clean,
+     unmodified, with RTL-023 now real and `route_dest_o` reaching RTL-006/
+     RTL-022 for real) -- same reasoning as every prior session's own
+     judgment call: the dedicated per-module testbench (`rtl023_
+     integration_tb.sv`, 54 checks) already carries the real functional-
+     coverage burden for the new routing behavior; the skeleton test's own
+     job is whole-chip bring-up/connectivity, not per-module functional
+     depth.
+
+183. **THIS SESSION COMPLETES ALL 24 MODULES (RTL-001 through RTL-024).**
+     RTL-023 is the last module; every module from RTL-001 through RTL-024
+     is now at least compile/synthesize/verify scope, with RTL-001 through
+     RTL-017 fully verified including confirmed clean FPGA placement.
+     `PROJECT_CONTINUITY.md` is updated with its own dated completion note.
+     Given that three real, independently-discovered defects in already-
+     approved modules (items 125, 154, 172) were each found ONLY by a
+     LATER module's own incidental work, never by deliberate search, this
+     is the natural point for a comprehensive, whole-project integration
+     audit beyond any single session's own per-module scope -- recommended
+     as the next piece of work, not undertaken here (out of this session's
+     own scope, which was RTL-023 specifically).
+
+184. **Real `build_ecp5.ps1 -SynthOnly` cell-count/utilization stats after
+     RTL-023 (Build ID `20261022_150811`, `nextpnr-ecp5` confirmed never
+     invoked -- the script's own "-SynthOnly requested -- stopping here,
+     nextpnr-ecp5 was never invoked" line): the final, whole-design CHECK
+     pass reports **0 problems** (confirmed by direct grep, not eyeballed --
+     the first synthesis attempt, before the two latch-inference fixes
+     disclosed in item 179, genuinely failed with `exit 1`; this is the
+     real, clean result AFTER those fixes). Real cell-count stats: CCU2C
+     4195, L6MUX21 899, LUT4 44016, PFUMX 4860, TRELLIS_FF 28323,
+     MULT18X18D 44, PDPW16KD 1. Real delta against item 171's own baseline
+     as further corrected by item 172's own resolution (Build ID
+     `20261022_135732`, CCU2C 3979/L6MUX21 865/LUT4 42013/PFUMX
+     4692/TRELLIS_FF 27671): CCU2C +216, L6MUX21 +34, LUT4 +2003, PFUMX
+     +168, TRELLIS_FF +652, MULT18X18D/PDPW16KD unchanged. Unlike item
+     171's own RTL-022 delta (four of seven categories went down, real
+     ECP5 LUT-packing variance, not logic removal), EVERY category
+     increased this time, consistent with RTL-023's own genuinely larger
+     new-logic footprint (16-entry route table, three-rule authorization
+     matrix, per-entry edge-history/activity-count state, event/irq
+     generation) -- no packing-variance anomaly to disclose here.
+
+     A benign, pre-existing, already-disclosed artifact (same class as
+     item 172's own "intermediate, non-final CHECK-pass" finding) recurs
+     for `dfc_rtl023.\event_drop_count_q`/`event_overflow_sticky_q` in the
+     SAME two non-final hierarchical-optimization check passes (steps
+     34.5/34.11) that `dfc_rtl021`'s own analogous fields triggered in the
+     prior (RTL-020-fix) session's log -- resolving to 0 in the real, final
+     whole-design check both then and now. Confirmed as the SAME harmless,
+     generic pattern (every module's own event-slot-overflow bookkeeping
+     splits its reset-branch declaration from its own increment logic
+     across two always_ff processes, a shape that only ever shows up as a
+     warning in this one specific non-final pass, never in the final
+     check), not a new finding specific to RTL-023 and not investigated
+     further, consistent with item 172's own precedent for exactly this
+     pattern.

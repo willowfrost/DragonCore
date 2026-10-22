@@ -196,11 +196,13 @@ module regbank_smoke_tb;
   // uli_io_input_status_i/rtl022_evt_overflow_status_status_i stub ports.
   logic [dfc_types_pkg::DFC_RTL022_STATUS_WIDTH-1:0]  rtl022_status_i;
   logic [dfc_types_pkg::DFC_RTL022_CONTROL_WIDTH-1:0] rtl022_control_o;
-  logic [31:0] uroute_status_status_i;
-  logic [31:0] uroute_active_source_status_i;
-  logic [31:0] uroute_active_dest_status_i;
-  logic [31:0] uroute_entry_status_status_i;
-  logic [31:0] rtl023_evt_overflow_status_status_i;
+  // Real cross-module register bus to RTL-023, same treatment as RTL-022
+  // above -- replaces the prior individual per-register uroute_status_
+  // status_i/uroute_active_source_status_i/uroute_active_dest_status_i/
+  // uroute_entry_status_status_i/rtl023_evt_overflow_status_status_i stub
+  // ports.
+  logic [dfc_types_pkg::DFC_RTL023_STATUS_WIDTH-1:0]  rtl023_status_i;
+  logic [dfc_types_pkg::DFC_RTL023_CONTROL_WIDTH-1:0] rtl023_control_o;
   int errors = 0;
   int checks = 0;
 
@@ -294,11 +296,8 @@ module regbank_smoke_tb;
     .rtl015_control_o(rtl015_control_o),
     .rtl016_status_i(rtl016_status_i),
     .rtl016_control_o(rtl016_control_o),
-    .uroute_status_status_i(uroute_status_status_i),
-    .uroute_active_source_status_i(uroute_active_source_status_i),
-    .uroute_active_dest_status_i(uroute_active_dest_status_i),
-    .uroute_entry_status_status_i(uroute_entry_status_status_i),
-    .rtl023_evt_overflow_status_status_i(rtl023_evt_overflow_status_status_i)
+    .rtl023_status_i(rtl023_status_i),
+    .rtl023_control_o(rtl023_control_o)
   );
 
   // Clock generation: 50 MHz nominal (ARCH-CLK-001), free-running.
@@ -341,11 +340,7 @@ module regbank_smoke_tb;
     rtl014_status_i = '0;
     rtl015_status_i = '0;
     rtl016_status_i = '0;
-    uroute_status_status_i = 32'h0;
-    uroute_active_source_status_i = 32'h0;
-    uroute_active_dest_status_i = 32'h0;
-    uroute_entry_status_status_i = 32'h0;
-    rtl023_evt_overflow_status_status_i = 32'h0;
+    rtl023_status_i = '0;
     rtl002_status_i = '0;
     addr_i = '0;
     wdata_i = '0;

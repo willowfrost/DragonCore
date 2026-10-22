@@ -277,6 +277,15 @@ module dfc_rtl001 (
   output logic [dfc_types_pkg::DFC_RTL022_CONTROL_WIDTH-1:0] rtl022_control_o,
   input  logic [dfc_types_pkg::DFC_RTL022_STATUS_WIDTH-1:0]  rtl022_status_i,
 
+  // REAL cross-module register bus for RTL-023 (tools/reggen/
+  // rtl023_field_map.json, 9 control regs/6 status regs) -- replaces
+  // the individual per-register status_i stub ties below for every
+  // register that field-map covers (UROUTE_STATUS/UROUTE_ACTIVE_SOURCE/
+  // UROUTE_ACTIVE_DEST/UROUTE_ENTRY_STATUS/RTL023_EVT_OVERFLOW_STATUS/
+  // UROUTE_ACTIVE_CONTROL).
+  output logic [dfc_types_pkg::DFC_RTL023_CONTROL_WIDTH-1:0] rtl023_control_o,
+  input  logic [dfc_types_pkg::DFC_RTL023_STATUS_WIDTH-1:0]  rtl023_status_i,
+
   // REAL cross-module register bus for RTL-024's own ARINC RX digital
   // receive adapter (ARCH-BUS-001) -- an internal RTL-024 subblock, not a
   // separate RTL-0NN module (same "internal subblock" status as the
@@ -657,6 +666,11 @@ module dfc_rtl001 (
     .rtl022_status_i  (rtl022_status_i),
     .rtl022_control_o (rtl022_control_o),
 
+    // REAL cross-module register bus for RTL-023 -- see the port-list
+    // comment above.
+    .rtl023_status_i  (rtl023_status_i),
+    .rtl023_control_o (rtl023_control_o),
+
     // REAL cross-module register bus for RTL-024's ARINC RX adapter --
     // see the port-list comment above.
     .rtl024arxadapter_status_i  (rtl024arxadapter_status_i),
@@ -676,14 +690,11 @@ module dfc_rtl001 (
     .host_access_error_count_status_i('0), .rtl024_evt_overflow_status_status_i('0),
     .buffer_status_status_i(buffer_status_status_i), .host_last_sequence_status_i('0), .test_status_status_i('0),
 
- .uroute_status_status_i('0), .uroute_active_source_status_i('0), .uroute_active_dest_status_i('0),
-    .uroute_entry_status_status_i('0), .rtl023_evt_overflow_status_status_i('0),
-    .buffer_client_error_count_0_1_status_i(buffer_client_error_count_0_1_status_i),
+.buffer_client_error_count_0_1_status_i(buffer_client_error_count_0_1_status_i),
     .buffer_client_error_count_2_3_status_i(buffer_client_error_count_2_3_status_i), .buffer_client_error_count_4_5_status_i(buffer_client_error_count_4_5_status_i), .buffer_client_error_count_6_status_i(buffer_client_error_count_6_status_i),
     .buffer_internal_error_count_status_i(buffer_internal_error_count_status_i),
     .clock_reset_status_status_i('0),
-    .test_rejection_abort_count_status_i('0),
-    .uroute_active_control_status_i('0)
+    .test_rejection_abort_count_status_i('0)
   );
 
   // ---- unused-port sink (RTLSTD-MOD-009): timestamp_i/operating_state_i/

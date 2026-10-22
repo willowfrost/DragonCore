@@ -3223,8 +3223,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL022_STATUS__ULI_MAILBOX_LOSS_COUNT__COUNT_HI = 136;
   localparam int unsigned DFC_RTL022_STATUS__ULI_MAILBOX_LOSS_COUNT__COUNT_LO = 73;
 
-  // ARCH-002 Appendix B dfc_rtl023_control_t (34 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl023_control_t (35 bits, rich format)
   typedef struct packed {
+    logic rtl023_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic uroute_entry_status__error;  //  reset=0 :: clear_mask
     logic uroute_validate_commit__disable_entry;  //  reset=0 :: command_pulse
     logic uroute_validate_commit__validate_commit;  //  reset=0 :: command_pulse
@@ -3242,9 +3243,9 @@ package dfc_types_pkg;
     logic uroute_control__event_enable;  //  reset=0 :: control_value
     logic uroute_control__enable;  //  reset=0 :: control_value
   } dfc_rtl023_control_t;
-  // total width: 34 bits
+  // total width: 35 bits
 
-  localparam int unsigned DFC_RTL023_CONTROL_WIDTH = 34;
+  localparam int unsigned DFC_RTL023_CONTROL_WIDTH = 35;
   localparam int unsigned DFC_RTL023_CONTROL__UROUTE_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL023_CONTROL__UROUTE_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL023_CONTROL__UROUTE_CONTROL__EVENT_ENABLE_HI = 1;
@@ -3277,9 +3278,14 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL023_CONTROL__UROUTE_VALIDATE_COMMIT__DISABLE_ENTRY_LO = 32;
   localparam int unsigned DFC_RTL023_CONTROL__UROUTE_ENTRY_STATUS__ERROR_HI = 33;
   localparam int unsigned DFC_RTL023_CONTROL__UROUTE_ENTRY_STATUS__ERROR_LO = 33;
+  localparam int unsigned DFC_RTL023_CONTROL__RTL023_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 34;
+  localparam int unsigned DFC_RTL023_CONTROL__RTL023_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 34;
 
-  // ARCH-002 Appendix B dfc_rtl023_status_t (75 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl023_status_t (79 bits, rich format)
   typedef struct packed {
+    logic [1:0] uroute_active_control__mode;  //  reset=0 :: readback_value
+    logic uroute_active_control__invert;  //  reset=0 :: readback_value
+    logic uroute_active_control__enable;  //  reset=0 :: readback_value
     logic [15:0] event_drop_count;  //  reset=0 :: saturating count of records lost while this producer pending slot was occupied
     logic [15:0] uroute_entry_status__activity_count;  //  reset=0 :: readback_value
     logic uroute_entry_status__error;  //  reset=0 :: readback_value
@@ -3297,9 +3303,9 @@ package dfc_types_pkg;
     logic fault;  //  reset=0 :: module_status
     logic ready;  //  reset=0 :: module_status
   } dfc_rtl023_status_t;
-  // total width: 75 bits
+  // total width: 79 bits
 
-  localparam int unsigned DFC_RTL023_STATUS_WIDTH = 75;
+  localparam int unsigned DFC_RTL023_STATUS_WIDTH = 79;
   localparam int unsigned DFC_RTL023_STATUS__READY_HI = 0;
   localparam int unsigned DFC_RTL023_STATUS__READY_LO = 0;
   localparam int unsigned DFC_RTL023_STATUS__FAULT_HI = 1;
@@ -3332,6 +3338,12 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL023_STATUS__UROUTE_ENTRY_STATUS__ACTIVITY_COUNT_LO = 43;
   localparam int unsigned DFC_RTL023_STATUS__EVENT_DROP_COUNT_HI = 74;
   localparam int unsigned DFC_RTL023_STATUS__EVENT_DROP_COUNT_LO = 59;
+  localparam int unsigned DFC_RTL023_STATUS__UROUTE_ACTIVE_CONTROL__ENABLE_HI = 75;
+  localparam int unsigned DFC_RTL023_STATUS__UROUTE_ACTIVE_CONTROL__ENABLE_LO = 75;
+  localparam int unsigned DFC_RTL023_STATUS__UROUTE_ACTIVE_CONTROL__INVERT_HI = 76;
+  localparam int unsigned DFC_RTL023_STATUS__UROUTE_ACTIVE_CONTROL__INVERT_LO = 76;
+  localparam int unsigned DFC_RTL023_STATUS__UROUTE_ACTIVE_CONTROL__MODE_HI = 78;
+  localparam int unsigned DFC_RTL023_STATUS__UROUTE_ACTIVE_CONTROL__MODE_LO = 77;
 
   // ARCH-002 Appendix B dfc_rtl024_control_t (278 bits, rich format)
   typedef struct packed {

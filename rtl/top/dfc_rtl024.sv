@@ -530,6 +530,14 @@ module dfc_rtl024 (
   logic [dfc_types_pkg::DFC_BUFFER_RSP_WIDTH-1:0] rtl022_buf_rsp;
   logic [3:0] rtl022_user_o, rtl022_user_oe_o;   // hardwired 4'b0000 inside dfc_rtl022.sv (ARCH-ULI-002)
 
+  logic [dfc_types_pkg::DFC_RTL023_CONTROL_WIDTH-1:0] rtl023_control;
+  logic [dfc_types_pkg::DFC_RTL023_STATUS_WIDTH-1:0]  rtl023_status;
+  logic rtl023_irq_req;    // RTL-003.irq_source_i[19]
+  logic rtl023_fault_req;  // RTL-013.fault_source_i[16] -- real (RTL-023's own header, finding 3)
+  logic rtl023_evt_valid, rtl023_evt_ready;
+  logic [dfc_types_pkg::DFC_EVENT_RECORD_WIDTH-1:0] rtl023_evt_record;
+  logic [31:0] rtl023_route_dest;     // Appendix C.2 fixed destination catalog
+
   // RTL-021's five source/destination route channels (index == fixed
   // ARCH-MSG-001..005 module ID, confirmed directly against Appendix A's
   // own per-bit producer/consumer lists for both ports): 0 ARINC (RTL-017/
@@ -642,7 +650,7 @@ module dfc_rtl024 (
   logic [31:0] rtl013_fault_source_comb;
   assign rtl013_fault_source_comb = {
     15'h0,              // [31:17] permanently reserved (matrix's own constant-zero range)
-    1'h0,               // [16] RTL-023 -- not real yet
+    rtl023_fault_req,   // [16] RTL-023 (User-Configurable Routing Logic, real this session -- a REAL, reachable condition, not a disclosed stub; see dfc_rtl023.sv's own header)
     rtl022_fault_req,   // [15] RTL-022 (Mask-Defined User Logic Island, real this session, disclosed permanent stub -- fault_req_o is tied 1'b0 in dfc_rtl022.sv itself)
     rtl021_fault_req,   // [14] RTL-021 (Databus Routing Engine, real this session, disclosed permanent stub -- fault_req_o is tied 1'b0 in dfc_rtl021.sv itself, finding 13)
     rtl020_fault_req,   // [13] RTL-020 (UART, real this session)
@@ -877,6 +885,8 @@ module dfc_rtl024 (
     .rtl021_status_i  (rtl021_status),
     .rtl022_control_o (rtl022_control),
     .rtl022_status_i  (rtl022_status),
+    .rtl023_control_o (rtl023_control),
+    .rtl023_status_i  (rtl023_status),
     .rtl024arxadapter_control_o (rtl024arxadapter_control),
     .rtl024arxadapter_status_i  (rtl024arxadapter_status),
     // RTL-001's own Host route channel (ARCH-MSG-004, module ID 0x03) --
@@ -1080,7 +1090,7 @@ module dfc_rtl024 (
   // irq_req_o, per ARCH-002's own port catalog (RTL-003.irq_source_i[18]) --
   // disclosed permanent stub, tied 1'b0 inside dfc_rtl022.sv itself (F.3:
   // diagnostic-event-only, never asserts IRQ).
-  assign rtl003_irq_source = {13'h0, rtl022_irq_req, rtl016_irq_req, rtl015_irq_req, rtl014_irq_req, rtl013_irq_req, rtl012_irq_req, rtl011_irq_req, rtl010_irq_req, rtl009_irq_req, rtl008_irq_req, rtl007_irq_req, rtl021_irq_req, rtl020_irq_req, rtl019_irq_req, rtl018_irq_req, rtl017_irq_req, rtl006_irq_req, rtl005_irq_req, rtl002_irq_req};
+  assign rtl003_irq_source = {12'h0, rtl023_irq_req, rtl022_irq_req, rtl016_irq_req, rtl015_irq_req, rtl014_irq_req, rtl013_irq_req, rtl012_irq_req, rtl011_irq_req, rtl010_irq_req, rtl009_irq_req, rtl008_irq_req, rtl007_irq_req, rtl021_irq_req, rtl020_irq_req, rtl019_irq_req, rtl018_irq_req, rtl017_irq_req, rtl006_irq_req, rtl005_irq_req, rtl002_irq_req};
 
   dfc_rtl003 u_rtl003 (
     .core_clk_i               (core_clk_i),
@@ -1197,7 +1207,7 @@ module dfc_rtl024 (
   // unconnected below rather than stubbed.
   // ==========================================================================
   assign rtl005_evt_valid_i = {1'b0,                    // [23] RTL-024 (no self-event)
-                               1'b0,                     // [22] RTL-023 (not real)
+                               rtl023_evt_valid,          // [22] RTL-023 (real this session)
                                rtl022_evt_valid,          // [21] RTL-022 (real this session)
                                rtl021_evt_valid,          // [20] RTL-021 (real this session)
                                rtl020_evt_valid,          // [19] RTL-020 (real this session)
@@ -1241,6 +1251,7 @@ module dfc_rtl024 (
   assign rtl020_evt_ready = rtl005_evt_ready_o[19];
   assign rtl021_evt_ready = rtl005_evt_ready_o[20];
   assign rtl022_evt_ready = rtl005_evt_ready_o[21];
+  assign rtl023_evt_ready = rtl005_evt_ready_o[22];
   // NOTE: this concatenation is now written to sum EXACTLY to
   // rtl005_evt_record_i's real declared width (24*128=3072 bits) --
   // confirmed by direct arithmetic, not assumed. A real, pre-existing,
@@ -1255,7 +1266,7 @@ module dfc_rtl024 (
   // block is being edited for real.
   assign rtl005_evt_record_i =
     {128'h0,              // [23] RTL-024 (no self-event)
-     128'h0,              // [22] RTL-023 (not real)
+     rtl023_evt_record,   // [22] RTL-023 (real this session)
      rtl022_evt_record,   // [21] RTL-022 (real this session)
      rtl021_evt_record,   // [20] RTL-021 (real this session)
      rtl020_evt_record,   // [19] RTL-020 (real this session)
@@ -1314,10 +1325,12 @@ module dfc_rtl024 (
   // additions in fpga/ecp5/ulx3s_dfc.lpf and ULX3S_CONNECTION_MAP.md's own
   // new GPIO section for the physical pin assignment.
   //
-  // route_gpio_req_i: real port per the Architecture catalog, tied to a
-  // disclosed stub (8'h0) -- RTL-022/023 are permanently out of scope for
-  // this build (PROJECT_CONTINUITY.md Section 5), not a "not yet built"
-  // gap, so this stub will never become real.
+  // route_gpio_req_i: REAL as of this session -- RTL-023.route_dest_o[8:1]
+  // (RTL-023's own standing "permanently out of scope" decision was
+  // explicitly reversed by the person in an earlier session for RTL-022,
+  // and now RTL-023 itself is real and instantiated; see
+  // PROJECT_CONTINUITY.md's own dated UPDATE note and this session's own
+  // 24-module-completion note).
   // ==========================================================================
   dfc_rtl006 u_rtl006 (
     .core_clk_i                      (core_clk_i),
@@ -1335,7 +1348,7 @@ module dfc_rtl024 (
     .gpio_oe_o                       (gpio_oe_o),
     .operating_state_i               (rtl002_operating_state),
     .observational_mode_i            (rtl002_observational_mode),
-    .route_gpio_req_i                (8'h0),  // RTL-023 permanently out of scope
+    .route_gpio_req_i                (rtl023_route_dest[8:1]),  // real this session -- RTL-023.route_dest_o[8:1]
     .module_enable_i                 (rtl002_module_enable[5]),
     .effective_operational_enable_i  (rtl002_effective_operational_enable),
     .event_condition_enable_i        (64'h0),
@@ -1747,9 +1760,12 @@ module dfc_rtl024 (
   // ==========================================================================
   // internal_source_vector (ARCH-002 Appendix A "dragon_core_top.
   // internal_source_vector[63:0]", allocation Appendix C.1) -- built here
-  // for the first time, since RTL-014 is its first real consumer (its only
-  // other architected consumer, RTL-023.route_source_i, is permanently out
-  // of scope). Every bit is sliced from an already-real module's own
+  // for the first time, since RTL-014 is its first real consumer; RTL-023
+  // (this session, the last of all 24 modules) is its OTHER real consumer,
+  // reusing this SAME registered vector directly as its own route_source_i
+  // rather than independently re-deriving a second copy of this same wide
+  // fan-in (confirmed no other consumer needs a differently-timed version).
+  // Every bit is sliced from an already-real module's own
   // status_o via generated _HI/_LO constants. This is a brand-new wide
   // fan-in across ~10 physically scattered producers, so -- applying
   // OPEN_ISSUES.md items 48/57/65 proactively, not after a failure -- it is
@@ -1768,7 +1784,11 @@ module dfc_rtl024 (
   //   31     RTL-013 fault active
   //   32     any interlock violation (RTL-014's own; never a legal term per
   //          C.3; registered, so no combinational loop)
-  //   33-36  RTL-022 user outputs -- permanently out of scope: constant 0
+  //   33-36  RTL-022 user outputs (real this session's own u_rtl022, which
+  //          predates this reuse -- rtl022_user_o[3:0], hardwired zero
+  //          inside dfc_rtl022.sv itself per ARCH-ULI-002, so this bit
+  //          range reads zero in practice, but is wired for real, not
+  //          hardcoded here)
   //   37     constant true               38-63  reserved, constant 0
   // ==========================================================================
   logic [63:0] internal_source_vector_comb;
@@ -1792,6 +1812,7 @@ module dfc_rtl024 (
     internal_source_vector_comb[30]   = |rtl015_status[dfc_types_pkg::DFC_RTL015_STATUS__LLINK_STATUS__LOST_ACTIVE_HI:dfc_types_pkg::DFC_RTL015_STATUS__LLINK_STATUS__LOST_ACTIVE_LO];
     internal_source_vector_comb[31]   = rtl013_status[dfc_types_pkg::DFC_RTL013_STATUS__FAULT_STATUS__FAULT_ACTIVE_HI];
     internal_source_vector_comb[32]   = |rtl014_status[dfc_types_pkg::DFC_RTL014_STATUS__ILOCK_STATUS__VIOLATION_ACTIVE_HI:dfc_types_pkg::DFC_RTL014_STATUS__ILOCK_STATUS__VIOLATION_ACTIVE_LO];
+    internal_source_vector_comb[36:33] = rtl022_user_o[3:0];
     internal_source_vector_comb[37]   = 1'b1;   // constant true
   end
 
@@ -2175,9 +2196,9 @@ module dfc_rtl024 (
   // real top-level ports (dfc_rtl024.sv's own, pre-existing); user_o/
   // user_oe_o are wired FROM this instantiation's own (hardwired-zero)
   // outputs above, replacing the former constant-zero top-level assigns.
-  // route_user_req_i/route_term_i are genuine forward references to
-  // RTL-023 (not instantiated) -- tied to a disclosed stub, same precedent
-  // as every other not-yet-real cross-module signal in this integration.
+  // route_user_req_i/route_term_i are REAL this session -- RTL-023.
+  // route_dest_o[12:9]/[20:13] (see u_rtl023's own instantiation below),
+  // closing this module's own disclosed forward reference.
   // test_active_i ties to the same disclosed 1'b0 stub as RTL-002's own
   // (no RTL-024 test controller exists yet).
   // ==========================================================================
@@ -2204,8 +2225,8 @@ module dfc_rtl024 (
     .tx_msg_record_o          (rtl022_tx_msg_record),
     .operating_state_i        (rtl002_operating_state),
     .observational_mode_i     (rtl002_observational_mode),
-    .route_user_req_i         (4'h0),
-    .route_term_i             (8'h0),
+    .route_user_req_i         (rtl023_route_dest[12:9]),   // real this session -- RTL-023.route_dest_o[12:9]
+    .route_term_i             (rtl023_route_dest[20:13]),  // real this session -- RTL-023.route_dest_o[20:13]
     .module_enable_i          (rtl002_module_enable[21]),
     .effective_operational_enable_i (rtl002_effective_operational_enable),
     .test_active_i            (1'b0),
@@ -2215,6 +2236,38 @@ module dfc_rtl024 (
     .buf_rsp_valid_i          (rtl022_buf_rsp_valid),
     .buf_rsp_ready_o          (rtl022_buf_rsp_ready),
     .buf_rsp_i                (rtl022_buf_rsp),
+    .event_condition_enable_i (64'h0),
+    .irq_condition_enable_i   (64'h0)
+  );
+
+  // ==========================================================================
+  // RTL-023 (User-Configurable Routing Logic) -- REAL this session, the
+  // LAST of all 24 modules. route_source_i reuses the SAME real, already-
+  // registered internal_source_vector_q built for RTL-014's own use just
+  // above (ARCH-002 Appendix A names RTL-023.route_source_i as that same
+  // signal's OTHER real consumer -- confirmed, not independently
+  // re-derived); route_dest_o closes RTL-006's (route_gpio_req_i) and
+  // RTL-022's (route_user_req_i/route_term_i) own disclosed forward
+  // references for real.
+  // ==========================================================================
+  dfc_rtl023 u_rtl023 (
+    .core_clk_i               (core_clk_i),
+    .core_rst_n_i             (core_rst_n),
+    .module_reset_i           (module_reset[22]),
+    .control_i                (rtl023_control),
+    .status_o                 (rtl023_status),
+    .timestamp_i              (rtl004_timestamp),
+    .evt_valid_o              (rtl023_evt_valid),
+    .evt_ready_i              (rtl023_evt_ready),
+    .evt_record_o             (rtl023_evt_record),
+    .irq_req_o                (rtl023_irq_req),
+    .fault_req_o              (rtl023_fault_req),
+    .route_source_i           (internal_source_vector_q),
+    .route_dest_o             (rtl023_route_dest),
+    .operating_state_i        (rtl002_operating_state),
+    .observational_mode_i     (rtl002_observational_mode),
+    .module_enable_i          (rtl002_module_enable[22]),
+    .effective_operational_enable_i (rtl002_effective_operational_enable),
     .event_condition_enable_i (64'h0),
     .irq_condition_enable_i   (64'h0)
   );

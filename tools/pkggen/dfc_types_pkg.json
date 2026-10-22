@@ -8918,8 +8918,8 @@
     },
     {
       "name": "dfc_rtl023_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl023_control_t (34 bits, rich format)",
-      "width": 34,
+      "trace": "ARCH-002 Appendix B dfc_rtl023_control_t (35 bits, rich format)",
+      "width": 35,
       "fields": [
         {
           "name": "uroute_control__enable",
@@ -9064,13 +9064,22 @@
           "signed": false,
           "reset": "0",
           "semantic": "clear_mask"
+        },
+        {
+          "name": "rtl023_evt_overflow_status__event_overflow",
+          "hi": 34,
+          "lo": 34,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },
     {
       "name": "dfc_rtl023_status_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl023_status_t (75 bits, rich format)",
-      "width": 75,
+      "trace": "ARCH-002 Appendix B dfc_rtl023_status_t (79 bits, rich format)",
+      "width": 79,
       "fields": [
         {
           "name": "ready",
@@ -9215,6 +9224,33 @@
           "signed": false,
           "reset": "0",
           "semantic": "saturating count of records lost while this producer pending slot was occupied"
+        },
+        {
+          "name": "uroute_active_control__enable",
+          "hi": 75,
+          "lo": 75,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "uroute_active_control__invert",
+          "hi": 76,
+          "lo": 76,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
+        },
+        {
+          "name": "uroute_active_control__mode",
+          "hi": 78,
+          "lo": 77,
+          "width": 2,
+          "signed": false,
+          "reset": "0",
+          "semantic": "readback_value"
         }
       ]
     },
