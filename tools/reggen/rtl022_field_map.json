@@ -1,0 +1,215 @@
+{
+  "_source": "Hand-verified directly against RCA-DFC-REG-002.md Section 29 (0x4000-0x4058) per-field bit tables, cited by contract ID, and RCA-DFC-ARCH-002.md's dfc_rtl022_control_t/status_t Appendix B tables. Covers all 23 real RTL-022 registers -- REG-002's own block header (Section 29) says 23 and the block lists exactly 23 rows (confirmed by direct count); RTL-022_RevA.md's own stale claims (11 ports -- real is 35, confirmed against ARCH-002 Appendix A directly; 20 registers -- real is 23) are both wrong, disclosed in OPEN_ISSUES.md, not followed. ULI_IO_DIRECTION (0x4040, CONST, fixed zero, ACCESS_ERROR on any write) needs no field-map entry at all -- handled generically by reggen.py's own CONST readback class. ULI_IN_LEVEL/ULI_OUT_LEVEL/ULI_OUT_DATA/ULI_IO_INPUT are pure-RO registers (status_registers entries only, no control_registers entry, same precedent as UART_RX_LEVEL/CAN_RX_ID/etc. in rtl019/020_field_map.json). ULI_PARAM0-7/ULI_IN_DATA/ULI_IO_OUTPUT are plain RW registers forwarded to RTL-022 via control_registers only (no status_registers entry -- dfc_rtl022_status_t has no corresponding readback field for any of these at all, confirmed directly: the generic regbank's own existing stored-value echo is this register's own readback, the same already-disclosed, pre-existing RTL-001 gap named in every prior module's own header -- 'no per-field legal-value range checks' -- not a new gap invented for this module; see OPEN_ISSUES.md for the explicit disclosure that REG-002's own 'reads zero' prose for these registers is therefore not literally enforced at the register level, only RTL-022's OWN internal violation-detection-and-ignore behavior is real). A genuine, disclosed REG-002-internal inconsistency was found and resolved while building this field map: ULI_CONTROL's own 'Register behavior' prose says 'ENABLE and IRQ_ENABLE have the sole legal value zero,' directly contradicting its OWN per-field 'Legal values/range' column ('0 or 1' for both, with no 'in Revision A' qualifier the OTHER real zero-only fields in this same section all consistently carry) -- resolved in favor of the prose (ENABLE/IRQ_ENABLE DO get the same reject-nonzero-plus-violation-evidence treatment as the 8 parameters and OUTPUT_REQUEST), per ARCH-002's own ARCH-ULI-001 ('Any nonzero parameter write or enable attempt is rejected and sets violation evidence') and this session's own task briefing explicitly requiring 'ENABLE/IRQ_ENABLE nonzero-write rejection (REG-ENC-017)' -- REG-ENC-017's own literal text names only 'functional enable' (ENABLE) explicitly, not IRQ_ENABLE by name, so IRQ_ENABLE's own inclusion rests on REG-002's own ULI_CONTROL prose plus this session's explicit instruction, not REG-ENC-017's own narrower literal wording -- disclosed, not silently picked, in OPEN_ISSUES.md. EVENT_ENABLE is NOT part of this restriction (REG-002's own prose: 'diagnostic EVENT_ENABLE remain available'), an ordinary RW bit.",
+  "consumer_module": "RTL-022",
+  "control_struct": "dfc_rtl022_control_t",
+  "status_struct": "dfc_rtl022_status_t",
+  "control_registers": [
+    {
+      "register": "ULI_CONTROL",
+      "contract_id": "REG-4000",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "RW", "struct_field": "uli_control__enable" },
+        { "reg_hi": 1, "reg_lo": 1, "class": "WO-CMD", "struct_field": "uli_control__reset_req" },
+        { "reg_hi": 2, "reg_lo": 2, "class": "RW", "struct_field": "uli_control__event_enable" },
+        { "reg_hi": 3, "reg_lo": 3, "class": "RW", "struct_field": "uli_control__irq_enable" }
+      ]
+    },
+    {
+      "register": "ULI_STATUS",
+      "contract_id": "REG-4004",
+      "fields": [
+        { "reg_hi": 6, "reg_lo": 6, "class": "W1C", "struct_field": "uli_status__violation" },
+        { "reg_hi": 7, "reg_lo": 7, "class": "W1C", "struct_field": "uli_status__reset_complete" }
+      ]
+    },
+    {
+      "register": "ULI_PARAM0",
+      "contract_id": "REG-4008",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_param0__param0" }
+      ]
+    },
+    {
+      "register": "ULI_PARAM1",
+      "contract_id": "REG-400C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_param1__param1" }
+      ]
+    },
+    {
+      "register": "ULI_PARAM2",
+      "contract_id": "REG-4010",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_param2__param2" }
+      ]
+    },
+    {
+      "register": "ULI_PARAM3",
+      "contract_id": "REG-4014",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_param3__param3" }
+      ]
+    },
+    {
+      "register": "ULI_PARAM4",
+      "contract_id": "REG-4018",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_param4__param4" }
+      ]
+    },
+    {
+      "register": "ULI_PARAM5",
+      "contract_id": "REG-401C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_param5__param5" }
+      ]
+    },
+    {
+      "register": "ULI_PARAM6",
+      "contract_id": "REG-4020",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_param6__param6" }
+      ]
+    },
+    {
+      "register": "ULI_PARAM7",
+      "contract_id": "REG-4024",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_param7__param7" }
+      ]
+    },
+    {
+      "register": "ULI_IN_DATA",
+      "contract_id": "REG-402C",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "class": "RW", "struct_field": "uli_in_data__mailbox_data" }
+      ]
+    },
+    {
+      "register": "ULI_IN_PUSH",
+      "contract_id": "REG-4030",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "uli_in_push__push" }
+      ]
+    },
+    {
+      "register": "ULI_OUT_POP",
+      "contract_id": "REG-403C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "WO-CMD", "struct_field": "uli_out_pop__pop" }
+      ]
+    },
+    {
+      "register": "ULI_IO_OUTPUT",
+      "contract_id": "REG-4048",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "class": "RW", "struct_field": "uli_io_output__output_request" }
+      ]
+    },
+    {
+      "register": "RTL022_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-404C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "class": "W1C", "struct_field": "rtl022_evt_overflow_status__event_overflow" }
+      ]
+    },
+    {
+      "register": "ULI_MAILBOX_STATUS",
+      "contract_id": "REG-4050",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "class": "W1C", "struct_field": "uli_mailbox_status__overflow_underflow_clear" }
+      ]
+    },
+    {
+      "register": "ULI_MAILBOX_LOSS_COUNT_0_1",
+      "contract_id": "REG-4054",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "class": "COUNTER16-CLR", "struct_field": "uli_mailbox_loss_count__clear", "bit": 0 },
+        { "reg_hi": 31, "reg_lo": 16, "class": "COUNTER16-CLR", "struct_field": "uli_mailbox_loss_count__clear", "bit": 1 }
+      ]
+    },
+    {
+      "register": "ULI_MAILBOX_LOSS_COUNT_2_3",
+      "contract_id": "REG-4058",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "class": "COUNTER16-CLR", "struct_field": "uli_mailbox_loss_count__clear", "bit": 2 },
+        { "reg_hi": 31, "reg_lo": 16, "class": "COUNTER16-CLR", "struct_field": "uli_mailbox_loss_count__clear", "bit": 3 }
+      ]
+    }
+  ],
+  "status_registers": [
+    {
+      "register": "ULI_STATUS",
+      "contract_id": "REG-4004",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "uli_status__enabled" },
+        { "reg_hi": 1, "reg_lo": 1, "struct_field": "uli_status__ready" },
+        { "reg_hi": 2, "reg_lo": 2, "struct_field": "uli_status__in_mailbox_not_empty" },
+        { "reg_hi": 3, "reg_lo": 3, "struct_field": "uli_status__out_mailbox_not_empty" },
+        { "reg_hi": 4, "reg_lo": 4, "struct_field": "uli_status__in_mailbox_full" },
+        { "reg_hi": 5, "reg_lo": 5, "struct_field": "uli_status__out_mailbox_full" },
+        { "reg_hi": 6, "reg_lo": 6, "struct_field": "uli_status__violation" },
+        { "reg_hi": 7, "reg_lo": 7, "struct_field": "uli_status__reset_complete" }
+      ]
+    },
+    {
+      "register": "ULI_IN_LEVEL",
+      "contract_id": "REG-4028",
+      "fields": [
+        { "reg_hi": 2, "reg_lo": 0, "struct_field": "uli_in_level__level" }
+      ]
+    },
+    {
+      "register": "ULI_OUT_LEVEL",
+      "contract_id": "REG-4034",
+      "fields": [
+        { "reg_hi": 2, "reg_lo": 0, "struct_field": "uli_out_level__level" }
+      ]
+    },
+    {
+      "register": "ULI_OUT_DATA",
+      "contract_id": "REG-4038",
+      "fields": [
+        { "reg_hi": 31, "reg_lo": 0, "struct_field": "uli_out_data__mailbox_data" }
+      ]
+    },
+    {
+      "register": "ULI_IO_INPUT",
+      "contract_id": "REG-4044",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "struct_field": "uli_io_input__input" }
+      ]
+    },
+    {
+      "register": "RTL022_EVT_OVERFLOW_STATUS",
+      "contract_id": "REG-404C",
+      "fields": [
+        { "reg_hi": 0, "reg_lo": 0, "struct_field": "event_overflow" },
+        { "reg_hi": 23, "reg_lo": 8, "struct_field": "event_drop_count" }
+      ]
+    },
+    {
+      "register": "ULI_MAILBOX_STATUS",
+      "contract_id": "REG-4050",
+      "fields": [
+        { "reg_hi": 3, "reg_lo": 0, "struct_field": "uli_mailbox_status__overflow_underflow" }
+      ]
+    },
+    {
+      "register": "ULI_MAILBOX_LOSS_COUNT_0_1",
+      "contract_id": "REG-4054",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "struct_field": "uli_mailbox_loss_count__count", "bit": 0 },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "uli_mailbox_loss_count__count", "bit": 1 }
+      ]
+    },
+    {
+      "register": "ULI_MAILBOX_LOSS_COUNT_2_3",
+      "contract_id": "REG-4058",
+      "fields": [
+        { "reg_hi": 15, "reg_lo": 0, "struct_field": "uli_mailbox_loss_count__count", "bit": 2 },
+        { "reg_hi": 31, "reg_lo": 16, "struct_field": "uli_mailbox_loss_count__count", "bit": 3 }
+      ]
+    }
+  ]
+}

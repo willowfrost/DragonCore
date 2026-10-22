@@ -20,6 +20,7 @@
 // Cross-module forwarding: RTL-019 (see tools/reggen/rtl019_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-020 (see tools/reggen/rtl020_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL-021 (see tools/reggen/rtl021_field_map.json's own _source note for exact scope/citations)
+// Cross-module forwarding: RTL-022 (see tools/reggen/rtl022_field_map.json's own _source note for exact scope/citations)
 // Cross-module forwarding: RTL024-ARX-ADAPTER (see tools/reggen/rtl024arxadapter_field_map.json's own _source note for exact scope/citations)
 
 
@@ -63,6 +64,8 @@
   // Aggregated real RTL-020 control, replacing the prior disconnected placeholder for: RTL020_EVT_OVERFLOW_STATUS, UART_BAUD_DIV, UART_CONTROL, UART_ERROR_COUNT, UART_RX_OVERFLOW_COUNT, UART_RX_POP, UART_RX_UNDERFLOW_COUNT, UART_STATUS, UART_TX_DATA, UART_TX_PUSH, UART_TX_REJECTED_COUNT, UART_TX_UNDERFLOW_COUNT
   // Aggregated real RTL-021 status, replacing individual ports for: ROUTE_ACTIVE_CONTROL, ROUTE_ACTIVE_DEST, ROUTE_ACTIVE_FILTER_MASK, ROUTE_ACTIVE_FILTER_VALUE, ROUTE_ACTIVE_SOURCE, ROUTE_ACTIVE_TYPE_MASK, ROUTE_DESTINATION_DROP_COUNT_0_1, ROUTE_DESTINATION_DROP_COUNT_2_3, ROUTE_DESTINATION_DROP_COUNT_4, ROUTE_ENTRY_STATUS, ROUTE_INGRESS_LOSS_COUNT_0_1, ROUTE_INGRESS_LOSS_COUNT_2_3, ROUTE_INGRESS_LOSS_COUNT_4, ROUTE_STATUS, RTL021_EVT_OVERFLOW_STATUS
   // Aggregated real RTL-021 control, replacing the prior disconnected placeholder for: ROUTE_CONTROL, ROUTE_DESTINATION_DROP_COUNT_0_1, ROUTE_DESTINATION_DROP_COUNT_2_3, ROUTE_DESTINATION_DROP_COUNT_4, ROUTE_ENTRY_SELECT, ROUTE_ENTRY_STATUS, ROUTE_INGRESS_LOSS_COUNT_0_1, ROUTE_INGRESS_LOSS_COUNT_2_3, ROUTE_INGRESS_LOSS_COUNT_4, ROUTE_STAGE_CONTROL, ROUTE_STAGE_DEST, ROUTE_STAGE_FILTER_MASK, ROUTE_STAGE_FILTER_VALUE, ROUTE_STAGE_SOURCE, ROUTE_STAGE_TYPE_MASK, ROUTE_STATUS, ROUTE_VALIDATE_COMMIT, RTL021_EVT_OVERFLOW_STATUS
+  // Aggregated real RTL-022 status, replacing individual ports for: RTL022_EVT_OVERFLOW_STATUS, ULI_IN_LEVEL, ULI_IO_INPUT, ULI_MAILBOX_LOSS_COUNT_0_1, ULI_MAILBOX_LOSS_COUNT_2_3, ULI_MAILBOX_STATUS, ULI_OUT_DATA, ULI_OUT_LEVEL, ULI_STATUS
+  // Aggregated real RTL-022 control, replacing the prior disconnected placeholder for: RTL022_EVT_OVERFLOW_STATUS, ULI_CONTROL, ULI_IN_DATA, ULI_IN_PUSH, ULI_IO_OUTPUT, ULI_MAILBOX_LOSS_COUNT_0_1, ULI_MAILBOX_LOSS_COUNT_2_3, ULI_MAILBOX_STATUS, ULI_OUT_POP, ULI_PARAM0, ULI_PARAM1, ULI_PARAM2, ULI_PARAM3, ULI_PARAM4, ULI_PARAM5, ULI_PARAM6, ULI_PARAM7, ULI_STATUS
   // Aggregated real RTL024-ARX-ADAPTER status, replacing individual ports for: 
   // Aggregated real RTL024-ARX-ADAPTER control, replacing the prior disconnected placeholder for: ARX_CONTROL
 module dfc_config_regbank_regs (
@@ -96,15 +99,6 @@ module dfc_config_regbank_regs (
   input  logic [31:0]  buffer_internal_error_count_status_i,
   input  logic [31:0]  test_status_status_i,
   input  logic [31:0]  test_rejection_abort_count_status_i,
-  input  logic [31:0]  uli_status_status_i,
-  input  logic [31:0]  uli_in_level_status_i,
-  input  logic [31:0]  uli_out_level_status_i,
-  input  logic [31:0]  uli_out_data_status_i,
-  input  logic [31:0]  uli_io_input_status_i,
-  input  logic [31:0]  rtl022_evt_overflow_status_status_i,
-  input  logic [31:0]  uli_mailbox_status_status_i,
-  input  logic [31:0]  uli_mailbox_loss_count_0_1_status_i,
-  input  logic [31:0]  uli_mailbox_loss_count_2_3_status_i,
   input  logic [31:0]  uroute_status_status_i,
   input  logic [31:0]  uroute_active_source_status_i,
   input  logic [31:0]  uroute_active_dest_status_i,
@@ -151,6 +145,8 @@ module dfc_config_regbank_regs (
   output logic [215:0] rtl020_control_o,
   input  logic [337:0]  rtl021_status_i,
   output logic [135:0] rtl021_control_o,
+  input  logic [136:0]  rtl022_status_i,
+  output logic [308:0] rtl022_control_o,
   input  logic [0:0]  rtl024arxadapter_status_i,
   output logic [4:0] rtl024arxadapter_control_o
 );
@@ -2583,14 +2579,30 @@ module dfc_config_regbank_regs (
   // RTL016_EVT_OVERFLOW_STATUS (0x341C) -- external passthrough, owner RTL-016. Reconstructed from the aggregated rtl016_status_i input (contract REG-341C), not an individual per-register port.
   wire [31:0] rtl016_evt_overflow_status_q = {8'h0, rtl016_status_i[46:31], 7'h0, rtl016_status_i[2:2]};
 
+  // ULI_CONTROL (0x4000) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-022, real
+  //   generation per contract REG-4000, not a permanent tie.
+  logic [31:0] uli_control_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_control_pulse_q <= 32'h0;
+    else uli_control_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_CONTROL)) ? wdata_i : 32'h0;
+
   // ULI_CONTROL (0x4000) -- Mixed: RW, WO-CMD, RSV0, owner RTL-022
   logic [31:0] uli_control_q;
   always_ff @(posedge clk_i or negedge rst_ni)
     if (!rst_ni) uli_control_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_CONTROL)) uli_control_q <= wdata_i;
 
-  // ULI_STATUS (0x4004) -- external passthrough, owner RTL-022
-  wire [31:0] uli_status_q = uli_status_status_i;
+  // ULI_STATUS (0x4004) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-022, real
+  //   generation per contract REG-4004, not a permanent tie.
+  logic [31:0] uli_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_status_pulse_q <= 32'h0;
+    else uli_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_STATUS)) ? wdata_i : 32'h0;
+
+  // ULI_STATUS (0x4004) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-4004), not an individual per-register port.
+  wire [31:0] uli_status_q = {24'h0, rtl022_status_i[10:10], rtl022_status_i[9:9], rtl022_status_i[8:8], rtl022_status_i[7:7], rtl022_status_i[6:6], rtl022_status_i[5:5], rtl022_status_i[4:4], rtl022_status_i[3:3]};
 
   // ULI_PARAM0 (0x4008) -- RW, owner RTL-001 / RTL-022
   logic [31:0] uli_param0_q;
@@ -2640,8 +2652,8 @@ module dfc_config_regbank_regs (
     if (!rst_ni) uli_param7_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_PARAM7)) uli_param7_q <= wdata_i;
 
-  // ULI_IN_LEVEL (0x4028) -- external passthrough, owner RTL-022
-  wire [31:0] uli_in_level_q = uli_in_level_status_i;
+  // ULI_IN_LEVEL (0x4028) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-4028), not an individual per-register port.
+  wire [31:0] uli_in_level_q = {29'h0, rtl022_status_i[13:11]};
 
   // ULI_IN_DATA (0x402C) -- RW, owner RTL-001 / RTL-022
   logic [31:0] uli_in_data_q;
@@ -2649,23 +2661,39 @@ module dfc_config_regbank_regs (
     if (!rst_ni) uli_in_data_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_IN_DATA)) uli_in_data_q <= wdata_i;
 
-  // ULI_IN_PUSH (0x4030) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_IN_PUSH)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // ULI_IN_PUSH (0x4030) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-022, real
+  //   generation per contract REG-4030, not a permanent tie.
+  logic [31:0] uli_in_push_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_in_push_pulse_q <= 32'h0;
+    else uli_in_push_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_IN_PUSH)) ? wdata_i : 32'h0;
+
+  // ULI_IN_PUSH (0x4030) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-022 via uli_in_push_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] uli_in_push_q = 32'h00000000;
 
-  // ULI_OUT_LEVEL (0x4034) -- external passthrough, owner RTL-022
-  wire [31:0] uli_out_level_q = uli_out_level_status_i;
+  // ULI_OUT_LEVEL (0x4034) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-4034), not an individual per-register port.
+  wire [31:0] uli_out_level_q = {29'h0, rtl022_status_i[16:14]};
 
-  // ULI_OUT_DATA (0x4038) -- external passthrough, owner RTL-022
-  wire [31:0] uli_out_data_q = uli_out_data_status_i;
+  // ULI_OUT_DATA (0x4038) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-4038), not an individual per-register port.
+  wire [31:0] uli_out_data_q = {rtl022_status_i[48:17]};
 
-  // ULI_OUT_POP (0x403C) -- WO-CMD, reads zero; command pulse generation is module-specific, not reggen-generated. Write acceptance (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_OUT_POP)) is decoded here but the resulting pulse is not yet wired to any consumer.
+  // ULI_OUT_POP (0x403C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-022, real
+  //   generation per contract REG-403C, not a permanent tie.
+  logic [31:0] uli_out_pop_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_out_pop_pulse_q <= 32'h0;
+    else uli_out_pop_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_OUT_POP)) ? wdata_i : 32'h0;
+
+  // ULI_OUT_POP (0x403C) -- WO-CMD, reads zero; real command-pulse forwarding to RTL-022 via uli_out_pop_pulse_q above (see control_o assembly below) -- replaces v2's permanent zero-tie for this register.
   wire [31:0] uli_out_pop_q = 32'h00000000;
 
   // ULI_IO_DIRECTION (0x4040) -- CONST, fixed at reset value
   wire [31:0] uli_io_direction_q = 32'h00000000;
 
-  // ULI_IO_INPUT (0x4044) -- external passthrough, owner RTL-022
-  wire [31:0] uli_io_input_q = uli_io_input_status_i;
+  // ULI_IO_INPUT (0x4044) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-4044), not an individual per-register port.
+  wire [31:0] uli_io_input_q = {28'h0, rtl022_status_i[52:49]};
 
   // ULI_IO_OUTPUT (0x4048) -- Mixed: RW, RSV0, owner RTL-022
   logic [31:0] uli_io_output_q;
@@ -2673,17 +2701,55 @@ module dfc_config_regbank_regs (
     if (!rst_ni) uli_io_output_q <= 32'h00000000;
     else if (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_IO_OUTPUT)) uli_io_output_q <= wdata_i;
 
-  // RTL022_EVT_OVERFLOW_STATUS (0x404C) -- external passthrough, owner RTL-022
-  wire [31:0] rtl022_evt_overflow_status_q = rtl022_evt_overflow_status_status_i;
+  // RTL022_EVT_OVERFLOW_STATUS (0x404C) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-022, real
+  //   generation per contract REG-404C, not a permanent tie.
+  logic [31:0] rtl022_evt_overflow_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) rtl022_evt_overflow_status_pulse_q <= 32'h0;
+    else rtl022_evt_overflow_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_RTL022_EVT_OVERFLOW_STATUS)) ? wdata_i : 32'h0;
 
-  // ULI_MAILBOX_STATUS (0x4050) -- external passthrough, owner RTL-022
-  wire [31:0] uli_mailbox_status_q = uli_mailbox_status_status_i;
+  // RTL022_EVT_OVERFLOW_STATUS (0x404C) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-404C), not an individual per-register port.
+  wire [31:0] rtl022_evt_overflow_status_q = {8'h0, rtl022_status_i[68:53], 7'h0, rtl022_status_i[2:2]};
 
-  // ULI_MAILBOX_LOSS_COUNT_0_1 (0x4054) -- external passthrough, owner RTL-022
-  wire [31:0] uli_mailbox_loss_count_0_1_q = uli_mailbox_loss_count_0_1_status_i;
+  // ULI_MAILBOX_STATUS (0x4050) -- real one-cycle command/clear-
+  //   request pulse capture for RTL-022, real
+  //   generation per contract REG-4050, not a permanent tie.
+  logic [31:0] uli_mailbox_status_pulse_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_mailbox_status_pulse_q <= 32'h0;
+    else uli_mailbox_status_pulse_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_STATUS)) ? wdata_i : 32'h0;
 
-  // ULI_MAILBOX_LOSS_COUNT_2_3 (0x4058) -- external passthrough, owner RTL-022
-  wire [31:0] uli_mailbox_loss_count_2_3_q = uli_mailbox_loss_count_2_3_status_i;
+  // ULI_MAILBOX_STATUS (0x4050) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-4050), not an individual per-register port.
+  wire [31:0] uli_mailbox_status_q = {28'h0, rtl022_status_i[72:69]};
+
+  // ULI_MAILBOX_LOSS_COUNT_0_1 (0x4054) -- COUNTER16-CLR, real per-
+  //   halfword one-cycle clear-pulse capture for RTL-022, generation per contract REG-4054.
+  logic uli_mailbox_loss_count_0_1_lo_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_mailbox_loss_count_0_1_lo_clr_q <= 1'b0;
+    else uli_mailbox_loss_count_0_1_lo_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_0_1)) && (wdata_i[15:0] == 16'hFFFF);
+  logic uli_mailbox_loss_count_0_1_hi_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_mailbox_loss_count_0_1_hi_clr_q <= 1'b0;
+    else uli_mailbox_loss_count_0_1_hi_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_0_1)) && (wdata_i[31:16] == 16'hFFFF);
+
+  // ULI_MAILBOX_LOSS_COUNT_0_1 (0x4054) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-4054), not an individual per-register port.
+  wire [31:0] uli_mailbox_loss_count_0_1_q = {rtl022_status_i[104:89], rtl022_status_i[88:73]};
+
+  // ULI_MAILBOX_LOSS_COUNT_2_3 (0x4058) -- COUNTER16-CLR, real per-
+  //   halfword one-cycle clear-pulse capture for RTL-022, generation per contract REG-4058.
+  logic uli_mailbox_loss_count_2_3_lo_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_mailbox_loss_count_2_3_lo_clr_q <= 1'b0;
+    else uli_mailbox_loss_count_2_3_lo_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_2_3)) && (wdata_i[15:0] == 16'hFFFF);
+  logic uli_mailbox_loss_count_2_3_hi_clr_q;
+  always_ff @(posedge clk_i or negedge rst_ni)
+    if (!rst_ni) uli_mailbox_loss_count_2_3_hi_clr_q <= 1'b0;
+    else uli_mailbox_loss_count_2_3_hi_clr_q <= (write_en_i && (addr_i == dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_2_3)) && (wdata_i[31:16] == 16'hFFFF);
+
+  // ULI_MAILBOX_LOSS_COUNT_2_3 (0x4058) -- external passthrough, owner RTL-022. Reconstructed from the aggregated rtl022_status_i input (contract REG-4058), not an individual per-register port.
+  wire [31:0] uli_mailbox_loss_count_2_3_q = {rtl022_status_i[136:121], rtl022_status_i[120:105]};
 
   // UROUTE_CONTROL (0x4100) -- Mixed: RW, RSV0, owner RTL-023
   logic [31:0] uroute_control_q;
@@ -3425,6 +3491,38 @@ module dfc_config_regbank_regs (
   assign rtl021_control_o[0] = route_control_q[0:0];  // ROUTE_CONTROL.route_control__enable
 
   // ==========================================================================
+  // Aggregated rtl022_control_o -- real forwarding to RTL-022, replacing the disconnected placeholder.
+  // Every assignment below is sourced from a real stored register or a real
+  // one-cycle pulse-capture register above, at the exact bit position the
+  // real generated dfc_types_pkg.sv's dfc_rtl022_control_t defines --
+  // cross-checked at generation time (309/309 bits, exact match confirmed by the assert above actually running).
+  // ==========================================================================
+  assign rtl022_control_o[308] = rtl022_evt_overflow_status_pulse_q[0:0];  // RTL022_EVT_OVERFLOW_STATUS.rtl022_evt_overflow_status__event_overflow
+  assign rtl022_control_o[307] = uli_mailbox_loss_count_2_3_hi_clr_q;  // ULI_MAILBOX_LOSS_COUNT_2_3.uli_mailbox_loss_count__clear
+  assign rtl022_control_o[306] = uli_mailbox_loss_count_2_3_lo_clr_q;  // ULI_MAILBOX_LOSS_COUNT_2_3.uli_mailbox_loss_count__clear
+  assign rtl022_control_o[305] = uli_mailbox_loss_count_0_1_hi_clr_q;  // ULI_MAILBOX_LOSS_COUNT_0_1.uli_mailbox_loss_count__clear
+  assign rtl022_control_o[304] = uli_mailbox_loss_count_0_1_lo_clr_q;  // ULI_MAILBOX_LOSS_COUNT_0_1.uli_mailbox_loss_count__clear
+  assign rtl022_control_o[303:300] = uli_mailbox_status_pulse_q[3:0];  // ULI_MAILBOX_STATUS.uli_mailbox_status__overflow_underflow_clear
+  assign rtl022_control_o[299:296] = uli_io_output_q[3:0];  // ULI_IO_OUTPUT.uli_io_output__output_request
+  assign rtl022_control_o[295] = uli_out_pop_pulse_q[0:0];  // ULI_OUT_POP.uli_out_pop__pop
+  assign rtl022_control_o[294] = uli_in_push_pulse_q[0:0];  // ULI_IN_PUSH.uli_in_push__push
+  assign rtl022_control_o[293:262] = uli_in_data_q[31:0];  // ULI_IN_DATA.uli_in_data__mailbox_data
+  assign rtl022_control_o[261:230] = uli_param7_q[31:0];  // ULI_PARAM7.uli_param7__param7
+  assign rtl022_control_o[229:198] = uli_param6_q[31:0];  // ULI_PARAM6.uli_param6__param6
+  assign rtl022_control_o[197:166] = uli_param5_q[31:0];  // ULI_PARAM5.uli_param5__param5
+  assign rtl022_control_o[165:134] = uli_param4_q[31:0];  // ULI_PARAM4.uli_param4__param4
+  assign rtl022_control_o[133:102] = uli_param3_q[31:0];  // ULI_PARAM3.uli_param3__param3
+  assign rtl022_control_o[101:70] = uli_param2_q[31:0];  // ULI_PARAM2.uli_param2__param2
+  assign rtl022_control_o[69:38] = uli_param1_q[31:0];  // ULI_PARAM1.uli_param1__param1
+  assign rtl022_control_o[37:6] = uli_param0_q[31:0];  // ULI_PARAM0.uli_param0__param0
+  assign rtl022_control_o[5] = uli_status_pulse_q[7:7];  // ULI_STATUS.uli_status__reset_complete
+  assign rtl022_control_o[4] = uli_status_pulse_q[6:6];  // ULI_STATUS.uli_status__violation
+  assign rtl022_control_o[3] = uli_control_q[3:3];  // ULI_CONTROL.uli_control__irq_enable
+  assign rtl022_control_o[2] = uli_control_q[2:2];  // ULI_CONTROL.uli_control__event_enable
+  assign rtl022_control_o[1] = uli_control_pulse_q[1:1];  // ULI_CONTROL.uli_control__reset_req
+  assign rtl022_control_o[0] = uli_control_q[0:0];  // ULI_CONTROL.uli_control__enable
+
+  // ==========================================================================
   // Aggregated rtl024arxadapter_control_o -- real forwarding to RTL024-ARX-ADAPTER, replacing the disconnected placeholder.
   // Every assignment below is sourced from a real stored register or a real
   // one-cycle pulse-capture register above, at the exact bit position the
@@ -3766,7 +3864,7 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_SAFETY_CHANNEL_STATUS: begin rdata_o = safety_channel_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_RTL016_EVT_OVERFLOW_STATUS: begin rdata_o = rtl016_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_CONTROL: begin rdata_o = uli_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
-      dfc_registers_pkg::DFC_ADDR_ULI_STATUS: begin rdata_o = uli_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ULI_STATUS: begin rdata_o = uli_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_PARAM0: begin rdata_o = uli_param0_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_PARAM1: begin rdata_o = uli_param1_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_PARAM2: begin rdata_o = uli_param2_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
@@ -3784,10 +3882,10 @@ module dfc_config_regbank_regs (
       dfc_registers_pkg::DFC_ADDR_ULI_IO_DIRECTION: begin rdata_o = uli_io_direction_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_IO_INPUT: begin rdata_o = uli_io_input_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_ULI_IO_OUTPUT: begin rdata_o = uli_io_output_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_RTL022_EVT_OVERFLOW_STATUS: begin rdata_o = rtl022_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_STATUS: begin rdata_o = uli_mailbox_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_0_1: begin rdata_o = uli_mailbox_loss_count_0_1_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
-      dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_2_3: begin rdata_o = uli_mailbox_loss_count_2_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_RTL022_EVT_OVERFLOW_STATUS: begin rdata_o = rtl022_evt_overflow_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_STATUS: begin rdata_o = uli_mailbox_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_0_1: begin rdata_o = uli_mailbox_loss_count_0_1_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
+      dfc_registers_pkg::DFC_ADDR_ULI_MAILBOX_LOSS_COUNT_2_3: begin rdata_o = uli_mailbox_loss_count_2_3_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_CONTROL: begin rdata_o = uroute_control_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b1; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_STATUS: begin rdata_o = uroute_status_q; decode_hit_o = 1'b1; write_illegal_o = 1'b1; protected_o = 1'b0; end
       dfc_registers_pkg::DFC_ADDR_UROUTE_ENTRY_SELECT: begin rdata_o = uroute_entry_select_q; decode_hit_o = 1'b1; write_illegal_o = 1'b0; protected_o = 1'b0; end

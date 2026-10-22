@@ -268,6 +268,15 @@ module dfc_rtl001 (
   output logic [dfc_types_pkg::DFC_RTL021_CONTROL_WIDTH-1:0] rtl021_control_o,
   input  logic [dfc_types_pkg::DFC_RTL021_STATUS_WIDTH-1:0]  rtl021_status_i,
 
+  // REAL cross-module register bus for RTL-022 (tools/reggen/
+  // rtl022_field_map.json, 18 control regs/9 status regs) -- replaces
+  // the individual per-register status_i stub ties below for every
+  // register that field-map covers (ULI_STATUS/ULI_IN_LEVEL/
+  // ULI_OUT_LEVEL/ULI_OUT_DATA/ULI_IO_INPUT/RTL022_EVT_OVERFLOW_STATUS/
+  // ULI_MAILBOX_STATUS/ULI_MAILBOX_LOSS_COUNT_0_1/2_3).
+  output logic [dfc_types_pkg::DFC_RTL022_CONTROL_WIDTH-1:0] rtl022_control_o,
+  input  logic [dfc_types_pkg::DFC_RTL022_STATUS_WIDTH-1:0]  rtl022_status_i,
+
   // REAL cross-module register bus for RTL-024's own ARINC RX digital
   // receive adapter (ARCH-BUS-001) -- an internal RTL-024 subblock, not a
   // separate RTL-0NN module (same "internal subblock" status as the
@@ -643,6 +652,11 @@ module dfc_rtl001 (
     .rtl021_status_i  (rtl021_status_i),
     .rtl021_control_o (rtl021_control_o),
 
+    // REAL cross-module register bus for RTL-022 -- see the port-list
+    // comment above.
+    .rtl022_status_i  (rtl022_status_i),
+    .rtl022_control_o (rtl022_control_o),
+
     // REAL cross-module register bus for RTL-024's ARINC RX adapter --
     // see the port-list comment above.
     .rtl024arxadapter_status_i  (rtl024arxadapter_status_i),
@@ -662,17 +676,14 @@ module dfc_rtl001 (
     .host_access_error_count_status_i('0), .rtl024_evt_overflow_status_status_i('0),
     .buffer_status_status_i(buffer_status_status_i), .host_last_sequence_status_i('0), .test_status_status_i('0),
 
- .uli_status_status_i('0), .uli_in_level_status_i('0), .uli_out_level_status_i('0),
-    .uli_out_data_status_i('0), .uli_io_input_status_i('0), .rtl022_evt_overflow_status_status_i('0),
-    .uroute_status_status_i('0), .uroute_active_source_status_i('0), .uroute_active_dest_status_i('0),
+ .uroute_status_status_i('0), .uroute_active_source_status_i('0), .uroute_active_dest_status_i('0),
     .uroute_entry_status_status_i('0), .rtl023_evt_overflow_status_status_i('0),
     .buffer_client_error_count_0_1_status_i(buffer_client_error_count_0_1_status_i),
     .buffer_client_error_count_2_3_status_i(buffer_client_error_count_2_3_status_i), .buffer_client_error_count_4_5_status_i(buffer_client_error_count_4_5_status_i), .buffer_client_error_count_6_status_i(buffer_client_error_count_6_status_i),
     .buffer_internal_error_count_status_i(buffer_internal_error_count_status_i),
     .clock_reset_status_status_i('0),
     .test_rejection_abort_count_status_i('0),
-    .uli_mailbox_loss_count_0_1_status_i('0), .uli_mailbox_loss_count_2_3_status_i('0),
-    .uli_mailbox_status_status_i('0), .uroute_active_control_status_i('0)
+    .uroute_active_control_status_i('0)
   );
 
   // ---- unused-port sink (RTLSTD-MOD-009): timestamp_i/operating_state_i/

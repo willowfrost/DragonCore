@@ -190,12 +190,12 @@ module regbank_smoke_tb;
   // route_ingress_loss_count_* stub ports.
   logic [dfc_types_pkg::DFC_RTL021_STATUS_WIDTH-1:0]  rtl021_status_i;
   logic [dfc_types_pkg::DFC_RTL021_CONTROL_WIDTH-1:0] rtl021_control_o;
-  logic [31:0] uli_status_status_i;
-  logic [31:0] uli_in_level_status_i;
-  logic [31:0] uli_out_level_status_i;
-  logic [31:0] uli_out_data_status_i;
-  logic [31:0] uli_io_input_status_i;
-  logic [31:0] rtl022_evt_overflow_status_status_i;
+  // Real cross-module register bus to RTL-022, same treatment as RTL-021
+  // above -- replaces the prior individual per-register uli_status_status_i/
+  // uli_in_level_status_i/uli_out_level_status_i/uli_out_data_status_i/
+  // uli_io_input_status_i/rtl022_evt_overflow_status_status_i stub ports.
+  logic [dfc_types_pkg::DFC_RTL022_STATUS_WIDTH-1:0]  rtl022_status_i;
+  logic [dfc_types_pkg::DFC_RTL022_CONTROL_WIDTH-1:0] rtl022_control_o;
   logic [31:0] uroute_status_status_i;
   logic [31:0] uroute_active_source_status_i;
   logic [31:0] uroute_active_dest_status_i;
@@ -272,6 +272,8 @@ module regbank_smoke_tb;
     .rtl020_control_o(rtl020_control_o),
     .rtl021_status_i(rtl021_status_i),
     .rtl021_control_o(rtl021_control_o),
+    .rtl022_status_i(rtl022_status_i),
+    .rtl022_control_o(rtl022_control_o),
     .rtl007_status_i(rtl007_status_i),
     .rtl007_control_o(rtl007_control_o),
     .rtl008_status_i(rtl008_status_i),
@@ -292,12 +294,6 @@ module regbank_smoke_tb;
     .rtl015_control_o(rtl015_control_o),
     .rtl016_status_i(rtl016_status_i),
     .rtl016_control_o(rtl016_control_o),
-    .uli_status_status_i(uli_status_status_i),
-    .uli_in_level_status_i(uli_in_level_status_i),
-    .uli_out_level_status_i(uli_out_level_status_i),
-    .uli_out_data_status_i(uli_out_data_status_i),
-    .uli_io_input_status_i(uli_io_input_status_i),
-    .rtl022_evt_overflow_status_status_i(rtl022_evt_overflow_status_status_i),
     .uroute_status_status_i(uroute_status_status_i),
     .uroute_active_source_status_i(uroute_active_source_status_i),
     .uroute_active_dest_status_i(uroute_active_dest_status_i),
@@ -334,6 +330,7 @@ module regbank_smoke_tb;
     rtl019_status_i = '0;
     rtl020_status_i = '0;
     rtl021_status_i = '0;
+    rtl022_status_i = '0;
     rtl007_status_i = '0;
     rtl008_status_i = '0;
     rtl009_status_i = '0;
@@ -344,12 +341,6 @@ module regbank_smoke_tb;
     rtl014_status_i = '0;
     rtl015_status_i = '0;
     rtl016_status_i = '0;
-    uli_status_status_i = 32'h0;
-    uli_in_level_status_i = 32'h0;
-    uli_out_level_status_i = 32'h0;
-    uli_out_data_status_i = 32'h0;
-    uli_io_input_status_i = 32'h0;
-    rtl022_evt_overflow_status_status_i = 32'h0;
     uroute_status_status_i = 32'h0;
     uroute_active_source_status_i = 32'h0;
     uroute_active_dest_status_i = 32'h0;

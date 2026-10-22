@@ -4665,3 +4665,227 @@ RTL-024's own SPI path) will depend on, ahead of the Databus domain.
      unchanged at 1 -- disclosed honestly as covering BOTH RTL-020's own
      and RTL-021's own real additions together, not RTL-021 alone, since
      no intermediate RTL-020-only checkpoint exists to isolate the split.
+
+160. **RTL-022 (Mask-Defined User Logic Island): stale port/register counts
+     in `RTL-022_RevA.md`, confirmed against the real `-002` documents
+     directly, not assumed.** RevA's own SS2 claims "11 total" ports --
+     real is 35, confirmed by direct row count of ARCH-002 Appendix A's own
+     RTL-022 table. RevA's own SS2 also claims "20 registers" -- REG-002's
+     own Section 29 block header says "Register count: 23," confirmed by
+     direct row count (23); RevA's own prose never mentions
+     `ULI_IO_DIRECTION`/`ULI_IO_INPUT`/`ULI_IO_OUTPUT` at all. Implemented
+     against the real 35-port/23-register set, same precedent as every
+     prior Databus module's own stale-count finding (RTL-017 through
+     RTL-021, five for five).
+
+161. **ARCH-002-internal gap fixed (same gap CLASS already fixed for
+     RTL-002 through RTL-021, the 14th real instance): `dfc_rtl022_control_t`
+     had no clear-forwarding field for `RTL022_EVT_OVERFLOW_STATUS.
+     EVENT_OVERFLOW` (REG-404C bit 0, a real W1C field).** Fixed: ARCH-002
+     grew the struct 308->309 bits, appending
+     `rtl022_evt_overflow_status__event_overflow` at the new highest bit
+     (308) -- appended at the end, not inserted in REG-002 address order,
+     same precedent as RTL-021's own analogous fix (item 148).
+     Regenerated via `extract_types.py`/`pkggen.py` with an isolated,
+     confirmed diff; `reggen.py` then produced "real cross-module
+     forwarding wired for RTL-022: 18 control regs, 9 status regs" with no
+     assertion failures.
+
+162. **A genuine, disclosed REG-002-internal inconsistency, resolved, not
+     silently picked: `ULI_CONTROL`'s own "Register behavior" prose
+     ("ENABLE and IRQ_ENABLE have the sole legal value zero") directly
+     contradicts its OWN per-field "Legal values/range" column ("0 or 1"
+     for both, with no "in Revision A" qualifier every OTHER real
+     zero-only field in this same section consistently carries).**
+     Resolved in favor of the prose: ENABLE and IRQ_ENABLE get the same
+     reject-nonzero-plus-violation-evidence treatment as the 8 parameters
+     and OUTPUT_REQUEST, per ARCH-ULI-001's own text ("Any nonzero
+     parameter write or enable attempt is rejected and sets violation
+     evidence") and this session's own task briefing explicitly requiring
+     "ENABLE/IRQ_ENABLE nonzero-write rejection (REG-ENC-017)." REG-ENC-017's
+     own literal text names only "functional enable" (ENABLE) by name, not
+     IRQ_ENABLE -- so IRQ_ENABLE's own inclusion rests on REG-002's own
+     ULI_CONTROL prose plus this session's explicit instruction, not
+     REG-ENC-017's narrower literal wording. EVENT_ENABLE is the one
+     confirmed exception (REG-002's own prose: "diagnostic EVENT_ENABLE
+     remain available") -- an ordinary RW bit.
+
+163. **A second genuine, disclosed inconsistency: Appendix F.3's own
+     RTL-022 condition-mask row does not correspond to Appendix C.7's own
+     RTL-022 event_id 0x0050 row.** F.3: "0 parameter rejection, 1
+     diagnostic mailbox activity, 2 reset complete, 3 shared-buffer error,
+     4 event-slot overflow." C.7: "0 diagnostic input, 1 mailbox, 2
+     parameter rejected, 3 reset" -- omitting shared-buffer error entirely
+     (itself normal: "event-slot overflow" is likewise absent from every
+     OTHER module's own C.7 row, confirmed against RTL-021's own 0x0024
+     row) but ALSO inventing an unreferenced "diagnostic input" cause C.7
+     nowhere else supports. Resolved in favor of F.3's own 4-cause list
+     for `dfc_rtl022.sv`'s own event-record cause/data encoding, because
+     (a) F.3's own stated purpose is precisely per-condition
+     subcondition-mask allocation, and (b) Appendix D.2's own CDC-USER
+     entry states user_i has "no operational output in Revision A" --
+     textually ruling out C.7's own "diagnostic input" cause as ever being
+     real. event_id 0x0050 itself (C.7's only undisputed fact for this
+     module) is used unchanged.
+
+164. **Master shared-resource-index table (item 140) checked before wiring
+     irq_source_i[18]/fault_source_i[15]/evt_valid_i & evt_record_i[21] --
+     the FIRST Databus-family module this session class to produce a
+     clean result with no stale claim anywhere to fix** (RTL-017/018/019/
+     020/021 each found one real conflict apiece, five for five). All
+     three indices match ARCH-002's own claimed indices exactly:
+     irq_source_i[18] (master table: "18=RTL-022"), fault_source_i[15]
+     (master table: "13-16=RTL-020..023," i.e. 15=RTL-022), evt slot 21
+     (master table: "19-22=RTL-020..023," i.e. 21=RTL-022). `activity_i[6]`
+     ("user diagnostic input transition" per RTL-015's own ARCH-SAFE-007
+     order) remains a disclosed, pre-existing stub with NO real producer:
+     RTL-022 has no `activity_o` port anywhere in its real 35-port
+     Appendix A catalog, confirmed directly -- this module does not drive
+     that bit, now or ever.
+
+165. **Join-verification (this session's own "load-bearing" discipline,
+     citing item 154's RTL-020 bug as the cautionary precedent): the new
+     `rtl022_control_o`/`rtl022_status_i` cross-module connection at
+     `u_rtl001`'s own instantiation in `dfc_rtl024.sv` was explicitly
+     grepped and confirmed actually JOINED end-to-end, not merely declared
+     on both sides** -- `dfc_rtl001.sv`'s own `rtl022_control_o`/
+     `rtl022_status_i` ports connect to `dfc_rtl024.sv`'s own
+     `rtl022_control`/`rtl022_status` wires at `u_rtl001`'s instantiation,
+     and those SAME wires connect to `u_rtl022`'s own `control_i`/
+     `status_o` ports -- a real, traced, three-point connection, not a
+     repeat of item 154's silently-dangling-port class of bug.
+
+166. **Design choices, disclosed (see `dfc_rtl022.sv`'s own header for the
+     full reasoning):**
+     - The OUTPUT mailbox (`ULI_OUT_LEVEL`/`ULI_OUT_DATA`/`ULI_OUT_POP`) is
+       a literal hardwired constant, not real shared-buffer-backed
+       infrastructure that happens to stay empty -- REG-002's own text
+       says "fixed zero"/"rejected as empty," not merely "currently
+       empty," and no register path exists anywhere to ever push into it.
+     - The INPUT mailbox is real, shared-buffer-backed (client-relative
+       offsets 0-3 of DFC_BUF_CLIENT5's 8-word window; offsets 4-7
+       reserved, unwired). A disclosed, deliberate asymmetry falls out of
+       this cleanly: INPUT can overflow (host-driven push, no drain path)
+       but can NEVER underflow (no pop path exists at all); OUTPUT can
+       underflow (host-driven pop, permanently empty) but can NEVER
+       overflow (no push path exists at all). INPUT_UNDERFLOW and
+       OUTPUT_OVERFLOW are real register fields that are structurally
+       unreachable in this Revision -- a disclosed stub pair, same class
+       of choice as RTL-021's own several unreachable commit codes.
+     - A second PUSH command arriving while the shared-buffer arbiter is
+       still busy with an earlier one is dropped, not queued, counted
+       identically to a push against an already-full mailbox.
+     - `rx_msg_ready_o` is unconditionally 1 and message reception gets
+       ZERO diagnostic surface (no event, no counter, no status bit) --
+       a deliberately narrower reading than "mailbox activity" might
+       suggest, since REG-002's own `ULI_MAILBOX_STATUS`/F.3's own
+       "diagnostic mailbox activity" condition both describe only the two
+       register-mailboxes' own push/pop traffic, never Databus message
+       reception.
+     - `irq_req_o`/`fault_req_o` are permanently hardwired 0: F.3's own
+       RTL-022 row states all 5 real condition bits "are
+       diagnostic-event-only and never assert IRQ," and an inert module
+       with every operational input/parameter forced to zero has no real
+       internal condition left to ever report as a fault.
+
+167. **Physical-pin determination, confirmed directly against
+     `ULX3S_CONNECTION_MAP.md`'s own text, not assumed either way:
+     `user_i`/`user_o`/`user_oe_o[3:0]` remain UNPINNED.** That file's own
+     existing text ("out of scope -- RTL-022/023 dropped from this build
+     per the demo-scope decision") governs physical board-pin assignment
+     specifically, a SEPARATE decision from `PROJECT_CONTINUITY.md`'s own
+     "RTL-022 will never be implemented" decision -- only the latter was
+     reversed by the person this session (see `PROJECT_CONTINUITY.md`'s
+     own UPDATE note). `user_i`/`user_o`/`user_oe_o` were already real,
+     wired top-level ports on `dfc_rtl024.sv` before this session (tied to
+     constant zero); they are now wired FROM/TO `u_rtl022`'s own real
+     ports instead, but still carry no physical ULX3S pin assignment.
+
+168. **`rtl024_skeleton_tb.sv` judged NOT to need extension, reasoning
+     disclosed rather than silently deciding either way.** The full-chip
+     skeleton test passed clean, unmodified, with RTL-021<->RTL-022 now a
+     real connection. Per this project's own established precedent (every
+     prior Databus module), the dedicated per-module integration
+     testbench carries the real functional-coverage burden for a new
+     cross-module link -- `rtl022_integration_tb.sv`'s own Case 8 already
+     exercises the real RTL-021-destination-side delivery path directly
+     (`rx_msg_valid_i`/`rx_msg_ready_o`/`rx_msg_record_i`, confirmed zero
+     operational effect). The skeleton test's own job is basic whole-chip
+     bring-up/connectivity, not per-link functional depth; extending it
+     would duplicate coverage `rtl022_integration_tb.sv` already owns more
+     thoroughly.
+
+169. **`cond_buf_error` (F.3 bit 3, "shared-buffer error") is not exercised
+     by `rtl022_integration_tb.sv`, disclosed, same precedent as
+     RTL-021's own testbench (which also never exercises its own
+     analogous shared-buffer-error event path).** The real shared buffer
+     never returns a non-OK response code for in-bounds, well-formed
+     client traffic -- a structural property of the shared buffer's own
+     real implementation (confirmed by grep: no prior Databus testbench
+     injects a shared-buffer error either), not a gap specific to this
+     testbench.
+
+170. **Scope reversal, explicitly authorized by the user this session (not
+     silently decided): `PROJECT_CONTINUITY.md`'s own standing "RTL-022
+     (User Logic Island)... will NOT be implemented, ever, as part of this
+     build" decision was surfaced directly to the person (quoting both
+     that file and `ULX3S_CONNECTION_MAP.md`'s own matching "out of scope"
+     note) before any implementation work began, and the person explicitly
+     chose to proceed.** `PROJECT_CONTINUITY.md` itself has been updated
+     with a dated UPDATE note documenting the reversal and its scope:
+     RTL-022 only, RTL-023 unchanged/still out of scope. The target module
+     count is now 22 (RTL-001 through RTL-022), not 21.
+
+171. **Real `build_ecp5.ps1 -SynthOnly` cell-count/utilization stats after
+     RTL-022 (Build ID `20261022_130115`, `nextpnr-ecp5` confirmed never
+     invoked -- the script's own "-SynthOnly requested -- stopping here,
+     nextpnr-ecp5 was never invoked" line, `output\logs\
+     ecp5_synth_20261022_130115.log`'s own "Printing statistics." section):
+     CCU2C 3964, L6MUX21 558, LUT4 41004, PFUMX 4031, TRELLIS_FF 27703,
+     MULT18X18D 44, PDPW16KD 1.** Real delta against the last recorded
+     baseline (item 159, RTL-020+021 combined, Build ID `20261022_104724`):
+     CCU2C -33 (3997->3964), L6MUX21 -247 (805->558), LUT4 -309
+     (41313->41004), PFUMX -400 (4431->4031), TRELLIS_FF +129
+     (27574->27703), MULT18X18D/PDPW16KD unchanged. Disclosed honestly,
+     not smoothed over: FOUR of seven categories went DOWN despite adding
+     a new module with real registered state -- not a measurement error,
+     a real, reproducible result of this exact run (re-confirmed by
+     re-reading the same log's own statistics section directly). TRELLIS_FF
+     going up (+129, consistent with RTL-022's own real new flip-flop state
+     -- the four 16-bit loss counters alone account for 64 of those bits)
+     is the one category that unambiguously tracks "real new logic added."
+     The other four categories (CCU2C/L6MUX21/LUT4/PFUMX) are all
+     interchangeable ECP5 LUT/wide-mux packing choices for logically
+     equivalent functions, and this project's own synthesis flow has no
+     fixed, deterministic packing order across different netlist
+     structures -- a real, previously-unremarked consequence of adding new
+     upstream logic changing how Yosys's own `abc9`/LUT-packing passes
+     choose to implement OTHER, unrelated existing logic elsewhere in the
+     design, not evidence that RTL-022 itself "removed" logic. Not
+     something this session can or should further isolate without a
+     dedicated bisection run, which is out of this session's own scope.
+
+172. **A real, pre-existing CHECK-pass finding, confirmed NOT introduced
+     by this session and NOT touching RTL-022 at all, but never previously
+     disclosed: Yosys's own `CHECK pass (checking for obvious problems)`
+     reports 32 "multiple conflicting drivers" warnings, all for
+     `u_rtl020.error_count_q` bits [31:0] (all 32 bits of RTL-020's own UART
+     error counter), two TRELLIS_FF cells apiece.** Item 159's own prior
+     session claimed "0 CHECK-pass problems" for the RTL-020+RTL-021
+     Build ID `20261022_104724` -- re-reading THAT SAME prior log directly
+     (not relying on memory) confirms this was already wrong THEN: the
+     identical 32-problem "multiple conflicting drivers" set is present in
+     `output\logs\ecp5_synth_20261022_104724.log` too, so this is a
+     genuinely pre-existing synthesis-time finding in RTL-020 itself
+     (`dfc_rtl020.sv`'s own `error_count_q`), not a regression from
+     RTL-021 or RTL-022's own work, and item 159's own "0 CHECK-pass
+     problems" claim is corrected here rather than left standing
+     uncorrected. Confirmed by direct grep that none of the 32 problems
+     involve `u_rtl022` anywhere (RTL-022's own only CHECK-pass-adjacent
+     log line is a benign, expected informational message. "Replacing
+     memory \loss_count_q with list of registers," Yosys's normal
+     small-unpacked-array lowering note, not a warning). Investigating and
+     fixing the real `dfc_rtl020.sv` multi-driver cause is out of this
+     session's own scope (RTL-022 only) -- flagged here for a future
+     session, not silently left undisclosed now that it has been directly
+     observed.

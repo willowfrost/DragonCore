@@ -3562,6 +3562,38 @@ written in this project going forward, not just a historical note.
     default back to "all 24 modules" out of habit or because that's what
     an older section of this document (or an RTL spec's own text)
     describes as the original full scope.
+  - **UPDATE (2026-10-22): the "RTL-022 will NOT be implemented, ever"
+    half of this decision has been explicitly reversed by the person,
+    and RTL-022 (Mask-Defined User Logic Island) is now real,
+    integrated, and tested** — see `OPEN_ISSUES.md` items 160-170 for
+    the full disclosure. This was a deliberate, informed override, not a
+    silent reversal: the conflict between this standing decision and the
+    new task briefing was surfaced to the person directly before any
+    implementation work began, and the person chose to proceed. The
+    reasoning above for why RTL-022 was originally cut (no real content
+    of its own to demonstrate) turned out to still apply to its OWN
+    *operational* behavior — the real implementation is, exactly as
+    REG-ENC-017/ARCH-ULI-001 require, "deliberately inert": every
+    parameter/enable/output is forced to zero, user_o/user_oe_o/
+    tx_msg_valid_o never assert, irq_req_o/fault_req_o are permanent
+    stubs. What IS real and demonstrable: the register interface's own
+    reject-and-violate contract, the two diagnostic mailboxes (push/pop,
+    full/empty, loss-counting), the CDC-synchronized user-input capture,
+    and RTL-021's own destination-side message delivery into it (closing
+    RTL-021's own disclosed forward reference, item 152) — this is what
+    changed the calculus versus the original "nothing to show" reasoning.
+    **RTL-023 (User Routing) remains out of scope, unchanged** — nothing
+    in this session's authorization touched that half of the original
+    decision; RTL-023 is not instantiated anywhere, and RTL-022's own
+    `route_user_req_i`/`route_term_i` ports remain tied to a disclosed
+    forward-reference stub. **The target module count is now 22 (RTL-001
+    through RTL-022), not 21.** The separate PHYSICAL BOARD PIN scoping
+    decision in `ULX3S_CONNECTION_MAP.md` (`user_i`/`o`/`oe[3:0]` "out of
+    scope") was NOT reversed — only the "RTL-022 will never be
+    implemented" decision was. `user_i`/`user_o`/`user_oe_o` are real,
+    wired top-level ports (and were already present at the top level
+    before this session), but they remain unassigned to any physical
+    ULX3S pin, exactly as before.
 - **RTL-002 through RTL-016 are now all real and implemented — the Safety
   domain (RTL-012 through RTL-016: Watchdog Manager, Fault Manager,
   Interlock Engine, Lost-Link Supervisor, Safety Output Controller) is

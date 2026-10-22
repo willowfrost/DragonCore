@@ -632,7 +632,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | rtl020_status_i | input | dfc_rtl020_status_t / 217 | RTL-020.status_o | RTL-001.rtl020_status_i; RTL-002.module_ready_i[19]; RTL-002.module_fault_i[19] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl021_control_o | output | dfc_rtl021_control_t / 136 | RTL-001.rtl021_control_o | RTL-021.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl021_status_i | input | dfc_rtl021_status_t / 338 | RTL-021.status_o | RTL-001.rtl021_status_i; RTL-002.module_ready_i[20]; RTL-002.module_fault_i[20] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
-| rtl022_control_o | output | dfc_rtl022_control_t / 308 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
+| rtl022_control_o | output | dfc_rtl022_control_t / 309 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl022_status_i | input | dfc_rtl022_status_t / 137 | RTL-022.status_o | RTL-001.rtl022_status_i; RTL-002.module_ready_i[21]; RTL-002.module_fault_i[21] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
 | rtl023_control_o | output | dfc_rtl023_control_t / 34 | RTL-001.rtl023_control_o | RTL-023.control_i | CORE_CLK / core_rst_n | registered configuration and one-cycle command members / generated field resets | same-domain |
 | rtl023_status_i | input | dfc_rtl023_status_t / 75 | RTL-023.status_o | RTL-001.rtl023_status_i; RTL-002.module_ready_i[22]; RTL-002.module_fault_i[22] | CORE_CLK / core_rst_n | registered/coherent status / generated field resets | same-domain |
@@ -1189,7 +1189,7 @@ The following tables are the sole formal top-level port definitions for RTL-001 
 | core_clk_i | input | logic / 1 | RTL-024.core_clk_o | RTL-022.core_clk_i | CORE_CLK / core_rst_n | free-running / N/A | same-domain |
 | core_rst_n_i | input | logic / 1 | RTL-024.core_rst_n_o | RTL-022.core_rst_n_i | CORE_CLK / core_rst_n | asynchronous assert; synchronized release / 0 asserted | RDC-001 |
 | module_reset_i | input | logic / 1 | RTL-002.module_reset_o[21] | RTL-022.module_reset_i | CORE_CLK / core_rst_n | synchronous local reset request / 0 | same-domain |
-| control_i | input | dfc_rtl022_control_t / 308 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
+| control_i | input | dfc_rtl022_control_t / 309 | RTL-001.rtl022_control_o | RTL-022.control_i | CORE_CLK / core_rst_n | registered configuration and qualified commands / generated field resets | same-domain |
 | status_o | output | dfc_rtl022_status_t / 137 | RTL-022.status_o | RTL-001.rtl022_status_i; RTL-002.module_ready_i[21]; RTL-002.module_fault_i[21] | CORE_CLK / core_rst_n | registered/coherent status; includes ready and local fault evidence / generated field resets; ready=0 | same-domain |
 | timestamp_i | input | logic / 64 | RTL-004.timestamp_o | RTL-022.timestamp_i | CORE_CLK / core_rst_n | registered monotonic time / 0 | same-domain |
 | evt_valid_o | output | logic / 1 | RTL-022.evt_valid_o | RTL-005.evt_valid_i[21] | CORE_CLK / core_rst_n | valid/ready; one pending slot / 0 | same-domain |
@@ -2454,7 +2454,7 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 336 | route_active_control__enable | 1 | unsigned | 0 | readback_value |
 | 337 | route_active_control__drop_on_full | 1 | unsigned | 0 | readback_value |
 
-### dfc_rtl022_control_t — 308 bits
+### dfc_rtl022_control_t — 309 bits
 
 | **Bits** | **Member** | **W** | **Signedness** | **Reset** | **Semantic** |
 | --- | --- | --- | --- | --- | --- |
@@ -2478,6 +2478,7 @@ unchanged (`OPEN_ISSUES.md` item 90).
 | 299:296 | uli_io_output__output_request | 4 | unsigned | 0 | control_value |
 | 303:300 | uli_mailbox_status__overflow_underflow_clear | 4 | unsigned | 0 | W1C input overflow, input underflow, output overflow, output underflow evidence |
 | 307:304 | uli_mailbox_loss_count__clear | 4 | unsigned | 0 | one whole-counter-clear pulse for each mailbox loss class |
+| 308 | rtl022_evt_overflow_status__event_overflow | 1 | unsigned | 0 | clear_mask |
 
 ### dfc_rtl022_status_t — 137 bits
 

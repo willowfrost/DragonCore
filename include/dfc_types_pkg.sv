@@ -3092,8 +3092,9 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL021_STATUS__ROUTE_ACTIVE_CONTROL__DROP_ON_FULL_HI = 337;
   localparam int unsigned DFC_RTL021_STATUS__ROUTE_ACTIVE_CONTROL__DROP_ON_FULL_LO = 337;
 
-  // ARCH-002 Appendix B dfc_rtl022_control_t (308 bits, rich format)
+  // ARCH-002 Appendix B dfc_rtl022_control_t (309 bits, rich format)
   typedef struct packed {
+    logic rtl022_evt_overflow_status__event_overflow;  //  reset=0 :: clear_mask
     logic [3:0] uli_mailbox_loss_count__clear;  //  reset=0 :: one whole-counter-clear pulse for each mailbox loss class
     logic [3:0] uli_mailbox_status__overflow_underflow_clear;  //  reset=0 :: W1C input overflow, input underflow, output overflow, output underflow evidence
     logic [3:0] uli_io_output__output_request;  //  reset=0 :: control_value
@@ -3115,9 +3116,9 @@ package dfc_types_pkg;
     logic uli_control__reset_req;  //  reset=0 :: command_pulse
     logic uli_control__enable;  //  reset=0 :: control_value
   } dfc_rtl022_control_t;
-  // total width: 308 bits
+  // total width: 309 bits
 
-  localparam int unsigned DFC_RTL022_CONTROL_WIDTH = 308;
+  localparam int unsigned DFC_RTL022_CONTROL_WIDTH = 309;
   localparam int unsigned DFC_RTL022_CONTROL__ULI_CONTROL__ENABLE_HI = 0;
   localparam int unsigned DFC_RTL022_CONTROL__ULI_CONTROL__ENABLE_LO = 0;
   localparam int unsigned DFC_RTL022_CONTROL__ULI_CONTROL__RESET_REQ_HI = 1;
@@ -3158,6 +3159,8 @@ package dfc_types_pkg;
   localparam int unsigned DFC_RTL022_CONTROL__ULI_MAILBOX_STATUS__OVERFLOW_UNDERFLOW_CLEAR_LO = 300;
   localparam int unsigned DFC_RTL022_CONTROL__ULI_MAILBOX_LOSS_COUNT__CLEAR_HI = 307;
   localparam int unsigned DFC_RTL022_CONTROL__ULI_MAILBOX_LOSS_COUNT__CLEAR_LO = 304;
+  localparam int unsigned DFC_RTL022_CONTROL__RTL022_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_HI = 308;
+  localparam int unsigned DFC_RTL022_CONTROL__RTL022_EVT_OVERFLOW_STATUS__EVENT_OVERFLOW_LO = 308;
 
   // ARCH-002 Appendix B dfc_rtl022_status_t (137 bits, rich format)
   typedef struct packed {

@@ -8553,8 +8553,8 @@
     },
     {
       "name": "dfc_rtl022_control_t",
-      "trace": "ARCH-002 Appendix B dfc_rtl022_control_t (308 bits, rich format)",
-      "width": 308,
+      "trace": "ARCH-002 Appendix B dfc_rtl022_control_t (309 bits, rich format)",
+      "width": 309,
       "fields": [
         {
           "name": "uli_control__enable",
@@ -8735,6 +8735,15 @@
           "signed": false,
           "reset": "0",
           "semantic": "one whole-counter-clear pulse for each mailbox loss class"
+        },
+        {
+          "name": "rtl022_evt_overflow_status__event_overflow",
+          "hi": 308,
+          "lo": 308,
+          "width": 1,
+          "signed": false,
+          "reset": "0",
+          "semantic": "clear_mask"
         }
       ]
     },
